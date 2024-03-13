@@ -1,0 +1,3 @@
+rootProject.name = 'smithy-java'
+
+include('smithy-java-core')
