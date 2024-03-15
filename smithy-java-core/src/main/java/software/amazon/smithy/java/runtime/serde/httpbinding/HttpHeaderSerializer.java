@@ -5,7 +5,6 @@
 
 package software.amazon.smithy.java.runtime.serde.httpbinding;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
@@ -35,19 +34,15 @@ final class HttpHeaderSerializer extends SpecificShapeSerializer {
     }
 
     @Override
-    public void flush() throws IOException {
-        // do nothing.
-    }
-
-    @Override
     public void beginList(SdkSchema schema, Consumer<ShapeSerializer> consumer) {
         consumer.accept(new ListSerializer(this, () -> {}));
     }
 
     void writeHeader(SdkSchema schema, Supplier<String> supplier) {
-        schema.getTrait(HttpHeaderTrait.class)
+        String field = schema.getTrait(HttpHeaderTrait.class)
                 .map(HttpHeaderTrait::getValue)
-                .ifPresent(name -> headerWriter.accept(name, supplier.get()));
+                .orElse(schema.memberName());
+        headerWriter.accept(field, supplier.get());
     }
 
     @Override

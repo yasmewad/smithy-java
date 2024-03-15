@@ -14,6 +14,7 @@ import software.amazon.smithy.java.runtime.shapes.SdkSchema;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;
 import software.amazon.smithy.model.traits.HttpHeaderTrait;
+import software.amazon.smithy.model.traits.HttpResponseCodeTrait;
 import software.amazon.smithy.model.traits.JsonNameTrait;
 import software.amazon.smithy.model.traits.RequiredTrait;
 import software.amazon.smithy.model.traits.TimestampFormatTrait;
@@ -36,22 +37,29 @@ public final class PutPersonOutput implements IOShape {
             .id(ID)
             .traits(new TimestampFormatTrait(TimestampFormatTrait.DATE_TIME))
             .build();
+    private static final SdkSchema SCHEMA_STATUS = SdkSchema
+            .memberBuilder(4, "status", SharedSchemas.INTEGER)
+            .id(ID)
+            .traits(new HttpResponseCodeTrait())
+            .build();
     static final SdkSchema SCHEMA = SdkSchema.builder()
             .id(ID)
             .type(ShapeType.STRUCTURE)
-            .members(SCHEMA_NAME, SCHEMA_FAVORITE_COLOR, SCHEMA_AGE, SCHEMA_BIRTHDAY)
+            .members(SCHEMA_NAME, SCHEMA_FAVORITE_COLOR, SCHEMA_AGE, SCHEMA_BIRTHDAY, SCHEMA_STATUS)
             .build();
 
     private final String name;
     private final int age;
     private final Instant birthday;
     private final String favoriteColor;
+    private final int status;
 
     private PutPersonOutput(Builder builder) {
         this.name = builder.name;
         this.age = builder.age;
         this.birthday = builder.birthday;
         this.favoriteColor = builder.favoriteColor;
+        this.status = builder.status;
     }
 
     public static Builder builder() {
@@ -82,6 +90,7 @@ public final class PutPersonOutput implements IOShape {
             st.integerMember(SCHEMA_AGE, age);
             st.timestampMemberIf(SCHEMA_BIRTHDAY, birthday);
             st.stringMemberIf(SCHEMA_FAVORITE_COLOR, favoriteColor);
+            st.integerMember(SCHEMA_STATUS, status);
         });
     }
 
@@ -91,6 +100,7 @@ public final class PutPersonOutput implements IOShape {
         private int age = 0;
         private Instant birthday;
         private String favoriteColor;
+        private int status;
 
         private Builder() {}
 
@@ -119,6 +129,11 @@ public final class PutPersonOutput implements IOShape {
             return this;
         }
 
+        public Builder status(int status) {
+            this.status = status;
+            return this;
+        }
+
         @Override
         public Builder deserialize(ShapeDeserializer decoder) {
             decoder.readStruct(SCHEMA, (member, de) -> {
@@ -127,10 +142,10 @@ public final class PutPersonOutput implements IOShape {
                     case 1 -> favoriteColor(de.readString(member));
                     case 2 -> age(de.readInteger(member));
                     case 3 -> birthday(de.readTimestamp(member));
+                    case 4 -> status(de.readInteger(member));
                 }
             });
             return this;
         }
     }
 }
-

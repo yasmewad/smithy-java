@@ -5,7 +5,10 @@
 
 package software.amazon.smithy.java.runtime.net.http;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.http.HttpHeaders;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import software.amazon.smithy.java.runtime.net.StoppableInputStream;
@@ -22,6 +25,25 @@ public final class SmithyHttpResponseImpl implements SmithyHttpResponse {
         this.statusCode = builder.statusCode;
         this.body = Objects.requireNonNullElseGet(builder.body, StoppableInputStream::ofEmpty);
         this.headers = Objects.requireNonNullElseGet(builder.headers, () -> HttpHeaders.of(Map.of(), (k, v) -> true));
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        result.append(httpVersion).append(' ').append(statusCode).append(System.lineSeparator());
+        headers.map().forEach((field, values) -> values.forEach(value -> {
+            result.append(field).append(": ").append(value).append(System.lineSeparator());
+        }));
+        result.append(System.lineSeparator());
+
+        try {
+            // Include up to 16 KB of the output.
+            result.append(new String(body.readNBytes(16384), StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        return result.toString();
     }
 
     @Override

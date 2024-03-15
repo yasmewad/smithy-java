@@ -10,20 +10,34 @@ import software.amazon.smithy.java.runtime.shapes.SdkSchema;
 import software.amazon.smithy.model.traits.HttpHeaderTrait;
 import software.amazon.smithy.model.traits.HttpLabelTrait;
 import software.amazon.smithy.model.traits.HttpPayloadTrait;
+import software.amazon.smithy.model.traits.HttpPrefixHeadersTrait;
+import software.amazon.smithy.model.traits.HttpQueryParamsTrait;
 import software.amazon.smithy.model.traits.HttpQueryTrait;
+import software.amazon.smithy.model.traits.HttpResponseCodeTrait;
 
 final class BindingMatcher {
 
-    enum Binding { HEADER, QUERY, PAYLOAD, BODY, LABEL }
+    enum Binding { HEADER, QUERY, PAYLOAD, BODY, LABEL, STATUS, PREFIX_HEADERS, QUERY_PARAMS }
 
     private final boolean isRequest;
     private HttpHeaderTrait header;
     private HttpLabelTrait label;
     private HttpQueryTrait query;
     private HttpPayloadTrait payload;
+    private HttpResponseCodeTrait responseCode;
+    private HttpPrefixHeadersTrait prefixHeaders;
+    private HttpQueryParamsTrait queryParams;
 
-    BindingMatcher(boolean isRequest) {
+    private BindingMatcher(boolean isRequest) {
         this.isRequest = isRequest;
+    }
+
+    static BindingMatcher requestMatcher() {
+        return new BindingMatcher(true);
+    }
+
+    static BindingMatcher responseMatcher() {
+        return new BindingMatcher(false);
     }
 
     Binding match(SdkSchema member) {
@@ -36,11 +50,25 @@ final class BindingMatcher {
             if (query != null) {
                 return Binding.QUERY;
             }
+            queryParams = member.getTrait(HttpQueryParamsTrait.class).orElse(null);
+            if (queryParams != null) {
+                return Binding.QUERY_PARAMS;
+            }
+        } else {
+            responseCode = member.getTrait(HttpResponseCodeTrait.class).orElse(null);
+            if (responseCode != null) {
+                return Binding.STATUS;
+            }
         }
 
         header = member.getTrait(HttpHeaderTrait.class).orElse(null);
         if (header != null) {
             return Binding.HEADER;
+        }
+
+        prefixHeaders = member.getTrait(HttpPrefixHeadersTrait.class).orElse(null);
+        if (prefixHeaders != null) {
+            return Binding.PREFIX_HEADERS;
         }
 
         payload = member.getTrait(HttpPayloadTrait.class).orElse(null);
@@ -51,19 +79,11 @@ final class BindingMatcher {
         return Binding.BODY;
     }
 
-    HttpHeaderTrait header() {
-        return Objects.requireNonNull(header, "Not a header binding");
+    String header() {
+        return Objects.requireNonNull(header, "Not a header binding").getValue();
     }
 
-    HttpLabelTrait label() {
-        return Objects.requireNonNull(label, "Not a label binding");
-    }
-
-    HttpQueryTrait query() {
-        return Objects.requireNonNull(query, "Not a query binding");
-    }
-
-    HttpPayloadTrait payload() {
-        return Objects.requireNonNull(payload, "Not a payload binding");
+    String prefixHeaders() {
+        return Objects.requireNonNull(prefixHeaders, "Not a prefix headers binding").getValue();
     }
 }

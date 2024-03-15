@@ -42,7 +42,7 @@ final class HttpBindingDeserializer extends SpecificShapeDeserializer implements
     private HttpBindingDeserializer(Builder builder) {
         this.payloadCodec = Objects.requireNonNull(builder.payloadCodec, "payloadSerializer not set");
         this.headers = Objects.requireNonNull(builder.headers, "headers not set");
-        this.bindingMatcher = new BindingMatcher(builder.isRequest);
+        this.bindingMatcher = builder.isRequest ? BindingMatcher.requestMatcher() : BindingMatcher.responseMatcher();
         this.body = builder.body == null ? InputStream.nullInputStream() : builder.body;
         this.requestPath = builder.requestPath;
         this.requestRawQueryString = builder.requestRawQueryString;
@@ -68,7 +68,7 @@ final class HttpBindingDeserializer extends SpecificShapeDeserializer implements
             switch (bindingMatcher.match(member)) {
                 case LABEL -> throw new UnsupportedOperationException("httpLabel binding not supported yet");
                 case QUERY -> throw new UnsupportedOperationException("httpQuery binding not supported yet");
-                case HEADER -> headers.firstValue(bindingMatcher.header().getValue())
+                case HEADER -> headers.firstValue(bindingMatcher.header())
                         .ifPresent(headerValue -> eachEntry.accept(member, new HttpHeaderDeserializer(headerValue)));
                 case BODY -> bodyMembers.add(member.id().getName());
                 case PAYLOAD -> {

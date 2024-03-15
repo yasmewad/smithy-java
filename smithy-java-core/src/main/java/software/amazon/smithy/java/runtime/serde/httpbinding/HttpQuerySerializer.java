@@ -34,11 +34,6 @@ final class HttpQuerySerializer extends SpecificShapeSerializer {
     }
 
     @Override
-    public void flush() {
-        // do nothing.
-    }
-
-    @Override
     public void beginList(SdkSchema schema, Consumer<ShapeSerializer> consumer) {
         consumer.accept(new ListSerializer(this, () -> {}));
     }

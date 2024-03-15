@@ -85,7 +85,4 @@ final class HttpLabelSerializer extends SpecificShapeSerializer {
                 .orElse(TimestampFormatter.Prelude.DATE_TIME)
                 .formatToString(value));
     }
-
-    @Override
-    public void flush() {}
 }

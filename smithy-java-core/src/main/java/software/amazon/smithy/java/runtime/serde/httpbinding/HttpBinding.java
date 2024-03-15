@@ -26,8 +26,8 @@ public final class HttpBinding {
      *
      * @return Returns the serializer.
      */
-    public static Object responseSerializer() {
-        throw new UnsupportedOperationException("Not yet implemented");
+    public static ResponseSerializer responseSerializer() {
+        return new ResponseSerializer();
     }
 
     /**

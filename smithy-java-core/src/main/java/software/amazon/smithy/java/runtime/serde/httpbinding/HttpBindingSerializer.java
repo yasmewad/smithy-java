@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import software.amazon.smithy.java.runtime.net.StoppableInputStream;
 import software.amazon.smithy.java.runtime.net.uri.QueryStringBuilder;
@@ -58,17 +59,20 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
     private ShapeSerializer shapeBodySerializer;
     private ByteArrayOutputStream shapeBodyOutput;
     private InputStream httpPayload;
+    private int responseStatus;
 
     private final BindingMatcher bindingMatcher;
     private final UriPattern uriPattern;
+    private final BiConsumer<String, String> headerConsumer = (field, value) -> {
+        headers.computeIfAbsent(field, f -> new ArrayList<>()).add(value);
+    };
 
     HttpBindingSerializer(HttpTrait httpTrait, Codec payloadCodec, BindingMatcher bindingMatcher) {
         uriPattern = httpTrait.getUri();
+        responseStatus = httpTrait.getCode();
         this.payloadCodec = payloadCodec;
         this.bindingMatcher = bindingMatcher;
-        headerSerializer = new HttpHeaderSerializer((field, value) -> {
-            headers.computeIfAbsent(field, f -> new ArrayList<>()).add(value);
-        });
+        headerSerializer = new HttpHeaderSerializer(headerConsumer);
         querySerializer = new HttpQuerySerializer(queryStringParams::put);
         labelSerializer = new HttpLabelSerializer(labels::put);
     }
@@ -177,6 +181,10 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
         return joiner.toString();
     }
 
+    public int getResponseStatus() {
+        return responseStatus;
+    }
+
     private final class HttpBindingStructSerializer implements StructSerializer {
 
         private final SdkSchema structSchema;
@@ -210,6 +218,10 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
                 case LABEL -> memberWriter.accept(labelSerializer);
                 case PAYLOAD -> handleStructurePayload(member, memberWriter);
                 case BODY -> forward().member(member, memberWriter);
+                case STATUS -> memberWriter.accept(new ResponseStatusSerializer(i -> responseStatus = i));
+                case PREFIX_HEADERS -> memberWriter.accept(
+                        new HttpPrefixHeadersSerializer(bindingMatcher.prefixHeaders(), headerConsumer));
+                case QUERY_PARAMS -> throw new UnsupportedOperationException("TODO");
             }
         }
 
