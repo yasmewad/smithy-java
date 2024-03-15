@@ -221,7 +221,7 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
                 case STATUS -> memberWriter.accept(new ResponseStatusSerializer(i -> responseStatus = i));
                 case PREFIX_HEADERS -> memberWriter.accept(
                         new HttpPrefixHeadersSerializer(bindingMatcher.prefixHeaders(), headerConsumer));
-                case QUERY_PARAMS -> throw new UnsupportedOperationException("TODO");
+                case QUERY_PARAMS -> memberWriter.accept(new HttpQueryParamsSerializer(queryStringParams::put));
             }
         }
 

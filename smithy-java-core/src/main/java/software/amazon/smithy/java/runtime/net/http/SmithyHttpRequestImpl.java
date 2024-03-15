@@ -5,8 +5,11 @@
 
 package software.amazon.smithy.java.runtime.net.http;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpHeaders;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import software.amazon.smithy.java.runtime.net.StoppableInputStream;
@@ -75,5 +78,41 @@ final class SmithyHttpRequestImpl implements SmithyHttpRequest {
     @Override
     public SmithyHttpRequest withBody(StoppableInputStream body) {
         return SmithyHttpRequest.builder().with(this).body(body).build();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        // Determine the path and possible query string.
+        String pathAndQuery = uri.getRawPath();
+        if (!uri.getRawQuery().isEmpty()) {
+            pathAndQuery += "?" + uri.getRawQuery();
+        }
+        // Add the start line.
+        result.append(method).append(' ').append(pathAndQuery)
+                .append(' ').append(httpVersion)
+                .append(System.lineSeparator());
+        // Append host header if not present.
+        if (!headers.firstValue("host").isPresent()) {
+            String host = uri.getHost();
+            if (uri.getPort() != -1) {
+                host += ":" + uri.getPort();
+            }
+            result.append("Host: ").append(host).append(System.lineSeparator());
+        }
+        // Add other headers.
+        headers.map().forEach((field, values) -> values.forEach(value -> {
+            result.append(field).append(": ").append(value).append(System.lineSeparator());
+        }));
+        result.append(System.lineSeparator());
+
+        // Include up to 16 KB of the output.
+        try {
+            result.append(new String(body.readNBytes(16384), StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        return result.toString();
     }
 }

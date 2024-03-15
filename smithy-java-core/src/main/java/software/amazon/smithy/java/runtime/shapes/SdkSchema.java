@@ -356,6 +356,21 @@ public class SdkSchema {
         }
 
         /**
+         * Set members on the shape using builders.
+         *
+         * @param members Members to set, and the ID of the current builder is used.
+         * @return Returns the builder.
+         * @throws IllegalStateException if the schema is for a member.
+         */
+        public Builder members(SdkSchema.Builder... members) {
+            List<SdkSchema> built = new ArrayList<>(members.length);
+            for (Builder member : members) {
+                built.add(member.id(id).build());
+            }
+            return members(built);
+        }
+
+        /**
          * Set members on the shape.
          *
          * @param members Members to set.
