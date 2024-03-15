@@ -129,17 +129,19 @@ public interface TimestampFormatter {
 
             @Override
             public Instant createFromNumber(Number value) {
-                return switch (value) {
-                    case Integer v -> Instant.ofEpochMilli(v * 1000);
-                    case Long v -> Instant.ofEpochMilli(v * 1000);
-                    case Float v -> Instant.ofEpochMilli((long) (v * 1000f));
-                    case Double v -> Instant.ofEpochMilli((long) (v * 1000f));
-                    default -> {
-                        throw new IllegalArgumentException("Expected numeric value for epoch-seconds to be an "
-                                                           + "integer, long, float, or double, but found "
-                                                           + value.getClass().getName());
-                    }
-                };
+                if (value instanceof Integer i) {
+                    return Instant.ofEpochMilli(i * 1000);
+                } else if (value instanceof Long l) {
+                    return Instant.ofEpochMilli(l * 1000);
+                } else if (value instanceof Float f) {
+                    return Instant.ofEpochMilli((long) (f * 1000f));
+                } else if (value instanceof Double f) {
+                    return Instant.ofEpochMilli((long) (f * 1000f));
+                } else {
+                    throw new IllegalArgumentException("Expected numeric value for epoch-seconds to be an "
+                                                       + "integer, long, float, or double, but found "
+                                                       + value.getClass().getName());
+                }
             }
 
             @Override

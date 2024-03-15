@@ -222,12 +222,12 @@ public final class SigV4 {
         for (var headerKey : sortedHeaders) {
             var headers = request.headers().allValues(headerKey);
             if (headers.size() != 1) {
-                throw new RuntimeException("Duplicate headers: " + headers.getFirst());
+                throw new RuntimeException("Duplicate headers: " + headers.get(0));
             }
             // Does not handle duplicate headers
             buffer.append(headerKey.toLowerCase(Locale.ENGLISH)).append(':');
-            if (headers.getFirst() != null) {
-                buffer.append(headers.getFirst().trim());
+            if (headers.get(0) != null) {
+                buffer.append(headers.get(0).trim());
             }
             buffer.append("\n");
         }
