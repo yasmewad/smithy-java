@@ -30,7 +30,7 @@ import software.amazon.smithy.utils.SmithyBuilder;
 // Example of a potentially generated client.
 public final class PersonDirectoryClient implements PersonDirectory {
 
-    private final EndpointProvider<Context> endpointProvider;
+    private final EndpointProvider endpointProvider;
     private final ClientHandler protocol;
     private final TypeRegistry typeRegistry;
 
@@ -88,7 +88,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
     public static final class Builder implements SmithyBuilder<PersonDirectoryClient> {
 
         private ClientHandler protocol;
-        private EndpointProvider<Context> endpointProvider;
+        private EndpointProvider endpointProvider;
 
         private Builder() {}
 
@@ -109,7 +109,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
          * @param endpointProvider Endpoint provider to use to resolve endpoints.
          * @return Returns the endpoint provider.
          */
-        public Builder endpointProvider(EndpointProvider<Context> endpointProvider) {
+        public Builder endpointProvider(EndpointProvider endpointProvider) {
             this.endpointProvider = endpointProvider;
             return this;
         }

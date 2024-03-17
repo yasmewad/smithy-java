@@ -7,6 +7,7 @@ package software.amazon.smithy.java.runtime.myservice.model;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -123,7 +124,7 @@ public final class PutPersonInput implements IOShape {
         private Instant birthday;
         private String favoriteColor;
         private byte[] binary;
-        private Map<String, List<String>> queryParams;
+        private Map<String, List<String>> queryParams = Collections.emptyMap();
 
         private Builder() {}
 

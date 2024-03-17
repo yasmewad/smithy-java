@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.client;
+package software.amazon.smithy.java.runtime.client.http;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import software.amazon.smithy.java.runtime.client.ClientCall;
+import software.amazon.smithy.java.runtime.client.InterceptorHandler;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpClient;
-import software.amazon.smithy.java.runtime.net.http.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.serde.Codec;
 import software.amazon.smithy.java.runtime.serde.httpbinding.HttpBinding;
@@ -19,57 +20,55 @@ import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
-import software.amazon.smithy.java.runtime.util.Context;
 
 /**
- * An abstract class for implementing handlers for protocols that use HTTP bindings.
+ * An abstract class for implementing client handlers that use HTTP.
  */
-public abstract class HttpBindingClientHandler implements ClientHandler {
+public abstract class HttpHandler extends InterceptorHandler {
 
-    private static final System.Logger LOGGER = System.getLogger(HttpBindingClientHandler.class.getName());
+    private static final System.Logger LOGGER = System.getLogger(HttpHandler.class.getName());
     private static final String X_AMZN_ERROR_TYPE = "X-Amzn-Errortype";
 
     private final SmithyHttpClient client;
     private final Codec codec;
 
-    public HttpBindingClientHandler(SmithyHttpClient client, Codec codec) {
+    public HttpHandler(SmithyHttpClient client, Codec codec) {
         this.client = client;
         this.codec = codec;
     }
 
+    protected SmithyHttpClient client() {
+        return client;
+    }
+
+    protected Codec codec() {
+        return codec;
+    }
+
     @Override
-    public <I extends IOShape, O extends IOShape> O send(ClientCall<I, O> call) {
-        var request = createRequest(call);
+    protected void sendRequest(ClientCall<?, ?> call) {
+        var request = call.context().expectAttribute(HttpContext.HTTP_REQUEST);
+        var response = client().send(request, call.context());
+        call.context().setAttribute(HttpContext.HTTP_RESPONSE, response);
+    }
 
-        var callContext = Context.create();
-        callContext.setAttribute(ClientParams.INPUT, call.input());
-        callContext.setAttribute(ClientParams.OPERATION_SCHEMA, call.operation().schema());
-        callContext.setAttribute(ClientParams.INPUT_SCHEMA, call.operation().inputSchema());
-        callContext.setAttribute(ClientParams.OUTPUT_SCHEMA, call.operation().outputSchema());
-        callContext.setAttribute(ClientParams.CALL_CONTEXT, call.context());
-        var response = client.send(request, callContext);
-
+    @Override
+    protected <I extends IOShape, O extends IOShape> O deserializeResponse(ClientCall<I, O> call) {
+        SmithyHttpResponse response = call.context().expectAttribute(HttpContext.HTTP_RESPONSE);
         if (isSuccess(call, response)) {
             var outputBuilder = call.createOutputBuilder(call.context(), call.operation().outputSchema().id());
-            HttpBinding.responseDeserializer()
-                    .payloadCodec(codec)
-                    .outputShapeBuilder(outputBuilder)
-                    .response(response)
-                    .deserialize();
+            deserializeResponse(outputBuilder, codec, response);
             return outputBuilder.errorCorrection().build();
         } else {
             throw createError(call, response);
         }
     }
 
-    private SmithyHttpRequest createRequest(ClientCall<?, ?> call) {
-        return HttpBinding.requestSerializer()
-                .operation(call.operation().schema())
-                .payloadCodec(codec)
-                .shapeValue(call.input())
-                .endpoint(call.endpoint().uri())
-                .serializeRequest();
-    }
+    abstract protected void deserializeResponse(
+            IOShape.Builder<?> builder,
+            Codec codec,
+            SmithyHttpResponse response
+    );
 
     private boolean isSuccess(ClientCall<?, ?> call, SmithyHttpResponse response) {
         // TODO: Better error checking.

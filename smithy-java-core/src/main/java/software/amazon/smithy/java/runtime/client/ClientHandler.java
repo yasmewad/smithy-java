@@ -10,6 +10,7 @@ import software.amazon.smithy.java.runtime.shapes.IOShape;
 /**
  * A handler used by clients to send requests and deserialize responses.
  */
+@FunctionalInterface
 public interface ClientHandler {
     /**
      * Send the input and deserialize a response or throw errors.

@@ -5,19 +5,30 @@
 
 package software.amazon.smithy.java.runtime.client;
 
+import software.amazon.smithy.java.runtime.endpoint.EndpointProvider;
 import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.shapes.SdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
 import software.amazon.smithy.java.runtime.util.Constant;
-import software.amazon.smithy.java.runtime.util.Context;
 
 /**
  * Context parameters made available to underlying transports like HTTP clients.
  */
-public final class ClientParams {
+public final class CallContext {
     /**
      * Contains the input of the operation being sent.
      */
     public static final Constant<IOShape> INPUT = new Constant<>(IOShape.class, "Input shape");
+
+    /**
+     * Deserialized output of the call.
+     */
+    public static final Constant<IOShape> OUTPUT = new Constant<>(IOShape.class, "Output");
+
+    /**
+     * Error encountered by the call that will be thrown.
+     */
+    public static final Constant<SdkException> ERROR = new Constant<>(SdkException.class, "Error");
 
     /**
      * Contains the schema of the operation being sent.
@@ -35,9 +46,10 @@ public final class ClientParams {
     public static final Constant<SdkSchema> OUTPUT_SCHEMA = new Constant<>(SdkSchema.class, "Output schema");
 
     /**
-     * Contains the context object of the operation being sent.
+     * The endpoint provider used to resolve the destination endpoint for a request.
      */
-    public static final Constant<Context> CALL_CONTEXT = new Constant<>(Context.class, "Call context");
+    public static final Constant<EndpointProvider> ENDPOINT_PROVIDER = new Constant<>(
+            EndpointProvider.class, "EndpointProvider");
 
-    private ClientParams() {}
+    private CallContext() {}
 }

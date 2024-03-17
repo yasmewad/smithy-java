@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.client.javaclient;
+package software.amazon.smithy.java.runtime.client.http;
 
 import java.io.IOException;
 import java.net.http.HttpClient;

@@ -5,8 +5,10 @@
 
 package software.amazon.smithy.java.runtime.client;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import software.amazon.smithy.java.runtime.client.interceptor.ClientInterceptor;
 import software.amazon.smithy.java.runtime.endpoint.Endpoint;
 import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.ModeledSdkException;
@@ -45,6 +47,20 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
     Endpoint endpoint();
 
     /**
+     * Gets the client interceptor used by the call.
+     *
+     * @return Returns the client interceptor.
+     */
+    ClientInterceptor interceptor();
+
+    /**
+     * Get the context of the call.
+     *
+     * @return Return the call context.
+     */
+    Context context();
+
+    /**
      * Create a builder for the output of the operation.
      *
      * <p>This is typically done by delegating to the underlying operation. This method allows creation to be
@@ -71,13 +87,6 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
     Optional<SdkShapeBuilder<ModeledSdkException>> createExceptionBuilder(Context context, String shapeId);
 
     /**
-     * Get the context of the call.
-     *
-     * @return Return the call context.
-     */
-    Context context();
-
-    /**
      * Create a ClientCall builder.
      *
      * @return Returns the created builder.
@@ -102,6 +111,7 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
         SdkOperation<I, O> operation;
         Context context;
         BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
+        ClientInterceptor interceptor = ClientInterceptor.NOOP;
 
         private Builder() {}
 
@@ -162,6 +172,17 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
          */
         public Builder<I, O> endpoint(Endpoint endpoint) {
             this.endpoint = endpoint;
+            return this;
+        }
+
+        /**
+         * Set the interceptor to use with this call.
+         *
+         * @param interceptor Interceptor to use.
+         * @return Returns the builder.
+         */
+        public Builder<I, O> interceptor(ClientInterceptor interceptor) {
+            this.interceptor = Objects.requireNonNull(interceptor);
             return this;
         }
 

@@ -8,6 +8,7 @@ package software.amazon.smithy.java.runtime.client;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import software.amazon.smithy.java.runtime.client.interceptor.ClientInterceptor;
 import software.amazon.smithy.java.runtime.endpoint.Endpoint;
 import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.ModeledSdkException;
@@ -28,6 +29,7 @@ final class ClientCallImpl<I extends IOShape, O extends IOShape> implements Clie
     private final SdkOperation<I, O> operation;
     private final Context context;
     private final BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
+    private final ClientInterceptor interceptor;
 
     ClientCallImpl(ClientCall.Builder<I, O> builder) {
         input = Objects.requireNonNull(builder.input, "input is null");
@@ -35,6 +37,7 @@ final class ClientCallImpl<I extends IOShape, O extends IOShape> implements Clie
         context = Objects.requireNonNull(builder.context, "context is null");
         errorCreator = Objects.requireNonNull(builder.errorCreator, "errorCreator is null");
         endpoint = Objects.requireNonNull(builder.endpoint, "endpoint is null");
+        interceptor = Objects.requireNonNull(builder.interceptor, "interceptor is null");
     }
 
     @Override
@@ -60,5 +63,10 @@ final class ClientCallImpl<I extends IOShape, O extends IOShape> implements Clie
     @Override
     public Endpoint endpoint() {
         return endpoint;
+    }
+
+    @Override
+    public ClientInterceptor interceptor() {
+        return interceptor;
     }
 }

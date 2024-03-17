@@ -5,9 +5,9 @@
 
 package software.amazon.smithy.java.runtime.util;
 
-import java.util.IdentityHashMap;
-import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * A typed context map.
@@ -21,16 +21,16 @@ public interface Context {
      */
     static Context create() {
         return new Context() {
-            private final Map<Constant<?>, Object> attributes = new IdentityHashMap<>();
+            private final ConcurrentMap<Constant<?>, Object> attributes = new ConcurrentHashMap<>();
 
             @Override
-            public <T> void setAttribute(Constant<T> key, T value) {
+            public final <T> void setAttribute(Constant<T> key, T value) {
                 attributes.put(key, value);
             }
 
             @Override
             @SuppressWarnings("unchecked")
-            public <T> T getAttribute(Constant<T> key) {
+            public final <T> T getAttribute(Constant<T> key) {
                 return (T) attributes.get(key);
             }
         };

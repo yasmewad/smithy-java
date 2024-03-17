@@ -14,7 +14,7 @@ import software.amazon.smithy.java.runtime.util.Context;
 public class EndpointProviderTest {
     @Test
     public void returnsStaticEndpoint() {
-        EndpointProvider<Context> provider = EndpointProvider.staticEndpoint("https://example.com");
+        EndpointProvider provider = EndpointProvider.staticEndpoint("https://example.com");
 
         assertThat(provider.resolveEndpoint(Context.create()).uri().toString(), equalTo("https://example.com"));
     }

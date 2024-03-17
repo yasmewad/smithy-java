@@ -41,6 +41,6 @@ public final class Constant<T> {
 
     @Override
     public int hashCode() {
-        return type.hashCode() * 3 + purpose.hashCode();
+        return System.identityHashCode(this);
     }
 }

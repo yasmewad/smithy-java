@@ -12,17 +12,15 @@ import software.amazon.smithy.java.runtime.util.Context;
 
 /**
  * Resolves an endpoint for an operation.
- *
- * @param <T> Context type.
  */
-public interface EndpointProvider<T extends Context> {
+public interface EndpointProvider {
     /**
      * Resolves an endpoint using the provided context.
      *
      * @param parameters Context parameters used during endpoint resolution.
      * @return Returns the resolved endpoint.
      */
-    Endpoint resolveEndpoint(T parameters);
+    Endpoint resolveEndpoint(Context parameters);
 
     /**
      * Create an endpoint provider that always returns the same endpoint.
@@ -30,7 +28,7 @@ public interface EndpointProvider<T extends Context> {
      * @param endpoint Endpoint to always resolve.
      * @return Returns the endpoint provider.
      */
-    static EndpointProvider<Context> staticEndpoint(String endpoint) {
+    static EndpointProvider staticEndpoint(String endpoint) {
         try {
             return staticEndpoint(new URI(endpoint));
         } catch (URISyntaxException e) {
@@ -44,7 +42,7 @@ public interface EndpointProvider<T extends Context> {
      * @param endpoint Endpoint to always resolve.
      * @return Returns the endpoint provider.
      */
-    static EndpointProvider<Context> staticEndpoint(URI endpoint) {
+    static EndpointProvider staticEndpoint(URI endpoint) {
         Context context = Context.create();
         return params -> new Endpoint() {
             @Override
