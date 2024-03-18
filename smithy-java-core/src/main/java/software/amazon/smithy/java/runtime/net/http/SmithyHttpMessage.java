@@ -11,6 +11,9 @@ import java.util.LinkedHashMap;
 import software.amazon.smithy.java.runtime.net.StoppableInputStream;
 
 public interface SmithyHttpMessage {
+
+    String startLine();
+
     SmithyHttpVersion httpVersion();
 
     SmithyHttpMessage withHttpVersion(SmithyHttpVersion version);

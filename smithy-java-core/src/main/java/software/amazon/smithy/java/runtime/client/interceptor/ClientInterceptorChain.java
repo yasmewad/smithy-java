@@ -7,9 +7,7 @@ package software.amazon.smithy.java.runtime.client.interceptor;
 
 import java.util.List;
 import software.amazon.smithy.java.runtime.shapes.IOShape;
-import software.amazon.smithy.java.runtime.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.util.Context;
-import software.amazon.smithy.java.runtime.util.Either;
 
 final class ClientInterceptorChain implements ClientInterceptor {
 
@@ -126,13 +124,10 @@ final class ClientInterceptorChain implements ClientInterceptor {
     }
 
     @Override
-    public Either<IOShape, ModeledSdkException> modifyOutputBeforeAttemptCompletion(IOShape output, Context context) {
-        Either<IOShape, ModeledSdkException> result = Either.left(output);
+    public IOShape modifyOutputBeforeAttemptCompletion(IOShape output, Context context) {
+        IOShape result = output;
         for (var interceptor : interceptors) {
-            if (result.isRight()) {
-                return result;
-            }
-            result = interceptor.modifyOutputBeforeAttemptCompletion(result.left(), context);
+            result = interceptor.modifyOutputBeforeAttemptCompletion(result, context);
         }
         return result;
     }
@@ -145,13 +140,10 @@ final class ClientInterceptorChain implements ClientInterceptor {
     }
 
     @Override
-    public Either<IOShape, ModeledSdkException> modifyOutputBeforeCompletion(IOShape output, Context context) {
-        Either<IOShape, ModeledSdkException> result = Either.left(output);
+    public IOShape modifyOutputBeforeCompletion(IOShape output, Context context) {
+        IOShape result = output;
         for (var interceptor : interceptors) {
-            if (result.isRight()) {
-                return result;
-            }
-            result = interceptor.modifyOutputBeforeCompletion(result.left(), context);
+            result = interceptor.modifyOutputBeforeCompletion(result, context);
         }
         return result;
     }

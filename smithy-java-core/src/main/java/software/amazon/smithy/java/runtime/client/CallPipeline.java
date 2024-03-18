@@ -9,16 +9,24 @@ import software.amazon.smithy.java.runtime.client.interceptor.ClientInterceptor;
 import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.SdkException;
 
-/**
- * An abstract class for implementing client handlers that takes care of interceptors.
- */
-public abstract class InterceptorHandler implements ClientHandler {
+public final class CallPipeline {
 
-    private static final System.Logger LOGGER = System.getLogger(InterceptorHandler.class.getName());
+    private final ClientProtocol protocol;
 
-    @Override
+    public CallPipeline(ClientProtocol protocol) {
+        this.protocol = protocol;
+    }
+
+    /**
+     * Send the input and deserialize a response or throw errors.
+     *
+     * @param call Call to invoke.
+     * @return Returns the deserialized response if successful.
+     * @param <I> Input shape.
+     * @param <O> Output shape.
+     */
     @SuppressWarnings("unchecked")
-    public final <I extends IOShape, O extends IOShape> O send(ClientCall<I, O> call) {
+    public <I extends IOShape, O extends IOShape> O send(ClientCall<I, O> call) {
         ClientInterceptor interceptor = call.interceptor();
         var context = call.context();
         context.setAttribute(CallContext.INPUT, call.input());
@@ -32,7 +40,7 @@ public abstract class InterceptorHandler implements ClientHandler {
 
         interceptor.readBeforeSerialization(context);
 
-        createRequest(call);
+        protocol.createRequest(call);
 
         interceptor.readAfterSerialization(context);
 
@@ -46,7 +54,7 @@ public abstract class InterceptorHandler implements ClientHandler {
 
         interceptor.readBeforeSigning(context);
 
-        // sign
+        protocol.signRequest(call);
 
         interceptor.readAfterSigning(context);
 
@@ -54,7 +62,7 @@ public abstract class InterceptorHandler implements ClientHandler {
 
         interceptor.readBeforeTransmit(context);
 
-        sendRequest(call);
+        protocol.sendRequest(call);
 
         interceptor.readAfterTransmit(context);
 
@@ -63,29 +71,34 @@ public abstract class InterceptorHandler implements ClientHandler {
         interceptor.readResponseBeforeDeserialization(context);
 
         try {
-            context.setAttribute(CallContext.OUTPUT, deserializeResponse(call));
+            context.setAttribute(CallContext.OUTPUT, protocol.deserializeResponse(call));
         } catch (SdkException e) {
             context.setAttribute(CallContext.ERROR, e);
         }
 
         interceptor.readAfterDeserialization(context);
 
-        try {
-            IOShape output = context.expectAttribute(CallContext.OUTPUT);
-            context.setAttribute(CallContext.OUTPUT, interceptor.modifyOutputBeforeAttemptCompletion(output, context));
-        } catch (SdkException e) {
-            context.setAttribute(CallContext.ERROR, e);
+        if (context.getAttribute(CallContext.OUTPUT) != null) {
+            try {
+                IOShape output = context.expectAttribute(CallContext.OUTPUT);
+                context.setAttribute(CallContext.OUTPUT, interceptor
+                        .modifyOutputBeforeAttemptCompletion(output, context));
+            } catch (SdkException e) {
+                context.setAttribute(CallContext.ERROR, e);
+            }
         }
 
         interceptor.readAfterAttempt(context);
 
         // End of retry loop
 
-        try {
-            IOShape output = context.expectAttribute(CallContext.OUTPUT);
-            context.setAttribute(CallContext.OUTPUT, interceptor.modifyOutputBeforeCompletion(output, context));
-        } catch (SdkException e) {
-            context.setAttribute(CallContext.ERROR, e);
+        if (context.getAttribute(CallContext.OUTPUT) != null) {
+            try {
+                IOShape output = context.expectAttribute(CallContext.OUTPUT);
+                context.setAttribute(CallContext.OUTPUT, interceptor.modifyOutputBeforeCompletion(output, context));
+            } catch (SdkException e) {
+                context.setAttribute(CallContext.ERROR, e);
+            }
         }
 
         interceptor.readAfterExecution(context);
@@ -97,10 +110,4 @@ public abstract class InterceptorHandler implements ClientHandler {
 
         return (O) context.expectAttribute(CallContext.OUTPUT);
     }
-
-    abstract protected void createRequest(ClientCall<?, ?> call);
-
-    abstract protected void sendRequest(ClientCall<?, ?> call);
-
-    abstract protected <I extends IOShape, O extends IOShape> O deserializeResponse(ClientCall<I, O> call);
 }

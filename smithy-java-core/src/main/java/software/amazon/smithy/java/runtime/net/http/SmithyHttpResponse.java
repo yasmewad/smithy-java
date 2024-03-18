@@ -12,6 +12,11 @@ import software.amazon.smithy.utils.SmithyBuilder;
 
 public interface SmithyHttpResponse extends SmithyHttpMessage {
 
+    @Override
+    default String startLine() {
+        return httpVersion() + " " + statusCode();
+    }
+
     int statusCode();
 
     SmithyHttpResponse withStatusCode(int statusCode);

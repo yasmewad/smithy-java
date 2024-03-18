@@ -7,41 +7,48 @@ package software.amazon.smithy.java.runtime.client.http;
 
 import software.amazon.smithy.java.runtime.client.ClientCall;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpClient;
+import software.amazon.smithy.java.runtime.net.http.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.serde.Codec;
 import software.amazon.smithy.java.runtime.serde.httpbinding.HttpBinding;
 import software.amazon.smithy.java.runtime.shapes.IOShape;
-import software.amazon.smithy.java.runtime.util.Context;
 
 /**
- * An abstract class for implementing handlers for protocols that use HTTP bindings.
+ * An HTTP-based protocol that uses HTTP binding traits.
  */
-public abstract class HttpBindingClientHandler extends HttpHandler {
+public class HttpBindingClientProtocol extends HttpClientProtocol {
 
-    public HttpBindingClientHandler(SmithyHttpClient client, Codec codec) {
+    public HttpBindingClientProtocol(SmithyHttpClient client, Codec codec) {
         super(client, codec);
     }
 
     @Override
-    protected final void createRequest(ClientCall<?, ?> call) {
-        call.context().setAttribute(HttpContext.HTTP_REQUEST, HttpBinding.requestSerializer()
+    protected SmithyHttpRequest createHttpRequest(Codec codec, ClientCall<?, ?> call) {
+        return HttpBinding.requestSerializer()
                 .operation(call.operation().schema())
-                .payloadCodec(codec())
+                .payloadCodec(codec)
                 .shapeValue(call.input())
                 .endpoint(call.endpoint().uri())
-                .serializeRequest());
+                .serializeRequest();
     }
 
     @Override
-    protected final void deserializeResponse(
-            IOShape.Builder<?> outputBuilder,
+    protected <I extends IOShape, O extends IOShape> void deserializeHttpResponse(
+            ClientCall<I, O> call,
             Codec codec,
-            SmithyHttpResponse response
+            SmithyHttpRequest request,
+            SmithyHttpResponse response,
+            IOShape.Builder<O> builder
     ) {
         HttpBinding.responseDeserializer()
                 .payloadCodec(codec)
-                .outputShapeBuilder(outputBuilder)
+                .outputShapeBuilder(builder)
                 .response(response)
                 .deserialize();
+    }
+
+    @Override
+    SmithyHttpResponse sendHttpRequest(ClientCall<?, ?> call, SmithyHttpClient client, SmithyHttpRequest request) {
+        return client.send(request, call.context());
     }
 }

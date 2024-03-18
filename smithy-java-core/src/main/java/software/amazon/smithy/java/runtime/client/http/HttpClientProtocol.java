@@ -11,8 +11,9 @@ import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import software.amazon.smithy.java.runtime.client.ClientCall;
-import software.amazon.smithy.java.runtime.client.InterceptorHandler;
+import software.amazon.smithy.java.runtime.client.ClientProtocol;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpClient;
+import software.amazon.smithy.java.runtime.net.http.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.serde.Codec;
 import software.amazon.smithy.java.runtime.serde.httpbinding.HttpBinding;
@@ -22,60 +23,97 @@ import software.amazon.smithy.java.runtime.shapes.SdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
 
 /**
- * An abstract class for implementing client handlers that use HTTP.
+ * An abstract HTTP-Based protocol.
  */
-public abstract class HttpHandler extends InterceptorHandler {
+public abstract class HttpClientProtocol implements ClientProtocol {
 
-    private static final System.Logger LOGGER = System.getLogger(HttpHandler.class.getName());
+    private static final System.Logger LOGGER = System.getLogger(HttpClientProtocol.class.getName());
     private static final String X_AMZN_ERROR_TYPE = "X-Amzn-Errortype";
 
     private final SmithyHttpClient client;
     private final Codec codec;
 
-    public HttpHandler(SmithyHttpClient client, Codec codec) {
+    public HttpClientProtocol(SmithyHttpClient client, Codec codec) {
         this.client = client;
         this.codec = codec;
     }
 
-    protected SmithyHttpClient client() {
-        return client;
-    }
+    abstract protected SmithyHttpRequest createHttpRequest(Codec codec, ClientCall<?, ?> call);
 
-    protected Codec codec() {
-        return codec;
+    abstract SmithyHttpResponse sendHttpRequest(
+            ClientCall<?, ?> call,
+            SmithyHttpClient client,
+            SmithyHttpRequest request
+    );
+
+    protected abstract <I extends IOShape, O extends IOShape> void deserializeHttpResponse(
+            ClientCall<I, O> call,
+            Codec codec,
+            SmithyHttpRequest request,
+            SmithyHttpResponse response,
+            IOShape.Builder<O> builder
+    );
+
+    @Override
+    public final void createRequest(ClientCall<?, ?> call) {
+        // Initialize the context with more HTTP information.
+        call.context().setAttribute(HttpContext.PAYLOAD_CODEC, codec);
+
+        var request = createHttpRequest(codec, call);
+        call.context().setAttribute(HttpContext.HTTP_REQUEST, request);
     }
 
     @Override
-    protected void sendRequest(ClientCall<?, ?> call) {
+    public final void signRequest(ClientCall<?, ?> call) {
         var request = call.context().expectAttribute(HttpContext.HTTP_REQUEST);
-        var response = client().send(request, call.context());
+        LOGGER.log(System.Logger.Level.TRACE, () -> "Signing HTTP request: " + request.startLine());
+
+        var signer = call.context().getAttribute(HttpContext.SIGNER);
+        if (signer == null) {
+            LOGGER.log(System.Logger.Level.TRACE, () -> "No signer registered for request: " + request.startLine());
+        } else {
+            var signedRequest = signer.sign(request, call.context());
+            LOGGER.log(System.Logger.Level.TRACE, () -> "Signed HTTP request: " + signedRequest.startLine());
+            call.context().setAttribute(HttpContext.HTTP_REQUEST, signedRequest);
+        }
+    }
+
+    @Override
+    public final void sendRequest(ClientCall<?, ?> call) {
+        var request = call.context().expectAttribute(HttpContext.HTTP_REQUEST);
+        LOGGER.log(System.Logger.Level.TRACE, () -> "Sending HTTP request: " + request.startLine());
+        var response = sendHttpRequest(call, client, request);
+        LOGGER.log(System.Logger.Level.TRACE, () -> "Got HTTP response: " + response.startLine());
         call.context().setAttribute(HttpContext.HTTP_RESPONSE, response);
     }
 
     @Override
-    protected <I extends IOShape, O extends IOShape> O deserializeResponse(ClientCall<I, O> call) {
-        SmithyHttpResponse response = call.context().expectAttribute(HttpContext.HTTP_RESPONSE);
+    public final <I extends IOShape, O extends IOShape> O deserializeResponse(ClientCall<I, O> call) {
+        var request = call.context().expectAttribute(HttpContext.HTTP_REQUEST);
+        var response = call.context().expectAttribute(HttpContext.HTTP_RESPONSE);
+
         if (isSuccess(call, response)) {
             var outputBuilder = call.createOutputBuilder(call.context(), call.operation().outputSchema().id());
-            deserializeResponse(outputBuilder, codec, response);
+            deserializeHttpResponse(call, codec, request, response, outputBuilder);
             return outputBuilder.errorCorrection().build();
         } else {
             throw createError(call, response);
         }
     }
 
-    abstract protected void deserializeResponse(
-            IOShape.Builder<?> builder,
-            Codec codec,
-            SmithyHttpResponse response
-    );
-
     private boolean isSuccess(ClientCall<?, ?> call, SmithyHttpResponse response) {
         // TODO: Better error checking.
         return response.statusCode() >= 200 && response.statusCode() <= 299;
     }
 
-    private SdkException createError(ClientCall<?, ?> call, SmithyHttpResponse response) {
+    /**
+     * An overrideable error deserializer.
+     *
+     * @param call     Call being sent.
+     * @param response HTTP response to deserialize.
+     * @return Returns the deserialized error.
+     */
+    protected SdkException createError(ClientCall<?, ?> call, SmithyHttpResponse response) {
         return response
                 .headers()
                 // Grab the error ID from the header first.

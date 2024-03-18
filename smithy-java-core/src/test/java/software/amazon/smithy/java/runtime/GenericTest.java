@@ -11,8 +11,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import software.amazon.smithy.java.runtime.client.http.RestJsonClientHandler;
 import software.amazon.smithy.java.runtime.client.http.JavaHttpClient;
+import software.amazon.smithy.java.runtime.client.http.RestJsonClientProtocol;
 import software.amazon.smithy.java.runtime.endpoint.EndpointProvider;
 import software.amazon.smithy.java.runtime.myservice.PersonDirectoryClient;
 import software.amazon.smithy.java.runtime.myservice.model.PersonDirectory;
@@ -35,7 +35,7 @@ public class GenericTest {
     public void theClient() {
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientHandler(new JavaHttpClient(httpClient)))
+                .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
                 .endpointProvider(EndpointProvider.staticEndpoint("https://example.com"))
                 .build();
         PutPersonInput input = PutPersonInput.builder()
@@ -51,7 +51,7 @@ public class GenericTest {
     public void streamingRequestPayload() {
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientHandler(new JavaHttpClient(httpClient)))
+                .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
                 .endpointProvider(EndpointProvider.staticEndpoint("https://example.com"))
                 .build();
         PutPersonImageInput input = PutPersonImageInput.builder()

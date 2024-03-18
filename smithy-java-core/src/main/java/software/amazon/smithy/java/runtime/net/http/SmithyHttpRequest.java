@@ -21,6 +21,11 @@ public interface SmithyHttpRequest extends SmithyHttpMessage {
 
     SmithyHttpRequest withUri(URI uri);
 
+    @Override
+    default String startLine() {
+        return method() + " " + uri().getHost() + " " + httpVersion();
+    }
+
     static Builder builder() {
         return new Builder();
     }

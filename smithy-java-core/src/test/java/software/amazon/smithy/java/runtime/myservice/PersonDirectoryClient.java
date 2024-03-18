@@ -6,8 +6,9 @@
 package software.amazon.smithy.java.runtime.myservice;
 
 import java.util.Objects;
+import software.amazon.smithy.java.runtime.client.CallPipeline;
 import software.amazon.smithy.java.runtime.client.ClientCall;
-import software.amazon.smithy.java.runtime.client.ClientHandler;
+import software.amazon.smithy.java.runtime.client.ClientProtocol;
 import software.amazon.smithy.java.runtime.endpoint.Endpoint;
 import software.amazon.smithy.java.runtime.endpoint.EndpointParams;
 import software.amazon.smithy.java.runtime.endpoint.EndpointProvider;
@@ -31,13 +32,12 @@ import software.amazon.smithy.utils.SmithyBuilder;
 public final class PersonDirectoryClient implements PersonDirectory {
 
     private final EndpointProvider endpointProvider;
-    private final ClientHandler protocol;
+    private final CallPipeline pipeline;
     private final TypeRegistry typeRegistry;
 
     private PersonDirectoryClient(Builder builder) {
-        this.protocol = Objects.requireNonNull(builder.protocol, "protocol is null");
         this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
-
+        this.pipeline = new CallPipeline(Objects.requireNonNull(builder.protocol, "protocol is null"));
         // Here is where you would register errors bound to the service on the registry.
         // ...
         this.typeRegistry = TypeRegistry.builder().build();
@@ -67,7 +67,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
                 .putAllTypes(typeRegistry, operation.typeRegistry())
                 .build();
 
-        return protocol.send(ClientCall.<I, O> builder()
+        return pipeline.send(ClientCall.<I, O> builder()
                                      .input(input)
                                      .operation(operation)
                                      .endpoint(resolveEndpoint(operation.schema()))
@@ -87,7 +87,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     public static final class Builder implements SmithyBuilder<PersonDirectoryClient> {
 
-        private ClientHandler protocol;
+        private ClientProtocol protocol;
         private EndpointProvider endpointProvider;
 
         private Builder() {}
@@ -98,7 +98,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
          * @param protocol Protocol to use.
          * @return Returns the builder.
          */
-        public Builder protocol(ClientHandler protocol) {
+        public Builder protocol(ClientProtocol protocol) {
             this.protocol = protocol;
             return this;
         }
