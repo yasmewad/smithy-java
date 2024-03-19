@@ -5,15 +5,18 @@
 
 package software.amazon.smithy.java.runtime.client;
 
+import java.util.concurrent.CompletableFuture;
 import software.amazon.smithy.java.runtime.client.interceptor.ClientInterceptor;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
-import software.amazon.smithy.java.runtime.shapes.SdkException;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamingShape;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
+import software.amazon.smithy.java.runtime.util.Context;
 
-public final class CallPipeline {
+public final class CallPipeline<RequestT, ResponseT> {
 
-    private final ClientProtocol protocol;
+    private static final System.Logger LOGGER = System.getLogger(CallPipeline.class.getName());
+    private final ClientProtocol<RequestT, ResponseT> protocol;
 
-    public CallPipeline(ClientProtocol protocol) {
+    public CallPipeline(ClientProtocol<RequestT, ResponseT> protocol) {
         this.protocol = protocol;
     }
 
@@ -25,8 +28,8 @@ public final class CallPipeline {
      * @param <I> Input shape.
      * @param <O> Output shape.
      */
-    @SuppressWarnings("unchecked")
-    public <I extends IOShape, O extends IOShape> O send(ClientCall<I, O> call) {
+    public <I extends SerializableShape, O extends SerializableShape, StreamT>
+    CompletableFuture<StreamingShape<O, StreamT>> send(ClientCall<I, O, StreamT> call) {
         ClientInterceptor interceptor = call.interceptor();
         var context = call.context();
         context.setAttribute(CallContext.INPUT, call.input());
@@ -40,74 +43,72 @@ public final class CallPipeline {
 
         interceptor.readBeforeSerialization(context);
 
-        protocol.createRequest(call);
+        RequestT request = protocol.createRequest(call);
 
         interceptor.readAfterSerialization(context);
 
-        interceptor.modifyRequestBeforeRetryLoop(context);
+        request = interceptor.modifyRequestBeforeRetryLoop(context, request);
 
         // Retry loop
 
         interceptor.readBeforeAttempt(context);
 
-        interceptor.modifyRequestBeforeSigning(context);
+        request = interceptor.modifyRequestBeforeSigning(context, request);
 
         interceptor.readBeforeSigning(context);
 
-        protocol.signRequest(call);
+        return protocol.signRequest(call, request)
+                .thenApply(signedRequest -> {
+                    interceptor.readAfterSigning(context);
+                    signedRequest = interceptor.modifyRequestBeforeTransmit(context, signedRequest);
+                    interceptor.readBeforeTransmit(context);
+                    return signedRequest;
+                })
+                .thenCompose(signed -> protocol
+                        .sendRequest(call, signed)
+                        .thenCompose(response -> deserialize(call, signed, response, interceptor)));
+    }
 
-        interceptor.readAfterSigning(context);
+    private <I extends SerializableShape, O extends SerializableShape, StreamT>
+    CompletableFuture<StreamingShape<O, StreamT>> deserialize(
+            ClientCall<I, O, StreamT> call,
+            RequestT request,
+            ResponseT response,
+            ClientInterceptor interceptor
+    ) {
+        LOGGER.log(System.Logger.Level.TRACE, () -> "Deserializing response with "
+                                                    + protocol.getClass()
+                                                    + " for " + request + ": " + response);
 
-        interceptor.modifyRequestBeforeTransmit(context);
-
-        interceptor.readBeforeTransmit(context);
-
-        protocol.sendRequest(call);
+        Context context = call.context();
 
         interceptor.readAfterTransmit(context);
 
-        interceptor.modifyResponseBeforeDeserialization(context);
+        ResponseT modifiedResponse = interceptor.modifyResponseBeforeDeserialization(context, response);
 
         interceptor.readResponseBeforeDeserialization(context);
 
-        try {
-            context.setAttribute(CallContext.OUTPUT, protocol.deserializeResponse(call));
-        } catch (SdkException e) {
-            context.setAttribute(CallContext.ERROR, e);
-        }
+        return protocol
+                .deserializeResponse(call, request, modifiedResponse)
+                .thenCompose(ioShape -> {
+                    O shape = ioShape.shape();
+                    context.setAttribute(CallContext.OUTPUT, shape);
+                    interceptor.readAfterDeserialization(context);
+                    shape = interceptor.modifyOutputBeforeAttemptCompletion(shape, context);
+                    interceptor.readAfterAttempt(context);
 
-        interceptor.readAfterDeserialization(context);
+                    // End of retry loop
+                    shape = interceptor.modifyOutputBeforeCompletion(shape, context);
+                    interceptor.readAfterExecution(context);
+                    var finalShape = shape;
 
-        if (context.getAttribute(CallContext.OUTPUT) != null) {
-            try {
-                IOShape output = context.expectAttribute(CallContext.OUTPUT);
-                context.setAttribute(CallContext.OUTPUT, interceptor
-                        .modifyOutputBeforeAttemptCompletion(output, context));
-            } catch (SdkException e) {
-                context.setAttribute(CallContext.ERROR, e);
-            }
-        }
-
-        interceptor.readAfterAttempt(context);
-
-        // End of retry loop
-
-        if (context.getAttribute(CallContext.OUTPUT) != null) {
-            try {
-                IOShape output = context.expectAttribute(CallContext.OUTPUT);
-                context.setAttribute(CallContext.OUTPUT, interceptor.modifyOutputBeforeCompletion(output, context));
-            } catch (SdkException e) {
-                context.setAttribute(CallContext.ERROR, e);
-            }
-        }
-
-        interceptor.readAfterExecution(context);
-
-        SdkException error = context.getAttribute(CallContext.ERROR);
-        if (error != null) {
-            throw error;
-        }
-
-        return (O) context.expectAttribute(CallContext.OUTPUT);
+                    // Subscribe the stream handler and then return it's future result.
+                    var subscriber = call.responseStreamHandler().apply(finalShape);
+                    // Note: this expects that if the body is already consumed upstream, then it has been replaced
+                    // with an empty body that can accept the subscriber. Otherwise, an IllegalStateException might
+                    // be thrown by publishers that accept a single subscriber.
+                    ioShape.value().subscribe(subscriber);
+                    return subscriber.result().thenApply(result -> StreamingShape.of(finalShape, result));
+                });
     }
 }

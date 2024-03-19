@@ -5,10 +5,8 @@
 
 package software.amazon.smithy.java.runtime.serde;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -40,7 +38,7 @@ public interface Codec {
      * @param source Source to parse.
      * @return Returns the created deserializer.
      */
-    ShapeDeserializer createDeserializer(InputStream source);
+    ShapeDeserializer createDeserializer(byte[] source);
 
     /**
      * Helper method to serialize a shape a string.
@@ -70,7 +68,7 @@ public interface Codec {
      * @return Returns the built and error-corrected shape.
      * @param <T> Shape to build.
      */
-    default <T extends SerializableShape> T deserializeShape(InputStream source, SdkShapeBuilder<T> builder) {
+    default <T extends SerializableShape> T deserializeShape(byte[] source, SdkShapeBuilder<T> builder) {
         return builder.deserialize(createDeserializer(source)).errorCorrection().build();
     }
 
@@ -83,10 +81,6 @@ public interface Codec {
      * @param <T> Shape to build.
      */
     default <T extends SerializableShape> T deserializeShape(String source, SdkShapeBuilder<T> builder) {
-        try (ByteArrayInputStream in = new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8))) {
-            return deserializeShape(in, builder);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return deserializeShape(source.getBytes(StandardCharsets.UTF_8), builder);
     }
 }

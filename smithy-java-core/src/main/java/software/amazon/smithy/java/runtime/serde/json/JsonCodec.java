@@ -5,7 +5,6 @@
 
 package software.amazon.smithy.java.runtime.serde.json;
 
-import java.io.InputStream;
 import java.io.OutputStream;
 import software.amazon.smithy.java.runtime.serde.Codec;
 import software.amazon.smithy.java.runtime.serde.ShapeDeserializer;
@@ -52,7 +51,7 @@ public final class JsonCodec implements Codec {
     }
 
     @Override
-    public ShapeDeserializer createDeserializer(InputStream source) {
+    public ShapeDeserializer createDeserializer(byte[] source) {
         return new JsonDeserializer(source, useJsonName, defaultTimestampFormat, useTimestampFormat);
     }
 

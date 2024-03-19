@@ -11,7 +11,7 @@ package software.amazon.smithy.java.runtime.shapes;
  * @param <I> Operation input shape type.
  * @param <O> Operation output shape type.
  */
-public interface SdkOperation<I extends IOShape, O extends IOShape> {
+public interface SdkOperation<I extends SerializableShape, O extends SerializableShape> {
     /**
      * Create a builder used to create the input of the operation.
      *
@@ -24,7 +24,7 @@ public interface SdkOperation<I extends IOShape, O extends IOShape> {
      *
      * @return Returns the operation output builder.
      */
-    IOShape.Builder<O> outputBuilder();
+    SdkShapeBuilder<O> outputBuilder();
 
     /**
      * Get the schema of the operation.

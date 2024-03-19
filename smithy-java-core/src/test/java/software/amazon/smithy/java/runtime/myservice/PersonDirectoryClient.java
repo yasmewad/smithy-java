@@ -6,12 +6,16 @@
 package software.amazon.smithy.java.runtime.myservice;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import software.amazon.smithy.java.runtime.client.CallPipeline;
 import software.amazon.smithy.java.runtime.client.ClientCall;
 import software.amazon.smithy.java.runtime.client.ClientProtocol;
 import software.amazon.smithy.java.runtime.endpoint.Endpoint;
 import software.amazon.smithy.java.runtime.endpoint.EndpointParams;
 import software.amazon.smithy.java.runtime.endpoint.EndpointProvider;
+import software.amazon.smithy.java.runtime.myservice.model.GetPersonImage;
+import software.amazon.smithy.java.runtime.myservice.model.GetPersonImageInput;
+import software.amazon.smithy.java.runtime.myservice.model.GetPersonImageOutput;
 import software.amazon.smithy.java.runtime.myservice.model.PersonDirectory;
 import software.amazon.smithy.java.runtime.myservice.model.PutPerson;
 import software.amazon.smithy.java.runtime.myservice.model.PutPersonImage;
@@ -19,10 +23,13 @@ import software.amazon.smithy.java.runtime.myservice.model.PutPersonImageInput;
 import software.amazon.smithy.java.runtime.myservice.model.PutPersonImageOutput;
 import software.amazon.smithy.java.runtime.myservice.model.PutPersonInput;
 import software.amazon.smithy.java.runtime.myservice.model.PutPersonOutput;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamHandler;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamingShape;
 import software.amazon.smithy.java.runtime.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkOperation;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.java.runtime.shapes.TypeRegistry;
 import software.amazon.smithy.java.runtime.util.Context;
 import software.amazon.smithy.model.shapes.ShapeId;
@@ -31,13 +38,15 @@ import software.amazon.smithy.utils.SmithyBuilder;
 // Example of a potentially generated client.
 public final class PersonDirectoryClient implements PersonDirectory {
 
+    private static final System.Logger LOGGER = System.getLogger(PersonDirectoryClient.class.getName());
+
     private final EndpointProvider endpointProvider;
-    private final CallPipeline pipeline;
+    private final CallPipeline<?, ?> pipeline;
     private final TypeRegistry typeRegistry;
 
     private PersonDirectoryClient(Builder builder) {
         this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
-        this.pipeline = new CallPipeline(Objects.requireNonNull(builder.protocol, "protocol is null"));
+        this.pipeline = new CallPipeline<>(Objects.requireNonNull(builder.protocol, "protocol is null"));
         // Here is where you would register errors bound to the service on the registry.
         // ...
         this.typeRegistry = TypeRegistry.builder().build();
@@ -48,17 +57,35 @@ public final class PersonDirectoryClient implements PersonDirectory {
     }
 
     @Override
-    public PutPersonOutput putPerson(PutPersonInput input, Context context) {
-        return call(input, new PutPerson(), context);
+    public CompletableFuture<PutPersonOutput> putPersonAsync(PutPersonInput input, Context context) {
+        return call(input, null, StreamHandler.discarding(), new PutPerson(), context)
+                .thenApply(StreamingShape::shape);
     }
 
     @Override
-    public PutPersonImageOutput putPersonImage(PutPersonImageInput input, Context context) {
-        return call(input, new PutPersonImage(), context);
+    public CompletableFuture<PutPersonImageOutput> putPersonImageAsync(
+            PutPersonImageInput input,
+            StreamPublisher image,
+            Context context
+    ) {
+        return call(input, image, StreamHandler.discarding(), new PutPersonImage(), context)
+                .thenApply(StreamingShape::shape);
     }
 
-    private <I extends IOShape, O extends IOShape> O call(
+    @Override
+    public <ResultT> CompletableFuture<StreamingShape<GetPersonImageOutput, ResultT>> getPersonImageAsync(
+            GetPersonImageInput input,
+            Context context,
+            StreamHandler<GetPersonImageOutput, ResultT> transformer
+    ) {
+        return call(input, null, transformer, new GetPersonImage(), context);
+    }
+
+    private <I extends SerializableShape, O extends SerializableShape, StreamT>
+    CompletableFuture<StreamingShape<O, StreamT>> call(
             I input,
+            StreamPublisher inputStream,
+            StreamHandler<O, StreamT> streamHandler,
             SdkOperation<I, O> operation,
             Context context
     ) {
@@ -67,11 +94,13 @@ public final class PersonDirectoryClient implements PersonDirectory {
                 .putAllTypes(typeRegistry, operation.typeRegistry())
                 .build();
 
-        return pipeline.send(ClientCall.<I, O> builder()
+        return pipeline.send(ClientCall.<I, O, StreamT> builder()
                                      .input(input)
                                      .operation(operation)
                                      .endpoint(resolveEndpoint(operation.schema()))
                                      .context(context)
+                                     .inputStream(inputStream)
+                                     .streamHandler(streamHandler)
                                      .errorCreator((c, id) -> {
                                          ShapeId shapeId = ShapeId.from(id);
                                          return operationRegistry.create(shapeId, ModeledSdkException.class);
@@ -87,7 +116,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     public static final class Builder implements SmithyBuilder<PersonDirectoryClient> {
 
-        private ClientProtocol protocol;
+        private ClientProtocol<?, ?> protocol;
         private EndpointProvider endpointProvider;
 
         private Builder() {}
@@ -98,7 +127,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
          * @param protocol Protocol to use.
          * @return Returns the builder.
          */
-        public Builder protocol(ClientProtocol protocol) {
+        public Builder protocol(ClientProtocol<?, ?> protocol) {
             this.protocol = protocol;
             return this;
         }

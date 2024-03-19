@@ -5,25 +5,22 @@
 
 package software.amazon.smithy.java.runtime.net.http;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.http.HttpHeaders;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
-import software.amazon.smithy.java.runtime.net.StoppableInputStream;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 
 public final class SmithyHttpResponseImpl implements SmithyHttpResponse {
 
     private final SmithyHttpVersion httpVersion;
     private final int statusCode;
-    private final StoppableInputStream body;
+    private final StreamPublisher body;
     private final HttpHeaders headers;
 
     SmithyHttpResponseImpl(SmithyHttpResponse.Builder builder) {
         this.httpVersion = Objects.requireNonNull(builder.httpVersion);
         this.statusCode = builder.statusCode;
-        this.body = Objects.requireNonNullElseGet(builder.body, StoppableInputStream::ofEmpty);
+        this.body = Objects.requireNonNullElseGet(builder.body, StreamPublisher::ofEmpty);
         this.headers = Objects.requireNonNullElseGet(builder.headers, () -> HttpHeaders.of(Map.of(), (k, v) -> true));
     }
 
@@ -35,14 +32,6 @@ public final class SmithyHttpResponseImpl implements SmithyHttpResponse {
             result.append(field).append(": ").append(value).append(System.lineSeparator());
         }));
         result.append(System.lineSeparator());
-
-        try {
-            // Include up to 16 KB of the output.
-            result.append(new String(body.readNBytes(16384), StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
         return result.toString();
     }
 
@@ -77,12 +66,12 @@ public final class SmithyHttpResponseImpl implements SmithyHttpResponse {
     }
 
     @Override
-    public StoppableInputStream body() {
+    public StreamPublisher body() {
         return body;
     }
 
     @Override
-    public SmithyHttpResponse withBody(StoppableInputStream body) {
+    public SmithyHttpResponse withBody(StreamPublisher body) {
         return SmithyHttpResponse.builder().with(this).body(body).build();
     }
 }

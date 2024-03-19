@@ -5,15 +5,15 @@
 
 package software.amazon.smithy.java.runtime.serde.httpbinding;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.net.http.HttpHeaders;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import software.amazon.smithy.java.runtime.myservice.model.PutPersonOutput;
 import software.amazon.smithy.java.runtime.serde.json.JsonCodec;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
 import software.amazon.smithy.model.pattern.UriPattern;
 import software.amazon.smithy.model.shapes.ShapeId;
@@ -102,13 +102,13 @@ public class HttpBindingDeserializerTest {
         var headers = HttpHeaders.of(headerMap, (k, v) -> true);
         var bday = Instant.now().toString();
         var data = "{\"name\":\"Michael\",\"favoriteColor\":\"Green\",\"Age\":100,\"birthday\":\"" + bday + "\"}";
-        InputStream payload = new ByteArrayInputStream(data.getBytes());
+        var bytes = data.getBytes(StandardCharsets.UTF_8);
 
         HttpBindingDeserializer deserializer = HttpBindingDeserializer.builder()
                 .payloadCodec(json)
                 .responseStatus(200)
                 .headers(headers)
-                .body(payload)
+                .body(StreamPublisher.ofString("test"))
                 .build();
 
         PutPersonOutput output = PutPersonOutput.builder().deserialize(deserializer).build();

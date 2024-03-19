@@ -14,8 +14,9 @@ import java.util.Map;
 import software.amazon.smithy.java.runtime.serde.ShapeDeserializer;
 import software.amazon.smithy.java.runtime.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.serde.ToStringSerializer;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;
 import software.amazon.smithy.model.traits.HttpLabelTrait;
@@ -25,7 +26,7 @@ import software.amazon.smithy.model.traits.JsonNameTrait;
 import software.amazon.smithy.model.traits.RequiredTrait;
 
 // Example of a potentially generated shape.
-public final class PutPersonInput implements IOShape {
+public final class PutPersonInput implements SerializableShape {
 
     public static final ShapeId ID = ShapeId.from("smithy.example#PutPersonInput");
     private static final SdkSchema SCHEMA_NAME = SdkSchema
@@ -117,7 +118,7 @@ public final class PutPersonInput implements IOShape {
         });
     }
 
-    public static final class Builder implements IOShape.Builder<PutPersonInput> {
+    public static final class Builder implements SdkShapeBuilder<PutPersonInput> {
 
         private String name;
         private int age = 0;

@@ -5,11 +5,11 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.http.HttpHeaders;
-import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import software.amazon.smithy.java.runtime.client.ClientCall;
 import software.amazon.smithy.java.runtime.client.ClientProtocol;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpClient;
@@ -17,18 +17,21 @@ import software.amazon.smithy.java.runtime.net.http.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.serde.Codec;
 import software.amazon.smithy.java.runtime.serde.httpbinding.HttpBinding;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamingShape;
 import software.amazon.smithy.java.runtime.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 
 /**
  * An abstract HTTP-Based protocol.
  */
-public abstract class HttpClientProtocol implements ClientProtocol {
+public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpRequest, SmithyHttpResponse> {
 
     private static final System.Logger LOGGER = System.getLogger(HttpClientProtocol.class.getName());
     private static final String X_AMZN_ERROR_TYPE = "X-Amzn-Errortype";
+    private static final Set<String> TEXT_CONTENT_TYPES = Set.of("application/json", "application/xml");
 
     private final SmithyHttpClient client;
     private final Codec codec;
@@ -38,34 +41,62 @@ public abstract class HttpClientProtocol implements ClientProtocol {
         this.codec = codec;
     }
 
-    abstract protected SmithyHttpRequest createHttpRequest(Codec codec, ClientCall<?, ?> call);
+    /**
+     * Create an unsigned HTTP request for the given call.
+     *
+     * @param codec Codec used to serialize structured payloads.
+     * @param call  Call being invoked.s
+     * @return Returns the serialized request.
+     */
+    abstract protected SmithyHttpRequest createHttpRequest(Codec codec, ClientCall<?, ?, ?> call);
 
-    abstract SmithyHttpResponse sendHttpRequest(
-            ClientCall<?, ?> call,
+    /**
+     * Send the HTTP request and return the eventually completed response.
+     *
+     * @param call    Call being invoked.
+     * @param client  Client used to send the request.
+     * @param request Request to send.
+     * @return the future response.
+     */
+    abstract CompletableFuture<SmithyHttpResponse> sendHttpRequest(
+            ClientCall<?, ?, ?> call,
             SmithyHttpClient client,
             SmithyHttpRequest request
     );
 
-    protected abstract <I extends IOShape, O extends IOShape> void deserializeHttpResponse(
-            ClientCall<I, O> call,
+    /**
+     * Deserializes the HTTP response and returns the updated output stream.
+     *
+     * @param call     Call being invoked.
+     * @param codec    Codec used to deserialize structured payloads.
+     * @param request  Request that was sent.
+     * @param response Response that was received.
+     * @param builder  Builder to populate while deserializing.
+     * @return Returns a future that contains the updated output stream, needed if the stream was consumed and must
+     *         be replaced by an empty stream, or if other wrappers are applied.
+     * @param <I> Input shape.
+     * @param <O> Output shape.
+     */
+    protected abstract <I extends SerializableShape, O extends SerializableShape>
+    CompletableFuture<StreamPublisher> deserializeHttpResponse(
+            ClientCall<I, O, ?> call,
             Codec codec,
             SmithyHttpRequest request,
             SmithyHttpResponse response,
-            IOShape.Builder<O> builder
+            SdkShapeBuilder<O> builder
     );
 
     @Override
-    public final void createRequest(ClientCall<?, ?> call) {
+    public final SmithyHttpRequest createRequest(ClientCall<?, ?, ?> call) {
         // Initialize the context with more HTTP information.
         call.context().setAttribute(HttpContext.PAYLOAD_CODEC, codec);
-
         var request = createHttpRequest(codec, call);
         call.context().setAttribute(HttpContext.HTTP_REQUEST, request);
+        return request;
     }
 
     @Override
-    public final void signRequest(ClientCall<?, ?> call) {
-        var request = call.context().expectAttribute(HttpContext.HTTP_REQUEST);
+    public final CompletableFuture<SmithyHttpRequest> signRequest(ClientCall<?, ?, ?> call, SmithyHttpRequest request) {
         LOGGER.log(System.Logger.Level.TRACE, () -> "Signing HTTP request: " + request.startLine());
 
         var signer = call.context().getAttribute(HttpContext.SIGNER);
@@ -76,32 +107,51 @@ public abstract class HttpClientProtocol implements ClientProtocol {
             LOGGER.log(System.Logger.Level.TRACE, () -> "Signed HTTP request: " + signedRequest.startLine());
             call.context().setAttribute(HttpContext.HTTP_REQUEST, signedRequest);
         }
+
+        return CompletableFuture.completedFuture(request);
     }
 
     @Override
-    public final void sendRequest(ClientCall<?, ?> call) {
-        var request = call.context().expectAttribute(HttpContext.HTTP_REQUEST);
+    public final CompletableFuture<SmithyHttpResponse> sendRequest(
+            ClientCall<?, ?, ?> call,
+            SmithyHttpRequest request
+    ) {
         LOGGER.log(System.Logger.Level.TRACE, () -> "Sending HTTP request: " + request.startLine());
-        var response = sendHttpRequest(call, client, request);
-        LOGGER.log(System.Logger.Level.TRACE, () -> "Got HTTP response: " + response.startLine());
-        call.context().setAttribute(HttpContext.HTTP_RESPONSE, response);
+        return sendHttpRequest(call, client, request).thenApply(response -> {
+            LOGGER.log(System.Logger.Level.TRACE, () -> "Got HTTP response: " + response.startLine());
+            call.context().setAttribute(HttpContext.HTTP_RESPONSE, response);
+            return response;
+        });
     }
 
     @Override
-    public final <I extends IOShape, O extends IOShape> O deserializeResponse(ClientCall<I, O> call) {
-        var request = call.context().expectAttribute(HttpContext.HTTP_REQUEST);
-        var response = call.context().expectAttribute(HttpContext.HTTP_RESPONSE);
-
+    public final <I extends SerializableShape, O extends SerializableShape>
+    CompletableFuture<StreamingShape<O, StreamPublisher>> deserializeResponse(
+            ClientCall<I, O, ?> call,
+            SmithyHttpRequest request,
+            SmithyHttpResponse response
+    ) {
         if (isSuccess(call, response)) {
+            LOGGER.log(System.Logger.Level.TRACE, "Deserializing successful response with " + getClass().getName());
             var outputBuilder = call.createOutputBuilder(call.context(), call.operation().outputSchema().id());
-            deserializeHttpResponse(call, codec, request, response, outputBuilder);
-            return outputBuilder.errorCorrection().build();
+            return deserializeHttpResponse(call, codec, request, response, outputBuilder)
+                    .thenApply(updatedResponse -> {
+                        LOGGER.log(System.Logger.Level.TRACE, "Deserialized HTTP response with " + getClass().getName()
+                                                              + " into " + outputBuilder.getClass().getName());
+                        O output = outputBuilder.errorCorrection().build();
+                        // TODO: error handling from the builder.
+                        LOGGER.log(System.Logger.Level.TRACE, "Successfully built " + output
+                                                              + " from HTTP response with " + getClass().getName());
+                        return StreamingShape.of(output, updatedResponse);
+                    });
         } else {
-            throw createError(call, response);
+            return createError(call, response).thenApply(e -> {
+                throw e;
+            });
         }
     }
 
-    private boolean isSuccess(ClientCall<?, ?> call, SmithyHttpResponse response) {
+    private boolean isSuccess(ClientCall<?, ?, ?> call, SmithyHttpResponse response) {
         // TODO: Better error checking.
         return response.statusCode() >= 200 && response.statusCode() <= 299;
     }
@@ -113,7 +163,7 @@ public abstract class HttpClientProtocol implements ClientProtocol {
      * @param response HTTP response to deserialize.
      * @return Returns the deserialized error.
      */
-    protected SdkException createError(ClientCall<?, ?> call, SmithyHttpResponse response) {
+    protected CompletableFuture<SdkException> createError(ClientCall<?, ?, ?> call, SmithyHttpResponse response) {
         return response
                 .headers()
                 // Grab the error ID from the header first.
@@ -126,6 +176,7 @@ public abstract class HttpClientProtocol implements ClientProtocol {
                 // Attempt to match the extracted error ID to a modeled error type.
                 .flatMap(errorId -> call.createExceptionBuilder(call.context(), errorId)
                         .<SdkException> map(error -> createModeledException(response, error)))
+                .map(CompletableFuture::completedFuture)
                 // If no error was matched, then create an error from protocol hints.
                 .orElseGet(() -> createErrorFromHints(call, response));
     }
@@ -143,7 +194,10 @@ public abstract class HttpClientProtocol implements ClientProtocol {
         return error.errorCorrection().build();
     }
 
-    private SdkException createErrorFromHints(ClientCall<?, ?> call, SmithyHttpResponse response) {
+    private CompletableFuture<SdkException> createErrorFromHints(
+            ClientCall<?, ?, ?> call,
+            SmithyHttpResponse response
+    ) {
         LOGGER.log(System.Logger.Level.WARNING, () -> "Unknown " + response.statusCode() + " error response from "
                                                       + call.operation().schema().id());
 
@@ -160,9 +214,29 @@ public abstract class HttpClientProtocol implements ClientProtocol {
         message.append(response.httpVersion()).append(' ').append(response.statusCode()).append(System.lineSeparator());
         writeHeaders(message, response.headers());
         message.append(System.lineSeparator());
-        writeBody(message, response);
 
-        return new SdkException(message.toString(), fault);
+        String contentType = response.headers()
+                .firstValue("Content-Type")
+                .orElse("application/octet-stream")
+                .toLowerCase(Locale.ENGLISH);
+
+        if (!isText(contentType)) {
+            return CompletableFuture.completedFuture(new SdkException(message.toString(), fault));
+        }
+
+        // Stream the response payload to the error message.
+        return response.body().asString().thenApply(body -> {
+            message.append(body);
+            return new SdkException(message.toString(), fault);
+        }).toCompletableFuture();
+    }
+
+    private boolean isText(String contentType) {
+        return contentType.startsWith("text/")
+                || contentType.contains("charset=utf-8")
+                || contentType.endsWith("+json")
+                || contentType.endsWith("+xml")
+                || TEXT_CONTENT_TYPES.contains(contentType);
     }
 
     private SdkException.Fault determineFault(int statusCode) {
@@ -181,14 +255,5 @@ public abstract class HttpClientProtocol implements ClientProtocol {
                 builder.append(field).append(": ").append(value).append(System.lineSeparator());
             });
         });
-    }
-
-    private void writeBody(StringBuilder builder, SmithyHttpResponse response) {
-        try (InputStream responseStream = response.body()) {
-            // Include up to 16 KB of the output.
-            builder.append(new String(responseStream.readNBytes(16384), StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            LOGGER.log(System.Logger.Level.WARNING, () -> "Unable to read error response payload from " + response);
-        }
     }
 }

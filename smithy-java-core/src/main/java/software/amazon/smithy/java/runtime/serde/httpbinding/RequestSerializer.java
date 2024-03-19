@@ -10,8 +10,9 @@ import java.util.Objects;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.net.uri.URIBuilder;
 import software.amazon.smithy.java.runtime.serde.Codec;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.model.shapes.ShapeType;
 import software.amazon.smithy.model.traits.HttpTrait;
 
@@ -23,7 +24,8 @@ public final class RequestSerializer {
     private Codec payloadCodec;
     private SdkSchema operation;
     private URI endpoint;
-    private IOShape shapeValue;
+    private SerializableShape shapeValue;
+    private StreamPublisher payload;
     private final BindingMatcher bindingMatcher = BindingMatcher.requestMatcher();
 
     RequestSerializer() {}
@@ -70,8 +72,19 @@ public final class RequestSerializer {
      * @param shapeValue Request shape value to serialize.
      * @return Returns the serializer.
      */
-    public RequestSerializer shapeValue(IOShape shapeValue) {
+    public RequestSerializer shapeValue(SerializableShape shapeValue) {
         this.shapeValue = shapeValue;
+        return this;
+    }
+
+    /**
+     * Set the streaming payload of the request, if any.
+     *
+     * @param payload Payload to associate to the request.
+     * @return Returns the serializer.
+     */
+    public RequestSerializer payload(StreamPublisher payload) {
+        this.payload = payload;
         return this;
     }
 
@@ -88,9 +101,8 @@ public final class RequestSerializer {
         Objects.requireNonNull(payloadCodec, "value is not set");
 
         var httpTrait = operation.expectTrait(HttpTrait.class);
-        var serializer = new HttpBindingSerializer(httpTrait, payloadCodec, bindingMatcher);
+        var serializer = new HttpBindingSerializer(httpTrait, payloadCodec, bindingMatcher, payload);
         shapeValue.serialize(serializer);
-        shapeValue.serializeStream(serializer);
         serializer.flush();
 
         var uriBuilder = URIBuilder.of(endpoint);

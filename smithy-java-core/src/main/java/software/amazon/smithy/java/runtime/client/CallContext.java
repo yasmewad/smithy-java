@@ -6,9 +6,9 @@
 package software.amazon.smithy.java.runtime.client;
 
 import software.amazon.smithy.java.runtime.endpoint.EndpointProvider;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.SdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.java.runtime.util.Constant;
 
 /**
@@ -18,12 +18,12 @@ public final class CallContext {
     /**
      * Contains the input of the operation being sent.
      */
-    public static final Constant<IOShape> INPUT = new Constant<>(IOShape.class, "Input shape");
+    public static final Constant<SerializableShape> INPUT = new Constant<>(SerializableShape.class, "Input shape");
 
     /**
      * Deserialized output of the call.
      */
-    public static final Constant<IOShape> OUTPUT = new Constant<>(IOShape.class, "Output");
+    public static final Constant<SerializableShape> OUTPUT = new Constant<>(SerializableShape.class, "Output");
 
     /**
      * Error encountered by the call that will be thrown.

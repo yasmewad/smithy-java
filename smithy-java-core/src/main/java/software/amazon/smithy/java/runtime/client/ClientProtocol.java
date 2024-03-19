@@ -5,36 +5,47 @@
 
 package software.amazon.smithy.java.runtime.client;
 
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import java.util.concurrent.CompletableFuture;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamingShape;
 import software.amazon.smithy.java.runtime.shapes.SdkException;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 
-public interface ClientProtocol {
+public interface ClientProtocol<RequestT, ResponseT> {
     /**
-     * Creates the underlying transport request and adds it to the call's context.
+     * Creates the underlying transport request.
      *
      * @param call Call being sent.
+     * @return Returns the request to send.
      */
-    void createRequest(ClientCall<?, ?> call);
+    RequestT createRequest(ClientCall<?, ?, ?> call);
 
     /**
-     * Signs the underlying transport request and updates it on the call's context.
+     * Signs and returns the underlying transport request.
      *
-     * @param call Call being sent.
+     * @param call    Call being sent.
+     * @param request Request to sign.
+     * @return Returns the signed request.
      */
-    void signRequest(ClientCall<?, ?> call);
+    CompletableFuture<RequestT> signRequest(ClientCall<?, ?, ?> call, RequestT request);
 
     /**
-     * Sends the underlying transport request, and sets the transport response on the call's context.
+     * Sends the underlying transport request and returns the response future.
      *
-     * @param call Call being sent.
+     * @param call    Call being sent.
+     * @param request Request to send.
+     * @return Returns the future response.
      */
-    void sendRequest(ClientCall<?, ?> call);
+    CompletableFuture<ResponseT> sendRequest(ClientCall<?, ?, ?> call, RequestT request);
 
     /**
      * Deserializes the output from the transport response or throws a modeled or unmodeled exception.
      *
-     * @param call Call being sent.
+     * @param call     Call being sent.
+     * @param request  Request that was sent for this response.
+     * @param response Response to deserialize.
      * @throws SdkException if an error occurs, including deserialized modeled errors and protocol errors.
      */
-    <I extends IOShape, O extends IOShape> O deserializeResponse(ClientCall<I, O> call);
+    <I extends SerializableShape, O extends SerializableShape> CompletableFuture<StreamingShape<O, StreamPublisher>>
+    deserializeResponse(ClientCall<I, O, ?> call, RequestT request, ResponseT response);
 }

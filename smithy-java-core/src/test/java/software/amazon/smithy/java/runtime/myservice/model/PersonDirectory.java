@@ -5,6 +5,11 @@
 
 package software.amazon.smithy.java.runtime.myservice.model;
 
+import java.io.InputStream;
+import java.util.concurrent.CompletableFuture;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamHandler;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamingShape;
 import software.amazon.smithy.java.runtime.util.Context;
 
 // An example of a generated service interface.
@@ -15,11 +20,58 @@ public interface PersonDirectory {
         return putPerson(input, Context.create());
     }
 
-    PutPersonOutput putPerson(PutPersonInput input, Context context);
-
-    default PutPersonImageOutput putPersonImage(PutPersonImageInput input) {
-        return putPersonImage(input, Context.create());
+    default PutPersonOutput putPerson(PutPersonInput input, Context context) {
+        return putPersonAsync(input, context).join();
     }
 
-    PutPersonImageOutput putPersonImage(PutPersonImageInput input, Context context);
+    default CompletableFuture<PutPersonOutput> putPersonAsync(PutPersonInput input) {
+        return putPersonAsync(input, Context.create());
+    }
+
+    CompletableFuture<PutPersonOutput> putPersonAsync(PutPersonInput input, Context context);
+
+    default PutPersonImageOutput putPersonImage(PutPersonImageInput input, StreamPublisher image) {
+        return putPersonImage(input, image, Context.create());
+    }
+
+    default PutPersonImageOutput putPersonImage(PutPersonImageInput input, StreamPublisher image, Context context) {
+        return putPersonImageAsync(input, image, context).join();
+    }
+
+    default CompletableFuture<PutPersonImageOutput> putPersonImageAsync(
+            PutPersonImageInput input,
+            StreamPublisher image
+    ) {
+        return putPersonImageAsync(input, image, Context.create());
+    }
+
+    CompletableFuture<PutPersonImageOutput> putPersonImageAsync(
+            PutPersonImageInput input,
+            StreamPublisher image,
+            Context context
+    );
+
+    default StreamingShape<GetPersonImageOutput, InputStream> getPersonImage(GetPersonImageInput input) {
+        return getPersonImage(input, Context.create());
+    }
+
+    default StreamingShape<GetPersonImageOutput, InputStream> getPersonImage(
+            GetPersonImageInput input,
+            Context context
+    ) {
+        return getPersonImageAsync(input, context, StreamHandler.ofInputStream()).join();
+    }
+
+    default <ResultT> CompletableFuture<StreamingShape<GetPersonImageOutput, ResultT>> getPersonImageAsync(
+            GetPersonImageInput input,
+            StreamHandler<GetPersonImageOutput, ResultT> handler
+    ) {
+        return getPersonImageAsync(input, Context.create(), handler);
+    }
+
+    <ResultT> CompletableFuture<StreamingShape<GetPersonImageOutput, ResultT>> getPersonImageAsync(
+            GetPersonImageInput input,
+            Context context,
+            StreamHandler<GetPersonImageOutput, ResultT> handler
+    );
 }

@@ -8,7 +8,7 @@ package software.amazon.smithy.java.runtime.net.http;
 import java.net.http.HttpHeaders;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import software.amazon.smithy.java.runtime.net.StoppableInputStream;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 
 public interface SmithyHttpMessage {
 
@@ -45,7 +45,7 @@ public interface SmithyHttpMessage {
         return withHeaders(HttpHeaders.of(current, (k, v) -> true));
     }
 
-    StoppableInputStream body();
+    StreamPublisher body();
 
-    SmithyHttpMessage withBody(StoppableInputStream body);
+    SmithyHttpMessage withBody(StreamPublisher body);
 }

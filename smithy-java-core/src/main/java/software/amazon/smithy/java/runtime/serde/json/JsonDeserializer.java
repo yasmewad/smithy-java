@@ -7,7 +7,6 @@ package software.amazon.smithy.java.runtime.serde.json;
 
 import com.jsoniter.JsonIterator;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -30,7 +29,7 @@ final class JsonDeserializer implements ShapeDeserializer {
     private final boolean useTimestampFormat;
 
     JsonDeserializer(
-            InputStream input,
+            byte[] source,
             boolean useJsonName,
             TimestampFormatter defaultTimestampFormat,
             boolean useTimestampFormat
@@ -38,15 +37,10 @@ final class JsonDeserializer implements ShapeDeserializer {
         this.useJsonName = useJsonName;
         this.useTimestampFormat = useTimestampFormat;
         this.defaultTimestampFormat = defaultTimestampFormat;
-        try {
-            byte[] bytes = input.readAllBytes();
-            if (bytes.length == 0) {
-                throw new IllegalArgumentException("Cannot parse empty JSON string");
-            }
-            this.iter = JsonIterator.parse(bytes);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        if (source.length == 0) {
+            throw new IllegalArgumentException("Cannot parse empty JSON string");
         }
+        this.iter = JsonIterator.parse(source);
     }
 
     @Override

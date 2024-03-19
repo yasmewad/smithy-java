@@ -5,10 +5,8 @@
 
 package software.amazon.smithy.java.runtime.serde.httpbinding;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.http.HttpHeaders;
 import java.util.ArrayList;
@@ -18,7 +16,6 @@ import java.util.Map;
 import java.util.StringJoiner;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import software.amazon.smithy.java.runtime.net.StoppableInputStream;
 import software.amazon.smithy.java.runtime.net.uri.QueryStringBuilder;
 import software.amazon.smithy.java.runtime.net.uri.URLEncoding;
 import software.amazon.smithy.java.runtime.serde.Codec;
@@ -26,7 +23,7 @@ import software.amazon.smithy.java.runtime.serde.SdkSerdeException;
 import software.amazon.smithy.java.runtime.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.serde.SpecificShapeSerializer;
 import software.amazon.smithy.java.runtime.serde.StructSerializer;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
 import software.amazon.smithy.model.pattern.SmithyPattern;
 import software.amazon.smithy.model.pattern.UriPattern;
@@ -41,7 +38,7 @@ import software.amazon.smithy.model.traits.MediaTypeTrait;
  * <p>This serializer requires that a top-level structure shape is written and will throw an
  * UnsupportedOperationException if any other kind of shape is first written to it.
  */
-final class HttpBindingSerializer extends SpecificShapeSerializer implements IOShape.Serializer {
+final class HttpBindingSerializer extends SpecificShapeSerializer implements ShapeSerializer {
 
     private static final String DEFAULT_BLOB_CONTENT_TYPE = "application/octet-stream";
     private static final String DEFAULT_STRING_CONTENT_TYPE = "text/plain";
@@ -58,7 +55,7 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
     private StructSerializer delegateStruct;
     private ShapeSerializer shapeBodySerializer;
     private ByteArrayOutputStream shapeBodyOutput;
-    private InputStream httpPayload;
+    private StreamPublisher httpPayload;
     private int responseStatus;
 
     private final BindingMatcher bindingMatcher;
@@ -67,7 +64,12 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
         headers.computeIfAbsent(field, f -> new ArrayList<>()).add(value);
     };
 
-    HttpBindingSerializer(HttpTrait httpTrait, Codec payloadCodec, BindingMatcher bindingMatcher) {
+    HttpBindingSerializer(
+            HttpTrait httpTrait,
+            Codec payloadCodec,
+            BindingMatcher bindingMatcher,
+            StreamPublisher httpPayload
+    ) {
         uriPattern = httpTrait.getUri();
         responseStatus = httpTrait.getCode();
         this.payloadCodec = payloadCodec;
@@ -75,6 +77,7 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
         headerSerializer = new HttpHeaderSerializer(headerConsumer);
         querySerializer = new HttpQuerySerializer(queryStringParams::put);
         labelSerializer = new HttpLabelSerializer(labels::put);
+        this.httpPayload = httpPayload;
     }
 
     @Override
@@ -98,27 +101,20 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
         }
     }
 
-    @Override
-    public void writeStreamingBlob(SdkSchema schema, StoppableInputStream value) {
+    void setHttpPayload(SdkSchema schema, StreamPublisher value) {
         httpPayload = value;
-        String contentType = schema.getTrait(MediaTypeTrait.class)
-                .map(MediaTypeTrait::getValue)
-                .orElse(DEFAULT_STRING_CONTENT_TYPE);
+        String contentType = value
+                .contentType()
+                .orElseGet(() -> schema.getTrait(MediaTypeTrait.class)
+                    .map(MediaTypeTrait::getValue)
+                    .orElseGet(() -> {
+                        if (schema.type() == ShapeType.BLOB) {
+                            return DEFAULT_BLOB_CONTENT_TYPE;
+                        } else {
+                            return DEFAULT_STRING_CONTENT_TYPE;
+                        }
+                    }));
         headers.put("Content-Type", List.of(contentType));
-    }
-
-    @Override
-    public void writeStreamingString(SdkSchema schema, StoppableInputStream value) {
-        httpPayload = value;
-        String contentType = schema.getTrait(MediaTypeTrait.class)
-                .map(MediaTypeTrait::getValue)
-                .orElse(DEFAULT_BLOB_CONTENT_TYPE);
-        headers.put("Content-Type", List.of(contentType));
-    }
-
-    @Override
-    public void writeEventStream(SdkSchema schema, StoppableInputStream value) {
-        throw new UnsupportedOperationException("Event stream not yet supported");
     }
 
     HttpHeaders getHeaders() {
@@ -137,13 +133,13 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
         return shapeBodyOutput != null || httpPayload != null;
     }
 
-    InputStream getBody() {
+    StreamPublisher getBody() {
         if (httpPayload != null) {
             return httpPayload;
         } else if (shapeBodyOutput != null) {
-            return new ByteArrayInputStream(shapeBodyOutput.toByteArray());
+            return StreamPublisher.ofBytes(shapeBodyOutput.toByteArray(), payloadCodec.getMediaType());
         } else {
-            return InputStream.nullInputStream();
+            return StreamPublisher.ofEmpty();
         }
     }
 
@@ -229,9 +225,10 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements IOS
             if (member.memberTarget().type() == ShapeType.STRUCTURE) {
                 // Deserialize a structure bound to the payload.
                 headers.put("Content-Type", List.of(payloadCodec.getMediaType()));
-                ByteArrayOutputStream output = shapeBodyOutput = new ByteArrayOutputStream();
+                ByteArrayOutputStream output = new ByteArrayOutputStream();
                 memberWriter.accept(payloadCodec.createSerializer(output));
-                httpPayload = new ByteArrayInputStream(output.toByteArray());
+                var byteArray = output.toByteArray();
+                setHttpPayload(member, StreamPublisher.ofBytes(byteArray, payloadCodec.getMediaType()));
             }
         }
     }

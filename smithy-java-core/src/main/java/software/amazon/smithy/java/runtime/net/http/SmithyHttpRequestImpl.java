@@ -5,28 +5,25 @@
 
 package software.amazon.smithy.java.runtime.net.http;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpHeaders;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
-import software.amazon.smithy.java.runtime.net.StoppableInputStream;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 
 final class SmithyHttpRequestImpl implements SmithyHttpRequest {
 
     private final SmithyHttpVersion httpVersion;
     private final String method;
     private final URI uri;
-    private final StoppableInputStream body;
+    private final StreamPublisher body;
     private final HttpHeaders headers;
 
     SmithyHttpRequestImpl(SmithyHttpRequest.Builder builder) {
         this.httpVersion = Objects.requireNonNull(builder.httpVersion);
         this.method = Objects.requireNonNull(builder.method);
         this.uri = Objects.requireNonNull(builder.uri);
-        this.body = Objects.requireNonNullElseGet(builder.body, StoppableInputStream::ofEmpty);
+        this.body = Objects.requireNonNullElseGet(builder.body, StreamPublisher::ofEmpty);
         this.headers = Objects.requireNonNullElseGet(builder.headers, () -> HttpHeaders.of(Map.of(), (k, v) -> true));
     }
 
@@ -71,12 +68,12 @@ final class SmithyHttpRequestImpl implements SmithyHttpRequest {
     }
 
     @Override
-    public StoppableInputStream body() {
+    public StreamPublisher body() {
         return body;
     }
 
     @Override
-    public SmithyHttpRequest withBody(StoppableInputStream body) {
+    public SmithyHttpRequest withBody(StreamPublisher body) {
         return SmithyHttpRequest.builder().with(this).body(body).build();
     }
 
@@ -85,7 +82,7 @@ final class SmithyHttpRequestImpl implements SmithyHttpRequest {
         StringBuilder result = new StringBuilder();
         // Determine the path and possible query string.
         String pathAndQuery = uri.getRawPath();
-        if (!uri.getRawQuery().isEmpty()) {
+        if (uri.getRawQuery() != null) {
             pathAndQuery += "?" + uri.getRawQuery();
         }
         // Add the start line.
@@ -105,13 +102,6 @@ final class SmithyHttpRequestImpl implements SmithyHttpRequest {
             result.append(field).append(": ").append(value).append(System.lineSeparator());
         }));
         result.append(System.lineSeparator());
-
-        // Include up to 16 KB of the output.
-        try {
-            result.append(new String(body.readNBytes(16384), StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
 
         return result.toString();
     }

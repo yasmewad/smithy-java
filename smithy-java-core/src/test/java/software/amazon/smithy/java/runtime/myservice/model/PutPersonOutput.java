@@ -9,8 +9,9 @@ import java.time.Instant;
 import software.amazon.smithy.java.runtime.serde.ShapeDeserializer;
 import software.amazon.smithy.java.runtime.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.serde.ToStringSerializer;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;
 import software.amazon.smithy.model.traits.HttpHeaderTrait;
@@ -20,7 +21,7 @@ import software.amazon.smithy.model.traits.RequiredTrait;
 import software.amazon.smithy.model.traits.TimestampFormatTrait;
 
 // Example of a potentially generated shape.
-public final class PutPersonOutput implements IOShape {
+public final class PutPersonOutput implements SerializableShape {
 
     static final ShapeId ID = ShapeId.from("smithy.example#PutPersonOutput");
     private static final SdkSchema SCHEMA_NAME = SdkSchema
@@ -94,7 +95,7 @@ public final class PutPersonOutput implements IOShape {
         });
     }
 
-    public static final class Builder implements IOShape.Builder<PutPersonOutput> {
+    public static final class Builder implements SdkShapeBuilder<PutPersonOutput> {
 
         private String name;
         private int age = 0;

@@ -7,12 +7,12 @@ package software.amazon.smithy.java.runtime.myservice.model;
 
 import java.util.ArrayList;
 import java.util.List;
-import software.amazon.smithy.java.runtime.net.StoppableInputStream;
 import software.amazon.smithy.java.runtime.serde.ShapeDeserializer;
 import software.amazon.smithy.java.runtime.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.serde.ToStringSerializer;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;
 import software.amazon.smithy.model.traits.HttpHeaderTrait;
@@ -22,7 +22,7 @@ import software.amazon.smithy.model.traits.HttpQueryTrait;
 import software.amazon.smithy.model.traits.RequiredTrait;
 
 // Example of a potentially generated shape.
-public final class PutPersonImageInput implements IOShape {
+public final class PutPersonImageInput implements SerializableShape {
 
     public static final ShapeId ID = ShapeId.from("smithy.example#PutPersonInput");
     private static final SdkSchema SCHEMA_NAME = SdkSchema
@@ -44,13 +44,11 @@ public final class PutPersonImageInput implements IOShape {
             .build();
 
     private final String name;
-    private final StoppableInputStream image;
     private final List<String> tags;
     private final List<String> moreTags;
 
     private PutPersonImageInput(Builder builder) {
         this.name = builder.name;
-        this.image = builder.image;
         this.tags = builder.tags;
         this.moreTags = builder.moreTags;
     }
@@ -61,10 +59,6 @@ public final class PutPersonImageInput implements IOShape {
 
     public String name() {
         return name;
-    }
-
-    public StoppableInputStream image() {
-        return image;
     }
 
     public List<String> tags() {
@@ -81,11 +75,6 @@ public final class PutPersonImageInput implements IOShape {
     }
 
     @Override
-    public void serializeStream(Serializer encoder) {
-        encoder.writeStreamingBlob(SCHEMA_IMAGE, image);
-    }
-
-    @Override
     public void serialize(ShapeSerializer serializer) {
         serializer.beginStruct(SCHEMA, st -> {
             st.stringMember(SCHEMA_NAME, name);
@@ -98,12 +87,11 @@ public final class PutPersonImageInput implements IOShape {
         });
     }
 
-    public static final class Builder implements IOShape.Builder<PutPersonImageInput> {
+    public static final class Builder implements SdkShapeBuilder<PutPersonImageInput> {
 
         private String name;
         private List<String> tags = new ArrayList<>();
         private List<String> moreTags = new ArrayList<>();
-        private StoppableInputStream image = StoppableInputStream.ofEmpty();
 
         private Builder() {}
 
@@ -114,11 +102,6 @@ public final class PutPersonImageInput implements IOShape {
 
         public Builder name(String name) {
             this.name = name;
-            return this;
-        }
-
-        public Builder image(StoppableInputStream image) {
-            this.image = image;
             return this;
         }
 
@@ -141,12 +124,6 @@ public final class PutPersonImageInput implements IOShape {
                     case 2 -> de.readList(SCHEMA_MORE_TAGS, ser -> moreTags.add(ser.readString(SCHEMA_MORE_TAGS)));
                 }
             });
-            return this;
-        }
-
-        @Override
-        public IOShape.Builder<PutPersonImageInput> deserializeStream(Deserializer decoder) {
-            image = decoder.readStream(SCHEMA_IMAGE);
             return this;
         }
     }

@@ -6,7 +6,7 @@
 package software.amazon.smithy.java.runtime.client.interceptor;
 
 import java.util.List;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.java.runtime.util.Context;
 
 final class ClientInterceptorChain implements ClientInterceptor {
@@ -25,7 +25,7 @@ final class ClientInterceptorChain implements ClientInterceptor {
     }
 
     @Override
-    public IOShape modifyInputBeforeSerialization(IOShape input, Context context) {
+    public <I extends SerializableShape> I modifyInputBeforeSerialization(I input, Context context) {
         for (var interceptor : interceptors) {
             input = interceptor.modifyInputBeforeSerialization(input, context);
         }
@@ -47,10 +47,11 @@ final class ClientInterceptorChain implements ClientInterceptor {
     }
 
     @Override
-    public void modifyRequestBeforeRetryLoop(Context context) {
+    public <T> T modifyRequestBeforeRetryLoop(Context context, T request) {
         for (var interceptor : interceptors) {
-            interceptor.modifyRequestBeforeRetryLoop(context);
+            request = interceptor.modifyRequestBeforeRetryLoop(context, request);
         }
+        return request;
     }
 
     @Override
@@ -61,10 +62,11 @@ final class ClientInterceptorChain implements ClientInterceptor {
     }
 
     @Override
-    public void modifyRequestBeforeSigning(Context context) {
+    public <T> T modifyRequestBeforeSigning(Context context, T request) {
         for (var interceptor : interceptors) {
-            interceptor.modifyRequestBeforeSigning(context);
+            request = interceptor.modifyRequestBeforeSigning(context, request);
         }
+        return request;
     }
 
     @Override
@@ -82,10 +84,11 @@ final class ClientInterceptorChain implements ClientInterceptor {
     }
 
     @Override
-    public void modifyRequestBeforeTransmit(Context context) {
+    public <T> T modifyRequestBeforeTransmit(Context context, T request) {
         for (var interceptor : interceptors) {
-            interceptor.modifyRequestBeforeTransmit(context);
+            request = interceptor.modifyRequestBeforeTransmit(context, request);
         }
+        return request;
     }
 
     @Override
@@ -103,10 +106,11 @@ final class ClientInterceptorChain implements ClientInterceptor {
     }
 
     @Override
-    public void modifyResponseBeforeDeserialization(Context context) {
+    public <T> T modifyResponseBeforeDeserialization(Context context, T request) {
         for (var interceptor : interceptors) {
-            interceptor.modifyResponseBeforeDeserialization(context);
+            request = interceptor.modifyResponseBeforeDeserialization(context, request);
         }
+        return request;
     }
 
     @Override
@@ -124,8 +128,8 @@ final class ClientInterceptorChain implements ClientInterceptor {
     }
 
     @Override
-    public IOShape modifyOutputBeforeAttemptCompletion(IOShape output, Context context) {
-        IOShape result = output;
+    public <O extends SerializableShape> O modifyOutputBeforeAttemptCompletion(O output, Context context) {
+        O result = output;
         for (var interceptor : interceptors) {
             result = interceptor.modifyOutputBeforeAttemptCompletion(result, context);
         }
@@ -140,8 +144,8 @@ final class ClientInterceptorChain implements ClientInterceptor {
     }
 
     @Override
-    public IOShape modifyOutputBeforeCompletion(IOShape output, Context context) {
-        IOShape result = output;
+    public <O extends SerializableShape> O modifyOutputBeforeCompletion(O output, Context context) {
+        O result = output;
         for (var interceptor : interceptors) {
             result = interceptor.modifyOutputBeforeCompletion(result, context);
         }

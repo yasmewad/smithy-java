@@ -14,34 +14,33 @@ import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;
 import software.amazon.smithy.model.traits.HttpTrait;
 
-public final class PutPersonImage implements SdkOperation<PutPersonImageInput, PutPersonImageOutput> {
+public final class GetPersonImage implements SdkOperation<GetPersonImageInput, GetPersonImageOutput> {
 
     private static final SdkSchema SCHEMA = SdkSchema.builder()
-            .id(ShapeId.from("smithy.example#PutPersonImage"))
+            .id(ShapeId.from("smithy.example#GetPerson"))
             .type(ShapeType.OPERATION)
             .traits(HttpTrait.builder()
-                            .method("PUT")
-                            // TODO: implement proper label handling
-                            .uri(UriPattern.parse("/persons/{name}/images"))
+                            .method("GET")
+                            .uri(UriPattern.parse("/anything"))//("/persons/{name}"))
                             .code(200)
                             .build())
             .build();
 
     // Each operation maintains a type registry of the input, output, and errors it can throw.
     private final TypeRegistry typeRegistry = TypeRegistry.builder()
-            .putType(PutPersonImageInput.ID, PutPersonImageInput.class, PutPersonImageInput::builder)
-            .putType(PutPersonImageOutput.ID, PutPersonImageOutput.class, PutPersonImageOutput::builder)
+            .putType(GetPersonImageInput.ID, GetPersonImageInput.class, GetPersonImageInput::builder)
+            .putType(GetPersonImageOutput.ID, GetPersonImageOutput.class, GetPersonImageOutput::builder)
             .putType(ValidationError.ID, ValidationError.class, ValidationError::builder)
             .build();
 
     @Override
-    public SdkShapeBuilder<PutPersonImageInput> inputBuilder() {
-        return PutPersonImageInput.builder();
+    public SdkShapeBuilder<GetPersonImageInput> inputBuilder() {
+        return GetPersonImageInput.builder();
     }
 
     @Override
-    public SdkShapeBuilder<PutPersonImageOutput> outputBuilder() {
-        return PutPersonImageOutput.builder();
+    public SdkShapeBuilder<GetPersonImageOutput> outputBuilder() {
+        return GetPersonImageOutput.builder();
     }
 
     @Override
@@ -51,12 +50,12 @@ public final class PutPersonImage implements SdkOperation<PutPersonImageInput, P
 
     @Override
     public SdkSchema inputSchema() {
-        return PutPersonImageInput.SCHEMA;
+        return GetPersonImageInput.SCHEMA;
     }
 
     @Override
     public SdkSchema outputSchema() {
-        return PutPersonImageOutput.SCHEMA;
+        return GetPersonImageOutput.SCHEMA;
     }
 
     @Override

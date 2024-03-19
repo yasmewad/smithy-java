@@ -5,9 +5,10 @@
 
 package software.amazon.smithy.java.runtime.serde.httpbinding;
 
+import java.util.concurrent.CompletableFuture;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.serde.Codec;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 import software.amazon.smithy.java.runtime.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
 
@@ -17,7 +18,7 @@ import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
 public final class ResponseDeserializer {
 
     private final HttpBindingDeserializer.Builder deserBuilder = HttpBindingDeserializer.builder();
-    private IOShape.Builder<?> outputShapeBuilder;
+    private SdkShapeBuilder<?> outputShapeBuilder;
     private SdkShapeBuilder<? extends ModeledSdkException> errorShapeBuilder;
 
     ResponseDeserializer() {}
@@ -47,14 +48,13 @@ public final class ResponseDeserializer {
         return this;
     }
 
-
     /**
      * Output shape builder to populate from the response.
      *
      * @param outputShapeBuilder Output shape builder.
      * @return Returns the deserializer.
      */
-    public ResponseDeserializer outputShapeBuilder(IOShape.Builder<?> outputShapeBuilder) {
+    public ResponseDeserializer outputShapeBuilder(SdkShapeBuilder<?> outputShapeBuilder) {
         this.outputShapeBuilder = outputShapeBuilder;
         errorShapeBuilder = null;
         return this;
@@ -74,10 +74,8 @@ public final class ResponseDeserializer {
 
     /**
      * Finish setting up and deserialize the response into the builder.
-     *
-     * @throws NullPointerException if anything is not set.
      */
-    public void deserialize() {
+    public CompletableFuture<StreamPublisher> deserialize() {
         if (errorShapeBuilder == null && outputShapeBuilder == null) {
             throw new IllegalStateException("Either errorShapeBuilder or outputShapeBuilder must be set");
         }
@@ -85,10 +83,12 @@ public final class ResponseDeserializer {
         HttpBindingDeserializer deserializer = deserBuilder.build();
 
         if (outputShapeBuilder != null) {
-            outputShapeBuilder.deserializeStream(deserializer);
             outputShapeBuilder.deserialize(deserializer);
         } else {
             errorShapeBuilder.deserialize(deserializer);
         }
+
+        // Finish reading from the payload if necessary.
+        return deserializer.finishParsingBody();
     }
 }

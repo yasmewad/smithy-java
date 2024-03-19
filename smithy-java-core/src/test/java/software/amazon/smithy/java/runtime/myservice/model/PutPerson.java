@@ -5,7 +5,6 @@
 
 package software.amazon.smithy.java.runtime.myservice.model;
 
-import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.SdkOperation;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
 import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
@@ -40,7 +39,7 @@ public final class PutPerson implements SdkOperation<PutPersonInput, PutPersonOu
     }
 
     @Override
-    public IOShape.Builder<PutPersonOutput> outputBuilder() {
+    public SdkShapeBuilder<PutPersonOutput> outputBuilder() {
         return PutPersonOutput.builder();
     }
 

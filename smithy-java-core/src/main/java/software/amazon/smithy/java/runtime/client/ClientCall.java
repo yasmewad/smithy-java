@@ -10,10 +10,12 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import software.amazon.smithy.java.runtime.client.interceptor.ClientInterceptor;
 import software.amazon.smithy.java.runtime.endpoint.Endpoint;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamHandler;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 import software.amazon.smithy.java.runtime.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkOperation;
 import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.java.runtime.util.Context;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.utils.SmithyBuilder;
@@ -23,8 +25,9 @@ import software.amazon.smithy.utils.SmithyBuilder;
  *
  * @param <I> Input to send.
  * @param <O> Output to return.
+ * @param <OutputStreamT> Streaming output type.
  */
-public interface ClientCall<I extends IOShape, O extends IOShape> {
+public interface ClientCall<I extends SerializableShape, O extends SerializableShape, OutputStreamT> {
     /**
      * Get the input of the operation.
      *
@@ -61,6 +64,22 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
     Context context();
 
     /**
+     * Contains the optionally present input stream.
+     *
+     * @return the optionally present input stream to send in a request.
+     */
+    Optional<StreamPublisher> requestStream();
+
+    /**
+     * Contains the non-null stream handler used to handle the output stream of the response.
+     *
+     * <p>This method may be called multiple times if retries occur.
+     *
+     * @return the stream handler used to process streaming output, if present.
+     */
+    StreamHandler<O, OutputStreamT> responseStreamHandler();
+
+    /**
      * Create a builder for the output of the operation.
      *
      * <p>This is typically done by delegating to the underlying operation. This method allows creation to be
@@ -70,7 +89,7 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
      * @param shapeId Nullable ID of the error shape to create, if known.
      * @return Returns the created output builder.
      */
-    default IOShape.Builder<O> createOutputBuilder(Context context, ShapeId shapeId) {
+    default SdkShapeBuilder<O> createOutputBuilder(Context context, ShapeId shapeId) {
         return operation().outputBuilder();
     }
 
@@ -93,7 +112,8 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
      * @param <I> Input type.
      * @param <O> Output type.
      */
-    static <I extends IOShape, O extends IOShape> Builder<I, O> builder() {
+    static <I extends SerializableShape, O extends SerializableShape, OutputStreamT> Builder<I, O, OutputStreamT>
+    builder() {
         return new Builder<>();
     }
 
@@ -103,8 +123,8 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
      * @param <I> Input to send.
      * @param <O> Expected output.
      */
-    final class Builder<I extends IOShape, O extends IOShape>
-            implements SmithyBuilder<ClientCall<I, O>> {
+    final class Builder<I extends SerializableShape, O extends SerializableShape, OutputStreamT>
+            implements SmithyBuilder<ClientCall<I, O, OutputStreamT>> {
 
         I input;
         Endpoint endpoint;
@@ -112,6 +132,8 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
         Context context;
         BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
         ClientInterceptor interceptor = ClientInterceptor.NOOP;
+        StreamPublisher inputStream;
+        StreamHandler<O, OutputStreamT> streamHandler;
 
         private Builder() {}
 
@@ -121,7 +143,7 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
          * @param input Input to set.
          * @return Returns the builder.
          */
-        public Builder<I, O> input(I input) {
+        public Builder<I, O, OutputStreamT> input(I input) {
             this.input = input;
             return this;
         }
@@ -132,7 +154,7 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
          * @param operation Operation to call.
          * @return Returns the builder.
          */
-        public Builder<I, O> operation(SdkOperation<I, O> operation) {
+        public Builder<I, O, OutputStreamT> operation(SdkOperation<I, O> operation) {
             this.operation = operation;
             return this;
         }
@@ -143,7 +165,7 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
          * @param context Context to use.
          * @return Returns the builder.
          */
-        public Builder<I, O> context(Context context) {
+        public Builder<I, O, OutputStreamT> context(Context context) {
             this.context = context;
             return this;
         }
@@ -157,7 +179,7 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
          * @param errorCreator Error supplier to create the builder for an error.
          * @return Returns the builder.
          */
-        public Builder<I, O> errorCreator(
+        public Builder<I, O, OutputStreamT> errorCreator(
                 BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator
         ) {
             this.errorCreator = errorCreator;
@@ -170,7 +192,7 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
          * @param endpoint Endpoint to set.
          * @return Returns the builder.
          */
-        public Builder<I, O> endpoint(Endpoint endpoint) {
+        public Builder<I, O, OutputStreamT> endpoint(Endpoint endpoint) {
             this.endpoint = endpoint;
             return this;
         }
@@ -181,13 +203,23 @@ public interface ClientCall<I extends IOShape, O extends IOShape> {
          * @param interceptor Interceptor to use.
          * @return Returns the builder.
          */
-        public Builder<I, O> interceptor(ClientInterceptor interceptor) {
+        public Builder<I, O, OutputStreamT> interceptor(ClientInterceptor interceptor) {
             this.interceptor = Objects.requireNonNull(interceptor);
             return this;
         }
 
+        public Builder<I, O, OutputStreamT> inputStream(StreamPublisher inputStream) {
+            this.inputStream = inputStream;
+            return this;
+        }
+
+        public Builder<I, O, OutputStreamT> streamHandler(StreamHandler<O, OutputStreamT> streamHandler) {
+            this.streamHandler = streamHandler;
+            return this;
+        }
+
         @Override
-        public ClientCall<I, O> build() {
+        public ClientCall<I, O, OutputStreamT> build() {
             return new ClientCallImpl<>(this);
         }
     }

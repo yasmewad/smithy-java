@@ -5,18 +5,17 @@
 
 package software.amazon.smithy.java.runtime.serde.httpbinding;
 
-import java.io.InputStream;
 import java.net.http.HttpHeaders;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
-import software.amazon.smithy.java.runtime.net.StoppableInputStream;
 import software.amazon.smithy.java.runtime.serde.Codec;
 import software.amazon.smithy.java.runtime.serde.ShapeDeserializer;
 import software.amazon.smithy.java.runtime.serde.SpecificShapeDeserializer;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
 import software.amazon.smithy.model.shapes.ShapeType;
 import software.amazon.smithy.utils.SmithyBuilder;
@@ -28,22 +27,25 @@ import software.amazon.smithy.utils.SmithyBuilder;
  * <p>This deserializer requires that a top-level structure shape is deserialized and will throw an
  * UnsupportedOperationException if any other kind of shape is first read from it.
  */
-final class HttpBindingDeserializer extends SpecificShapeDeserializer implements IOShape.Deserializer {
+final class HttpBindingDeserializer extends SpecificShapeDeserializer implements ShapeDeserializer {
+
+    private static final System.Logger LOGGER = System.getLogger(HttpBindingDeserializer.class.getName());
 
     private final Codec payloadCodec;
     private final HttpHeaders headers;
     private final String requestRawQueryString;
-    private final InputStream body;
     private final int responseStatus;
     private final String requestPath;
     private final Map<String, String> requestPathLabels;
     private final BindingMatcher bindingMatcher;
+    private final StreamPublisher body;
+    private CompletableFuture<StreamPublisher> bodyCf;
 
     private HttpBindingDeserializer(Builder builder) {
         this.payloadCodec = Objects.requireNonNull(builder.payloadCodec, "payloadSerializer not set");
         this.headers = Objects.requireNonNull(builder.headers, "headers not set");
         this.bindingMatcher = builder.isRequest ? BindingMatcher.requestMatcher() : BindingMatcher.responseMatcher();
-        this.body = builder.body == null ? InputStream.nullInputStream() : builder.body;
+        this.body = builder.body == null ? StreamPublisher.ofEmpty() : builder.body;
         this.requestPath = builder.requestPath;
         this.requestRawQueryString = builder.requestRawQueryString;
         this.responseStatus = builder.responseStatus;
@@ -73,7 +75,15 @@ final class HttpBindingDeserializer extends SpecificShapeDeserializer implements
                 case BODY -> bodyMembers.add(member.id().getName());
                 case PAYLOAD -> {
                     if (member.memberTarget().type() == ShapeType.STRUCTURE) {
-                        eachEntry.accept(member, payloadCodec.createDeserializer(body));
+                        // Read the payload into a byte buffer to deserialize a shape in the body.
+                        LOGGER.log(System.Logger.Level.TRACE, () -> "Reading " + schema
+                                                                    + " body to bytes for structure payload");
+                        bodyCf = body.asBytes().thenApply(bytes -> {
+                            LOGGER.log(System.Logger.Level.TRACE, () -> "Deserializing the payload of " + schema
+                                                                         + " via " + payloadCodec.getMediaType());
+                            eachEntry.accept(member, payloadCodec.createDeserializer(bytes));
+                            return StreamPublisher.ofEmpty();
+                        }).toCompletableFuture();
                     }
                 }
             }
@@ -83,18 +93,21 @@ final class HttpBindingDeserializer extends SpecificShapeDeserializer implements
         if (!bodyMembers.isEmpty()) {
             // Extract from the payload codec and exclude members from other locations.
             SdkSchema payloadOnly = schema.withFilteredMembers(member -> !bodyMembers.contains(member.id().getName()));
-            payloadCodec.createDeserializer(body).readStruct(payloadOnly, eachEntry);
+            // Need to read the entire payload into a byte buffer to deserialize via a codec.
+            // TODO: inspect and validate the content-type?
+            bodyCf = body.asBytes().thenApply(bytes -> {
+                LOGGER.log(System.Logger.Level.TRACE, () -> "Deserializing the structured body of " + schema
+                                                            + " via " + payloadCodec.getMediaType());
+                payloadCodec.createDeserializer(bytes).readStruct(payloadOnly, eachEntry);
+                LOGGER.log(System.Logger.Level.TRACE, () -> "Deserialized the structured body of " + schema
+                                                            + " via " + payloadCodec.getMediaType());
+                return StreamPublisher.ofEmpty();
+            }).toCompletableFuture();
         }
     }
 
-    @Override
-    public StoppableInputStream readStream(SdkSchema schema) {
-        return StoppableInputStream.of(body);
-    }
-
-    @Override
-    public Object readEventStream(SdkSchema schema) {
-        throw new UnsupportedOperationException("Event streams are not yet implemented");
+    public CompletableFuture<StreamPublisher> finishParsingBody() {
+        return Objects.requireNonNullElseGet(bodyCf, () -> CompletableFuture.completedFuture(body));
     }
 
     static final class Builder implements SmithyBuilder<HttpBindingDeserializer> {
@@ -103,7 +116,7 @@ final class HttpBindingDeserializer extends SpecificShapeDeserializer implements
         private boolean isRequest;
         private HttpHeaders headers;
         private String requestRawQueryString;
-        private InputStream body;
+        private StreamPublisher body;
         private String requestPath;
         private int responseStatus;
 
@@ -173,7 +186,7 @@ final class HttpBindingDeserializer extends SpecificShapeDeserializer implements
          * @param body Payload to deserialize.
          * @return Returns the builder.
          */
-        Builder body(InputStream body) {
+        Builder body(StreamPublisher body) {
             this.body = body;
             return this;
         }

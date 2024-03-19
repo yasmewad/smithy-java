@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.runtime;
 
-import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -15,16 +15,20 @@ import software.amazon.smithy.java.runtime.client.http.JavaHttpClient;
 import software.amazon.smithy.java.runtime.client.http.RestJsonClientProtocol;
 import software.amazon.smithy.java.runtime.endpoint.EndpointProvider;
 import software.amazon.smithy.java.runtime.myservice.PersonDirectoryClient;
+import software.amazon.smithy.java.runtime.myservice.model.GetPersonImageInput;
+import software.amazon.smithy.java.runtime.myservice.model.GetPersonImageOutput;
 import software.amazon.smithy.java.runtime.myservice.model.PersonDirectory;
 import software.amazon.smithy.java.runtime.myservice.model.PutPersonImageInput;
 import software.amazon.smithy.java.runtime.myservice.model.PutPersonImageOutput;
 import software.amazon.smithy.java.runtime.myservice.model.PutPersonInput;
 import software.amazon.smithy.java.runtime.myservice.model.PutPersonOutput;
 import software.amazon.smithy.java.runtime.myservice.model.ValidationError;
-import software.amazon.smithy.java.runtime.net.StoppableInputStream;
 import software.amazon.smithy.java.runtime.serde.Codec;
 import software.amazon.smithy.java.runtime.serde.any.Any;
 import software.amazon.smithy.java.runtime.serde.json.JsonCodec;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamHandler;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamingShape;
 import software.amazon.smithy.java.runtime.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.shapes.TypeRegistry;
@@ -32,11 +36,11 @@ import software.amazon.smithy.java.runtime.shapes.TypeRegistry;
 public class GenericTest {
 
     @Test
-    public void theClient() {
+    public void putPerson() {
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
                 .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
-                .endpointProvider(EndpointProvider.staticEndpoint("https://example.com"))
+                .endpointProvider(EndpointProvider.staticEndpoint("https://httpbin.org/anything"))
                 .build();
         PutPersonInput input = PutPersonInput.builder()
                 .name("Michael")
@@ -48,6 +52,26 @@ public class GenericTest {
     }
 
     @Test
+    public void getPersonImage() throws Exception {
+        HttpClient httpClient = HttpClient.newBuilder().build();
+        PersonDirectory client = PersonDirectoryClient.builder()
+                .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
+                .endpointProvider(EndpointProvider.staticEndpoint("https://httpbin.org"))
+                .build();
+        GetPersonImageInput input = GetPersonImageInput.builder().name("Michael").build();
+
+        StreamingShape<GetPersonImageOutput, InputStream> output = client.getPersonImage(input);
+        try (InputStream is = output.value()) {
+            System.out.println(new String(is.readAllBytes(), StandardCharsets.UTF_8));
+        }
+
+        String data = client.getPersonImageAsync(input, StreamHandler.ofString())
+                .thenApply(StreamingShape::value)
+                .join();
+        System.out.println(data);
+    }
+
+    @Test
     public void streamingRequestPayload() {
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
@@ -56,11 +80,10 @@ public class GenericTest {
                 .build();
         PutPersonImageInput input = PutPersonImageInput.builder()
                 .name("Michael")
-                .image(StoppableInputStream.of(new ByteArrayInputStream("foo".getBytes(StandardCharsets.UTF_8))))
                 .tags(List.of("Foo", "Bar"))
                 .moreTags(List.of("Abc", "one two"))
                 .build();
-        PutPersonImageOutput output = client.putPersonImage(input);
+        PutPersonImageOutput output = client.putPersonImage(input, StreamPublisher.ofString("image..."));
     }
 
     @Test

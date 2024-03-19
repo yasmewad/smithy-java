@@ -8,13 +8,14 @@ package software.amazon.smithy.java.runtime.myservice.model;
 import software.amazon.smithy.java.runtime.serde.ShapeDeserializer;
 import software.amazon.smithy.java.runtime.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.serde.ToStringSerializer;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.shapes.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;
 
 // Example of a potentially generated empty structure shape.
-public final class PutPersonImageOutput implements IOShape {
+public final class PutPersonImageOutput implements SerializableShape {
 
     static final ShapeId ID = ShapeId.from("smithy.example#PutPersonImageOutput");
     static final SdkSchema SCHEMA = SdkSchema.builder().id(ID).type(ShapeType.STRUCTURE).build();
@@ -35,7 +36,7 @@ public final class PutPersonImageOutput implements IOShape {
         serializer.beginStruct(SCHEMA, st -> {});
     }
 
-    public static final class Builder implements IOShape.Builder<PutPersonImageOutput> {
+    public static final class Builder implements SdkShapeBuilder<PutPersonImageOutput> {
 
         private Builder() {}
 

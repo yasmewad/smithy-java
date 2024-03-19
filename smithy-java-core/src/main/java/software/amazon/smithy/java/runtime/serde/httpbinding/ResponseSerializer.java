@@ -8,8 +8,9 @@ package software.amazon.smithy.java.runtime.serde.httpbinding;
 import java.util.Objects;
 import software.amazon.smithy.java.runtime.net.http.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.serde.Codec;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 import software.amazon.smithy.java.runtime.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.model.shapes.ShapeType;
 import software.amazon.smithy.model.traits.HttpTrait;
 
@@ -19,8 +20,9 @@ import software.amazon.smithy.model.traits.HttpTrait;
 public final class ResponseSerializer {
     private Codec payloadCodec;
     private SdkSchema operation;
-    private IOShape shapeValue;
+    private SerializableShape shapeValue;
     private final BindingMatcher bindingMatcher = BindingMatcher.responseMatcher();
+    private StreamPublisher payload;
 
     ResponseSerializer() {}
 
@@ -55,8 +57,19 @@ public final class ResponseSerializer {
      * @param shapeValue Response shape value to serialize.
      * @return Returns the serializer.
      */
-    public ResponseSerializer shapeValue(IOShape shapeValue) {
+    public ResponseSerializer shapeValue(SerializableShape shapeValue) {
         this.shapeValue = shapeValue;
+        return this;
+    }
+
+    /**
+     * Set the streaming payload of the response, if any.
+     *
+     * @param payload Payload to associate to the response.
+     * @return Returns the serializer.
+     */
+    public ResponseSerializer payload(StreamPublisher payload) {
+        this.payload = payload;
         return this;
     }
 
@@ -73,9 +86,8 @@ public final class ResponseSerializer {
         Objects.requireNonNull(payloadCodec, "value is not set");
 
         var httpTrait = operation.expectTrait(HttpTrait.class);
-        var serializer = new HttpBindingSerializer(httpTrait, payloadCodec, bindingMatcher);
+        var serializer = new HttpBindingSerializer(httpTrait, payloadCodec, bindingMatcher, payload);
         shapeValue.serialize(serializer);
-        shapeValue.serializeStream(serializer);
         serializer.flush();
 
         return SmithyHttpResponse.builder()

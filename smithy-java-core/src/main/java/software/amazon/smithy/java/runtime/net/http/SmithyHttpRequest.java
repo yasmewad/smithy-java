@@ -5,10 +5,9 @@
 
 package software.amazon.smithy.java.runtime.net.http;
 
-import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpHeaders;
-import software.amazon.smithy.java.runtime.net.StoppableInputStream;
+import software.amazon.smithy.java.runtime.serde.streaming.StreamPublisher;
 import software.amazon.smithy.utils.SmithyBuilder;
 
 public interface SmithyHttpRequest extends SmithyHttpMessage {
@@ -34,7 +33,7 @@ public interface SmithyHttpRequest extends SmithyHttpMessage {
 
         String method;
         URI uri;
-        StoppableInputStream body;
+        StreamPublisher body;
         HttpHeaders headers;
         SmithyHttpVersion httpVersion = SmithyHttpVersion.HTTP_1_1;
 
@@ -55,13 +54,9 @@ public interface SmithyHttpRequest extends SmithyHttpMessage {
             return this;
         }
 
-        public Builder body(StoppableInputStream body) {
+        public Builder body(StreamPublisher body) {
             this.body = body;
             return this;
-        }
-
-        public Builder body(InputStream body) {
-            return body(StoppableInputStream.of(body));
         }
 
         public Builder headers(HttpHeaders headers) {

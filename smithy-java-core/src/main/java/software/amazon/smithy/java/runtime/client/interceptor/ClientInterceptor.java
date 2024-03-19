@@ -6,10 +6,9 @@
 package software.amazon.smithy.java.runtime.client.interceptor;
 
 import java.util.List;
-import software.amazon.smithy.java.runtime.shapes.IOShape;
+import software.amazon.smithy.java.runtime.shapes.SerializableShape;
 import software.amazon.smithy.java.runtime.util.Context;
 
-// TODO: why non-blocking? Does that mean credential fetching is external to interceptors? What about short-circuiting?
 public interface ClientInterceptor {
 
     ClientInterceptor NOOP = new ClientInterceptor() {};
@@ -20,7 +19,7 @@ public interface ClientInterceptor {
 
     default void readBeforeExecution(Context context) {}
 
-    default IOShape modifyInputBeforeSerialization(IOShape input, Context context) {
+    default <I extends SerializableShape> I modifyInputBeforeSerialization(I input, Context context) {
         return input;
     }
 
@@ -28,39 +27,43 @@ public interface ClientInterceptor {
 
     default void readAfterSerialization(Context context) {}
 
-    // Could modify "TransmitRequest"
-    default void modifyRequestBeforeRetryLoop(Context context) {}
+    default <T> T modifyRequestBeforeRetryLoop(Context context, T request) {
+        return request;
+    }
 
     default void readBeforeAttempt(Context context) {}
 
-    // Could modify "TransmitRequest"
-    default void modifyRequestBeforeSigning(Context context) {}
+    default <T> T modifyRequestBeforeSigning(Context context, T request) {
+        return request;
+    }
 
     default void readBeforeSigning(Context context) {}
 
     default void readAfterSigning(Context context) {}
 
-    // Could modify "TransmitRequest"
-    default void modifyRequestBeforeTransmit(Context context) {}
+    default <T> T modifyRequestBeforeTransmit(Context context, T request) {
+        return request;
+    }
 
     default void readBeforeTransmit(Context context) {}
 
     default void readAfterTransmit(Context context) {}
 
-    // Could modify "TransmitResponse"
-    default void modifyResponseBeforeDeserialization(Context context) {}
+    default <T> T modifyResponseBeforeDeserialization(Context context, T response) {
+        return response;
+    }
 
     default void readResponseBeforeDeserialization(Context context) {}
 
     default void readAfterDeserialization(Context context) {}
 
-    default IOShape modifyOutputBeforeAttemptCompletion(IOShape output, Context context) {
+    default <O extends SerializableShape> O modifyOutputBeforeAttemptCompletion(O output, Context context) {
         return output;
     }
 
     default void readAfterAttempt(Context context) {}
 
-    default IOShape modifyOutputBeforeCompletion(IOShape output, Context context) {
+    default <O extends SerializableShape> O modifyOutputBeforeCompletion(O output, Context context) {
         return output;
     }
 
