@@ -1,3 +1,14 @@
-rootProject.name = 'smithy-java'
+rootProject.name = "smithy-java"
 
-include('smithy-java-core')
+include ":http"
+include ":core"
+include ":endpoint-provider"
+include ":sigv4"
+include ":http-binding"
+include ":json"
+
+include ":client-interceptor"
+include ":client-core"
+include ":client-http"
+
+include "examples:restjson-example"

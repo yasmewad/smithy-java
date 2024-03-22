@@ -1,0 +1,29 @@
+plugins {
+    id "java-library"
+}
+
+group = "software.amazon.smithy"
+version = "0.1"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api project(":core")
+    api project(":client-interceptor")
+    api project(":endpoint-provider")
+
+    testImplementation platform("org.junit:junit-bom:5.9.1")
+    testImplementation "org.junit.jupiter:junit-jupiter"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
