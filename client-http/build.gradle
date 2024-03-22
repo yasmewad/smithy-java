@@ -13,5 +13,5 @@ dependencies {
     api(project(":http-binding"))
     api(project(":client-core"))
     api(project(":endpoint-provider"))
-    api(project(":json")) // remove?
+    api(project(":json-codec")) // remove?
 }

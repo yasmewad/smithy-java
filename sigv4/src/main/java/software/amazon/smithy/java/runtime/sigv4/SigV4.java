@@ -124,13 +124,13 @@ public final class SigV4 {
         LOGGER.log(System.Logger.Level.TRACE, () -> "AWS4 String to Sign: '\"" + stringToSign + "\"");
 
         // AWS4 uses a series of derived keys, formed by hashing different pieces of data
-        var kSecret = ("AWS4" + secretKey).getBytes();
+        var kSecret = ("AWS4" + secretKey).getBytes(StandardCharsets.UTF_8);
         var kDate = sign(dateStamp, kSecret, "HmacSHA256");
         var kRegion = sign(regionName, kDate, "HmacSHA256");
         var kService = sign(serviceName, kRegion, "HmacSHA256");
         var kSigning = sign(TERMINATOR, kService, "HmacSHA256");
 
-        var signature = sign(stringToSign.getBytes(), kSigning, "HmacSHA256");
+        var signature = sign(stringToSign.getBytes(StandardCharsets.UTF_8), kSigning, "HmacSHA256");
 
         var credentialsAuthorizationHeader = "Credential=" + signingCredentials;
         var signedHeadersAuthorizationHeader = "SignedHeaders=" + getSignedHeaders(httpHeaders);

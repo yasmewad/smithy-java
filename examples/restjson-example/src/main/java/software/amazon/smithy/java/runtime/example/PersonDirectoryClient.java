@@ -6,9 +6,9 @@
 package software.amazon.smithy.java.runtime.example;
 
 import java.util.Objects;
-import software.amazon.smithy.java.runtime.clientcore.CallPipeline;
-import software.amazon.smithy.java.runtime.clientcore.ClientCall;
-import software.amazon.smithy.java.runtime.clientcore.ClientProtocol;
+import software.amazon.smithy.java.runtime.client.core.CallPipeline;
+import software.amazon.smithy.java.runtime.client.core.ClientCall;
+import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
 import software.amazon.smithy.java.runtime.core.context.Context;
 import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
