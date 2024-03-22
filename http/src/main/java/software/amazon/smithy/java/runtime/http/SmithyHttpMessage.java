@@ -8,7 +8,7 @@ package software.amazon.smithy.java.runtime.http;
 import java.net.http.HttpHeaders;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 
 public interface SmithyHttpMessage {
 
@@ -45,7 +45,7 @@ public interface SmithyHttpMessage {
         return withHeaders(HttpHeaders.of(current, (k, v) -> true));
     }
 
-    StreamPublisher body();
+    DataStream body();
 
-    SmithyHttpMessage withBody(StreamPublisher body);
+    SmithyHttpMessage withBody(DataStream body);
 }

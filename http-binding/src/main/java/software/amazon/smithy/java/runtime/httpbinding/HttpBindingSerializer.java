@@ -17,11 +17,11 @@ import java.util.StringJoiner;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.serde.SdkSerdeException;
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.SpecificShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.StructSerializer;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
 import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
 import software.amazon.smithy.java.runtime.core.uri.QueryStringBuilder;
 import software.amazon.smithy.java.runtime.core.uri.URLEncoding;
@@ -55,7 +55,7 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements Sha
     private StructSerializer delegateStruct;
     private ShapeSerializer shapeBodySerializer;
     private ByteArrayOutputStream shapeBodyOutput;
-    private StreamPublisher httpPayload;
+    private DataStream httpPayload;
     private int responseStatus;
 
     private final BindingMatcher bindingMatcher;
@@ -68,7 +68,7 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements Sha
             HttpTrait httpTrait,
             Codec payloadCodec,
             BindingMatcher bindingMatcher,
-            StreamPublisher httpPayload
+            DataStream httpPayload
     ) {
         uriPattern = httpTrait.getUri();
         responseStatus = httpTrait.getCode();
@@ -101,7 +101,7 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements Sha
         }
     }
 
-    void setHttpPayload(SdkSchema schema, StreamPublisher value) {
+    void setHttpPayload(SdkSchema schema, DataStream value) {
         httpPayload = value;
         String contentType = value
                 .contentType()
@@ -133,13 +133,13 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements Sha
         return shapeBodyOutput != null || httpPayload != null;
     }
 
-    StreamPublisher getBody() {
+    DataStream getBody() {
         if (httpPayload != null) {
             return httpPayload;
         } else if (shapeBodyOutput != null) {
-            return StreamPublisher.ofBytes(shapeBodyOutput.toByteArray(), payloadCodec.getMediaType());
+            return DataStream.ofBytes(shapeBodyOutput.toByteArray(), payloadCodec.getMediaType());
         } else {
-            return StreamPublisher.ofEmpty();
+            return DataStream.ofEmpty();
         }
     }
 
@@ -228,7 +228,7 @@ final class HttpBindingSerializer extends SpecificShapeSerializer implements Sha
                 ByteArrayOutputStream output = new ByteArrayOutputStream();
                 memberWriter.accept(payloadCodec.createSerializer(output));
                 var byteArray = output.toByteArray();
-                setHttpPayload(member, StreamPublisher.ofBytes(byteArray, payloadCodec.getMediaType()));
+                setHttpPayload(member, DataStream.ofBytes(byteArray, payloadCodec.getMediaType()));
             }
         }
     }

@@ -5,9 +5,8 @@
 
 package software.amazon.smithy.java.runtime.http;
 
-import java.util.concurrent.CompletableFuture;
 import software.amazon.smithy.java.runtime.core.context.Context;
 
 public interface SmithyHttpClient {
-    CompletableFuture<SmithyHttpResponse> send(SmithyHttpRequest request, Context context);
+    SmithyHttpResponse send(SmithyHttpRequest request, Context context);
 }

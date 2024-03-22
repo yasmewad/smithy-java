@@ -14,10 +14,8 @@ import org.junit.jupiter.api.Test;
 import software.amazon.smithy.java.runtime.clienthttp.JavaHttpClient;
 import software.amazon.smithy.java.runtime.clienthttp.RestJsonClientProtocol;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.serde.any.Any;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamHandler;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamingShape;
 import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.shapes.TypeRegistry;
@@ -59,16 +57,10 @@ public class GenericTest {
                 .endpointProvider(EndpointProvider.staticEndpoint("https://httpbin.org"))
                 .build();
         GetPersonImageInput input = GetPersonImageInput.builder().name("Michael").build();
-
-        StreamingShape<GetPersonImageOutput, InputStream> output = client.getPersonImage(input);
-        try (InputStream is = output.value()) {
+        GetPersonImageOutput output = client.getPersonImage(input);
+        try (InputStream is = output.image().inputStream()) {
             System.out.println(new String(is.readAllBytes(), StandardCharsets.UTF_8));
         }
-
-        String data = client.getPersonImageAsync(input, StreamHandler.ofString())
-                .thenApply(StreamingShape::value)
-                .join();
-        System.out.println(data);
     }
 
     @Test
@@ -82,8 +74,9 @@ public class GenericTest {
                 .name("Michael")
                 .tags(List.of("Foo", "Bar"))
                 .moreTags(List.of("Abc", "one two"))
+                .image(DataStream.ofString("image..."))
                 .build();
-        PutPersonImageOutput output = client.putPersonImage(input, StreamPublisher.ofString("image..."));
+        PutPersonImageOutput output = client.putPersonImage(input);
     }
 
     @Test

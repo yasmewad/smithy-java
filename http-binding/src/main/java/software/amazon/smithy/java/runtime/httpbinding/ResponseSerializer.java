@@ -7,7 +7,7 @@ package software.amazon.smithy.java.runtime.httpbinding;
 
 import java.util.Objects;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
 import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
 import software.amazon.smithy.java.runtime.http.SmithyHttpResponse;
@@ -22,7 +22,7 @@ public final class ResponseSerializer {
     private SdkSchema operation;
     private SerializableShape shapeValue;
     private final BindingMatcher bindingMatcher = BindingMatcher.responseMatcher();
-    private StreamPublisher payload;
+    private DataStream payload;
 
     ResponseSerializer() {}
 
@@ -68,7 +68,7 @@ public final class ResponseSerializer {
      * @param payload Payload to associate to the response.
      * @return Returns the serializer.
      */
-    public ResponseSerializer payload(StreamPublisher payload) {
+    public ResponseSerializer payload(DataStream payload) {
         this.payload = payload;
         return this;
     }

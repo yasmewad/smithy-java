@@ -8,7 +8,7 @@ package software.amazon.smithy.java.runtime.httpbinding;
 import java.net.URI;
 import java.util.Objects;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
 import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
 import software.amazon.smithy.java.runtime.core.uri.URIBuilder;
@@ -25,7 +25,7 @@ public final class RequestSerializer {
     private SdkSchema operation;
     private URI endpoint;
     private SerializableShape shapeValue;
-    private StreamPublisher payload;
+    private DataStream payload;
     private final BindingMatcher bindingMatcher = BindingMatcher.requestMatcher();
 
     RequestSerializer() {}
@@ -83,7 +83,7 @@ public final class RequestSerializer {
      * @param payload Payload to associate to the request.
      * @return Returns the serializer.
      */
-    public RequestSerializer payload(StreamPublisher payload) {
+    public RequestSerializer payload(DataStream payload) {
         this.payload = payload;
         return this;
     }

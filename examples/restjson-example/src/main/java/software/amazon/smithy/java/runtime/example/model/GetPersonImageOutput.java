@@ -5,6 +5,7 @@
 
 package software.amazon.smithy.java.runtime.example.model;
 
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.serde.ShapeDeserializer;
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.ToStringSerializer;
@@ -33,9 +34,11 @@ public final class GetPersonImageOutput implements SerializableShape {
             .build();
 
     private final String name;
+    private final DataStream image;
 
     private GetPersonImageOutput(Builder builder) {
         this.name = builder.name;
+        this.image = builder.image;
     }
 
     public static Builder builder() {
@@ -44,6 +47,10 @@ public final class GetPersonImageOutput implements SerializableShape {
 
     public String getName() {
         return name;
+    }
+
+    public DataStream image() {
+        return image;
     }
 
     @Override
@@ -61,6 +68,7 @@ public final class GetPersonImageOutput implements SerializableShape {
     public static final class Builder implements SdkShapeBuilder<GetPersonImageOutput> {
 
         private String name;
+        private DataStream image = DataStream.ofEmpty();
 
         private Builder() {}
 
@@ -72,6 +80,16 @@ public final class GetPersonImageOutput implements SerializableShape {
         public Builder name(String name) {
             this.name = name;
             return this;
+        }
+
+        public Builder image(DataStream image) {
+            this.image = image;
+            return this;
+        }
+
+        @Override
+        public void setDataStream(DataStream stream) {
+            image(stream);
         }
 
         @Override

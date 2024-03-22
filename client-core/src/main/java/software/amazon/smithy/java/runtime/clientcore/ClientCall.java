@@ -10,8 +10,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import software.amazon.smithy.java.runtime.clientinterceptor.ClientInterceptor;
 import software.amazon.smithy.java.runtime.core.context.Context;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamHandler;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.shapes.SdkOperation;
 import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
@@ -23,9 +22,8 @@ import software.amazon.smithy.java.runtime.endpointprovider.Endpoint;
  *
  * @param <I> Input to send.
  * @param <O> Output to return.
- * @param <OutputStreamT> Streaming output type.
  */
-public interface ClientCall<I extends SerializableShape, O extends SerializableShape, OutputStreamT> {
+public interface ClientCall<I extends SerializableShape, O extends SerializableShape> {
     /**
      * Get the input of the operation.
      *
@@ -66,16 +64,15 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
      *
      * @return the optionally present input stream to send in a request.
      */
-    Optional<StreamPublisher> requestStream();
+    Optional<DataStream> requestInputStream();
 
     /**
-     * Contains the non-null stream handler used to handle the output stream of the response.
+     * Contains the optionally present event stream of the input shape.
      *
-     * <p>This method may be called multiple times if retries occur.
-     *
-     * @return the stream handler used to process streaming output, if present.
+     * <p>TODO: Implement event streams.
+     * @return the optionally present input event stream.
      */
-    StreamHandler<O, OutputStreamT> responseStreamHandler();
+    Optional<Object> requestEventStream();
 
     /**
      * Create a builder for the output of the operation.
@@ -110,8 +107,7 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
      * @param <I> Input type.
      * @param <O> Output type.
      */
-    static <I extends SerializableShape, O extends SerializableShape, OutputStreamT> Builder<I, O, OutputStreamT>
-    builder() {
+    static <I extends SerializableShape, O extends SerializableShape> Builder<I, O> builder() {
         return new Builder<>();
     }
 
@@ -121,7 +117,7 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
      * @param <I> Input to send.
      * @param <O> Expected output.
      */
-    final class Builder<I extends SerializableShape, O extends SerializableShape, OutputStreamT> {
+    final class Builder<I extends SerializableShape, O extends SerializableShape> {
 
         I input;
         Endpoint endpoint;
@@ -129,8 +125,8 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
         Context context;
         BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
         ClientInterceptor interceptor = ClientInterceptor.NOOP;
-        StreamPublisher inputStream;
-        StreamHandler<O, OutputStreamT> streamHandler;
+        DataStream requestInputStream;
+        Object requestEventStream;
 
         private Builder() {}
 
@@ -140,7 +136,7 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
          * @param input Input to set.
          * @return Returns the builder.
          */
-        public Builder<I, O, OutputStreamT> input(I input) {
+        public Builder<I, O> input(I input) {
             this.input = input;
             return this;
         }
@@ -151,7 +147,7 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
          * @param operation Operation to call.
          * @return Returns the builder.
          */
-        public Builder<I, O, OutputStreamT> operation(SdkOperation<I, O> operation) {
+        public Builder<I, O> operation(SdkOperation<I, O> operation) {
             this.operation = operation;
             return this;
         }
@@ -162,7 +158,7 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
          * @param context Context to use.
          * @return Returns the builder.
          */
-        public Builder<I, O, OutputStreamT> context(Context context) {
+        public Builder<I, O> context(Context context) {
             this.context = context;
             return this;
         }
@@ -176,7 +172,7 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
          * @param errorCreator Error supplier to create the builder for an error.
          * @return Returns the builder.
          */
-        public Builder<I, O, OutputStreamT> errorCreator(
+        public Builder<I, O> errorCreator(
                 BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator
         ) {
             this.errorCreator = errorCreator;
@@ -189,7 +185,7 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
          * @param endpoint Endpoint to set.
          * @return Returns the builder.
          */
-        public Builder<I, O, OutputStreamT> endpoint(Endpoint endpoint) {
+        public Builder<I, O> endpoint(Endpoint endpoint) {
             this.endpoint = endpoint;
             return this;
         }
@@ -200,22 +196,28 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
          * @param interceptor Interceptor to use.
          * @return Returns the builder.
          */
-        public Builder<I, O, OutputStreamT> interceptor(ClientInterceptor interceptor) {
+        public Builder<I, O> interceptor(ClientInterceptor interceptor) {
             this.interceptor = Objects.requireNonNull(interceptor);
             return this;
         }
 
-        public Builder<I, O, OutputStreamT> inputStream(StreamPublisher inputStream) {
-            this.inputStream = inputStream;
+        public Builder<I, O> requestInputStream(DataStream requestInputStream) {
+            if (requestInputStream != null) {
+                this.requestInputStream = requestInputStream;
+                this.requestEventStream = null;
+            }
             return this;
         }
 
-        public Builder<I, O, OutputStreamT> streamHandler(StreamHandler<O, OutputStreamT> streamHandler) {
-            this.streamHandler = streamHandler;
+        public Builder<I, O> requestEventStream(Object requestEventStream) {
+            if (requestEventStream != null) {
+                this.requestEventStream = requestEventStream;
+                this.requestInputStream = null;
+            }
             return this;
         }
 
-        public ClientCall<I, O, OutputStreamT> build() {
+        public ClientCall<I, O> build() {
             return new ClientCallImpl<>(this);
         }
     }

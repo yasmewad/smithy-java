@@ -8,19 +8,19 @@ package software.amazon.smithy.java.runtime.http;
 import java.net.http.HttpHeaders;
 import java.util.Map;
 import java.util.Objects;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 
 public final class SmithyHttpResponseImpl implements SmithyHttpResponse {
 
     private final SmithyHttpVersion httpVersion;
     private final int statusCode;
-    private final StreamPublisher body;
+    private final DataStream body;
     private final HttpHeaders headers;
 
     SmithyHttpResponseImpl(SmithyHttpResponse.Builder builder) {
         this.httpVersion = Objects.requireNonNull(builder.httpVersion);
         this.statusCode = builder.statusCode;
-        this.body = Objects.requireNonNullElseGet(builder.body, StreamPublisher::ofEmpty);
+        this.body = Objects.requireNonNullElseGet(builder.body, DataStream::ofEmpty);
         this.headers = Objects.requireNonNullElseGet(builder.headers, () -> HttpHeaders.of(Map.of(), (k, v) -> true));
     }
 
@@ -66,12 +66,12 @@ public final class SmithyHttpResponseImpl implements SmithyHttpResponse {
     }
 
     @Override
-    public StreamPublisher body() {
+    public DataStream body() {
         return body;
     }
 
     @Override
-    public SmithyHttpResponse withBody(StreamPublisher body) {
+    public SmithyHttpResponse withBody(DataStream body) {
         return SmithyHttpResponse.builder().with(this).body(body).build();
     }
 }

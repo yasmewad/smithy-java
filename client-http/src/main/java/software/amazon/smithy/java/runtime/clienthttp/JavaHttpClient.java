@@ -5,16 +5,13 @@
 
 package software.amazon.smithy.java.runtime.clienthttp;
 
+import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Flow;
 import software.amazon.smithy.java.runtime.core.context.Context;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.http.HttpRequestOptions;
 import software.amazon.smithy.java.runtime.http.SmithyHttpClient;
 import software.amazon.smithy.java.runtime.http.SmithyHttpRequest;
@@ -37,10 +34,10 @@ public final class JavaHttpClient implements SmithyHttpClient {
     }
 
     @Override
-    public CompletableFuture<SmithyHttpResponse> send(SmithyHttpRequest request, Context context) {
+    public SmithyHttpResponse send(SmithyHttpRequest request, Context context) {
         var bodyPublisher = request.body().contentLength() == 0
                 ? HttpRequest.BodyPublishers.noBody()
-                : HttpRequest.BodyPublishers.fromPublisher(request.body());
+                : HttpRequest.BodyPublishers.ofInputStream(request.body()::inputStream);
 
         HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder()
                 .version(smithyToHttpVersion(request.httpVersion()))
@@ -61,8 +58,8 @@ public final class JavaHttpClient implements SmithyHttpClient {
 
         LOGGER.log(System.Logger.Level.TRACE, () -> "Sending request " + httpRequest + " " + httpRequest.headers());
 
-        return httpClient.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofPublisher()).thenApply(response -> {
-            var responsePublisher = response.body();
+        try {
+            var response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
             var contentType = response.headers().firstValue("content-type").orElse(null);
             var contentLength = response.headers().firstValue("content-length").map(Long::valueOf).orElse(-1L);
             LOGGER.log(System.Logger.Level.TRACE, () -> "Got response: " + response
@@ -72,12 +69,11 @@ public final class JavaHttpClient implements SmithyHttpClient {
                     .httpVersion(javaToSmithyVersion(response.version()))
                     .statusCode(response.statusCode())
                     .headers(response.headers())
-                    // Flatten the List<ByteBuffer> to ByteBuffer.
-                    .body(StreamPublisher.ofPublisher(new ListByteBufferToByteBuffer(responsePublisher),
-                                                      contentType,
-                                                      contentLength))
+                    .body(DataStream.ofInputStream(response.body(), contentType, contentLength))
                     .build();
-        });
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e); // todo
+        }
     }
 
     private HttpClient.Version smithyToHttpVersion(SmithyHttpVersion version) {
@@ -95,32 +91,4 @@ public final class JavaHttpClient implements SmithyHttpClient {
             default -> throw new UnsupportedOperationException("Unsupported HTTP version: " + version);
         };
     }
-
-    private record ListByteBufferToByteBuffer(Flow.Publisher<List<ByteBuffer>> originalPublisher)
-            implements Flow.Publisher<ByteBuffer> {
-        @Override
-            public void subscribe(Flow.Subscriber<? super ByteBuffer> subscriber) {
-                originalPublisher.subscribe(new Flow.Subscriber<>() {
-                    @Override
-                    public void onSubscribe(Flow.Subscription subscription) {
-                        subscriber.onSubscribe(subscription);
-                    }
-
-                    @Override
-                    public void onNext(List<ByteBuffer> item) {
-                        item.forEach(subscriber::onNext);
-                    }
-
-                    @Override
-                    public void onError(Throwable throwable) {
-                        subscriber.onError(throwable);
-                    }
-
-                    @Override
-                    public void onComplete() {
-                        subscriber.onComplete();
-                    }
-                });
-            }
-        }
 }

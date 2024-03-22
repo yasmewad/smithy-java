@@ -6,7 +6,7 @@
 package software.amazon.smithy.java.runtime.http;
 
 import java.net.http.HttpHeaders;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 
 public interface SmithyHttpResponse extends SmithyHttpMessage {
 
@@ -26,7 +26,7 @@ public interface SmithyHttpResponse extends SmithyHttpMessage {
     final class Builder {
 
         int statusCode;
-        StreamPublisher body;
+        DataStream body;
         HttpHeaders headers;
         SmithyHttpVersion httpVersion = SmithyHttpVersion.HTTP_1_1;
 
@@ -42,7 +42,7 @@ public interface SmithyHttpResponse extends SmithyHttpMessage {
             return this;
         }
 
-        public Builder body(StreamPublisher body) {
+        public Builder body(DataStream body) {
             this.body = body;
             return this;
         }

@@ -7,6 +7,7 @@ package software.amazon.smithy.java.runtime.example.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.serde.ShapeDeserializer;
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.ToStringSerializer;
@@ -46,11 +47,13 @@ public final class PutPersonImageInput implements SerializableShape {
     private final String name;
     private final List<String> tags;
     private final List<String> moreTags;
+    private final DataStream image;
 
     private PutPersonImageInput(Builder builder) {
         this.name = builder.name;
         this.tags = builder.tags;
         this.moreTags = builder.moreTags;
+        this.image = builder.image;
     }
 
     public static Builder builder() {
@@ -67,6 +70,10 @@ public final class PutPersonImageInput implements SerializableShape {
 
     public List<String> moreTags() {
         return moreTags;
+    }
+
+    public DataStream image() {
+        return image;
     }
 
     @Override
@@ -92,6 +99,7 @@ public final class PutPersonImageInput implements SerializableShape {
         private String name;
         private List<String> tags = new ArrayList<>();
         private List<String> moreTags = new ArrayList<>();
+        private DataStream image = DataStream.ofEmpty();
 
         private Builder() {}
 
@@ -113,6 +121,16 @@ public final class PutPersonImageInput implements SerializableShape {
         public Builder moreTags(List<String> moreTags) {
             this.moreTags = moreTags;
             return this;
+        }
+
+        public Builder image(DataStream image) {
+            this.image = image;
+            return this;
+        }
+
+        @Override
+        public void setDataStream(DataStream stream) {
+            image(stream);
         }
 
         @Override

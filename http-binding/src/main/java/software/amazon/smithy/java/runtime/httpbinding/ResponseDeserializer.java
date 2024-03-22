@@ -5,9 +5,7 @@
 
 package software.amazon.smithy.java.runtime.httpbinding;
 
-import java.util.concurrent.CompletableFuture;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
 import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.http.SmithyHttpResponse;
@@ -44,7 +42,8 @@ public final class ResponseDeserializer {
         deserBuilder
                 .headers(response.headers())
                 .responseStatus(response.statusCode())
-                .body(response.body());
+                .body(response.body())
+                .shapeBuilder(outputShapeBuilder);
         return this;
     }
 
@@ -75,7 +74,7 @@ public final class ResponseDeserializer {
     /**
      * Finish setting up and deserialize the response into the builder.
      */
-    public CompletableFuture<StreamPublisher> deserialize() {
+    public void deserialize() {
         if (errorShapeBuilder == null && outputShapeBuilder == null) {
             throw new IllegalStateException("Either errorShapeBuilder or outputShapeBuilder must be set");
         }
@@ -87,8 +86,5 @@ public final class ResponseDeserializer {
         } else {
             errorShapeBuilder.deserialize(deserializer);
         }
-
-        // Finish reading from the payload if necessary.
-        return deserializer.finishParsingBody();
     }
 }

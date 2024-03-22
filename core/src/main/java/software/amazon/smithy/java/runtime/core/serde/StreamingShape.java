@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.core.serde.streaming;
+package software.amazon.smithy.java.runtime.core.serde;
 
 import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
 

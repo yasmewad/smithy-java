@@ -5,6 +5,7 @@
 
 package software.amazon.smithy.java.runtime.core.shapes;
 
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.serde.ShapeDeserializer;
 import software.amazon.smithy.utils.SmithyBuilder;
 
@@ -14,6 +15,28 @@ import software.amazon.smithy.utils.SmithyBuilder;
  * @param <T> Shape to build.
  */
 public interface SdkShapeBuilder<T extends SerializableShape> extends SmithyBuilder<T> {
+    /**
+     * Set a stream of data on the shape, if allowed.
+     *
+     * @param stream Stream to set.
+     * @throws UnsupportedOperationException if the shape has no stream.
+     */
+    default void setDataStream(DataStream stream) {
+        throw new UnsupportedOperationException("This shape does not have a stream: " + getClass().getName());
+    }
+
+    /**
+     * Set an event stream on the shape, if allowed.
+     *
+     * <p>TODO: Implement event streams.
+     *
+     * @param eventStream Event stream to set.
+     * @throws UnsupportedOperationException if the shape has not event stream.
+     */
+    default void setEventStream(Object eventStream) {
+        throw new UnsupportedOperationException("This shape does not have an event stream: " + getClass().getName());
+    }
+
     /**
      * Deserializes data from the given decoder into the state of the builder.
      *

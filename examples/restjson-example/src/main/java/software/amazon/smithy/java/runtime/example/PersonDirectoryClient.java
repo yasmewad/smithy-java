@@ -6,14 +6,11 @@
 package software.amazon.smithy.java.runtime.example;
 
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import software.amazon.smithy.java.runtime.clientcore.CallPipeline;
 import software.amazon.smithy.java.runtime.clientcore.ClientCall;
 import software.amazon.smithy.java.runtime.clientcore.ClientProtocol;
 import software.amazon.smithy.java.runtime.core.context.Context;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamHandler;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamingShape;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.shapes.SdkOperation;
 import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
@@ -38,8 +35,6 @@ import software.amazon.smithy.utils.SmithyBuilder;
 // Example of a potentially generated client.
 public final class PersonDirectoryClient implements PersonDirectory {
 
-    private static final System.Logger LOGGER = System.getLogger(PersonDirectoryClient.class.getName());
-
     private final EndpointProvider endpointProvider;
     private final CallPipeline<?, ?> pipeline;
     private final TypeRegistry typeRegistry;
@@ -57,35 +52,36 @@ public final class PersonDirectoryClient implements PersonDirectory {
     }
 
     @Override
-    public CompletableFuture<PutPersonOutput> putPersonAsync(PutPersonInput input, Context context) {
-        return call(input, null, StreamHandler.discarding(), new PutPerson(), context)
-                .thenApply(StreamingShape::shape);
+    public PutPersonOutput putPerson(PutPersonInput input, Context context) {
+        return call(input, null, null, new PutPerson(), context);
     }
 
     @Override
-    public CompletableFuture<PutPersonImageOutput> putPersonImageAsync(
-            PutPersonImageInput input,
-            StreamPublisher image,
-            Context context
-    ) {
-        return call(input, image, StreamHandler.discarding(), new PutPersonImage(), context)
-                .thenApply(StreamingShape::shape);
+    public PutPersonImageOutput putPersonImage(PutPersonImageInput input, Context context) {
+        return call(input, input.image(), null, new PutPersonImage(), context);
     }
 
     @Override
-    public <ResultT> CompletableFuture<StreamingShape<GetPersonImageOutput, ResultT>> getPersonImageAsync(
-            GetPersonImageInput input,
-            Context context,
-            StreamHandler<GetPersonImageOutput, ResultT> transformer
-    ) {
-        return call(input, null, transformer, new GetPersonImage(), context);
+    public GetPersonImageOutput getPersonImage(GetPersonImageInput input, Context context) {
+        return call(input, null, null, new GetPersonImage(), context);
     }
 
-    private <I extends SerializableShape, O extends SerializableShape, StreamT>
-    CompletableFuture<StreamingShape<O, StreamT>> call(
+    /**
+     * Performs the actual RPC call.
+     *
+     * @param input       Input to send.
+     * @param inputStream Any kind of data stream extracted from the input, or null.
+     * @param eventStream The event stream extracted from the input, or null. TODO: Implement.
+     * @param operation   The operation shape.
+     * @param context     Context of the call.
+     * @return Returns the deserialized output.
+     * @param <I> Input shape.
+     * @param <O> Output shape.
+     */
+    private <I extends SerializableShape, O extends SerializableShape> O call(
             I input,
-            StreamPublisher inputStream,
-            StreamHandler<O, StreamT> streamHandler,
+            DataStream inputStream,
+            Object eventStream,
             SdkOperation<I, O> operation,
             Context context
     ) {
@@ -94,13 +90,13 @@ public final class PersonDirectoryClient implements PersonDirectory {
                 .putAllTypes(typeRegistry, operation.typeRegistry())
                 .build();
 
-        return pipeline.send(ClientCall.<I, O, StreamT> builder()
+        return pipeline.send(ClientCall.<I, O> builder()
                                      .input(input)
                                      .operation(operation)
                                      .endpoint(resolveEndpoint(operation.schema()))
                                      .context(context)
-                                     .inputStream(inputStream)
-                                     .streamHandler(streamHandler)
+                                     .requestInputStream(inputStream)
+                                     .requestEventStream(eventStream)
                                      .errorCreator((c, id) -> {
                                          ShapeId shapeId = ShapeId.from(id);
                                          return operationRegistry.create(shapeId, ModeledSdkException.class);

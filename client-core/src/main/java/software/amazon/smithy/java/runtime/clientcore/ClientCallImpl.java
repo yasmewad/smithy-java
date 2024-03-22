@@ -10,8 +10,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import software.amazon.smithy.java.runtime.clientinterceptor.ClientInterceptor;
 import software.amazon.smithy.java.runtime.core.context.Context;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamHandler;
-import software.amazon.smithy.java.runtime.core.serde.streaming.StreamPublisher;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.shapes.SdkOperation;
 import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
@@ -25,7 +24,7 @@ import software.amazon.smithy.java.runtime.endpointprovider.Endpoint;
  * @param <O> Operation output shape.
  */
 final class ClientCallImpl<I extends SerializableShape, O extends SerializableShape, OutputStreamT>
-        implements ClientCall<I, O, OutputStreamT> {
+        implements ClientCall<I, O> {
 
     private final I input;
     private final Endpoint endpoint;
@@ -33,18 +32,18 @@ final class ClientCallImpl<I extends SerializableShape, O extends SerializableSh
     private final Context context;
     private final BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
     private final ClientInterceptor interceptor;
-    private final StreamPublisher inputStream;
-    private final StreamHandler<O, OutputStreamT> streamHandler;
+    private final DataStream requestInputStream;
+    private final Object requestEventStream;
 
-    ClientCallImpl(ClientCall.Builder<I, O, OutputStreamT> builder) {
+    ClientCallImpl(ClientCall.Builder<I, O> builder) {
         input = Objects.requireNonNull(builder.input, "input is null");
         operation = Objects.requireNonNull(builder.operation, "operation is null");
         context = Objects.requireNonNull(builder.context, "context is null");
         errorCreator = Objects.requireNonNull(builder.errorCreator, "errorCreator is null");
         endpoint = Objects.requireNonNull(builder.endpoint, "endpoint is null");
         interceptor = Objects.requireNonNull(builder.interceptor, "interceptor is null");
-        inputStream = builder.inputStream;
-        streamHandler = builder.streamHandler;
+        requestInputStream = builder.requestInputStream;
+        requestEventStream = builder.requestEventStream;
     }
 
     @Override
@@ -78,12 +77,12 @@ final class ClientCallImpl<I extends SerializableShape, O extends SerializableSh
     }
 
     @Override
-    public Optional<StreamPublisher> requestStream() {
-        return Optional.ofNullable(inputStream);
+    public Optional<DataStream> requestInputStream() {
+        return Optional.ofNullable(requestInputStream);
     }
 
     @Override
-    public StreamHandler<O, OutputStreamT> responseStreamHandler() {
-        return streamHandler;
+    public Optional<Object> requestEventStream() {
+        return Optional.ofNullable(requestEventStream);
     }
 }
