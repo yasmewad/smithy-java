@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import software.amazon.smithy.java.runtime.core.serde.DataStream;
 
-public interface SmithyHttpMessage {
+public interface SmithyHttpMessage extends AutoCloseable {
 
     String startLine();
 
@@ -48,4 +48,14 @@ public interface SmithyHttpMessage {
     DataStream body();
 
     SmithyHttpMessage withBody(DataStream body);
+
+    /**
+     * Close underlying resources, if necessary.
+     *
+     * <p>If the resource is already closed, this method does nothing.
+     */
+    @Override
+    default void close() {
+        body().close();
+    }
 }

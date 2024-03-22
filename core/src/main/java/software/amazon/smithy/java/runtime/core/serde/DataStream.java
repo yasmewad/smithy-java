@@ -13,12 +13,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
-import software.amazon.smithy.java.runtime.core.UncheckedCloseable;
 
 /**
  * Abstraction for reading streams of data.
  */
-public interface DataStream extends UncheckedCloseable {
+public interface DataStream extends AutoCloseable {
     /**
      * Length of the data stream, if known.
      *
@@ -58,6 +57,11 @@ public interface DataStream extends UncheckedCloseable {
      */
     boolean rewind();
 
+    /**
+     * Close underlying resources, if necessary.
+     *
+     * <p>If the resource is already closed, this method does nothing.
+     */
     @Override
     default void close() {
         try {
