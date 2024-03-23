@@ -8,6 +8,7 @@ package software.amazon.smithy.java.runtime.api;
 import java.net.URI;
 import java.net.URISyntaxException;
 import software.amazon.smithy.java.runtime.context.Context;
+import software.amazon.smithy.java.runtime.context.ReadableContext;
 
 /**
  * Resolves an endpoint for an operation.
@@ -16,7 +17,7 @@ public interface EndpointProvider {
     /**
      * Resolves an endpoint using the provided context.
      *
-     * @param parameters Context parameters used during endpoint resolution.
+     * @param parameters Mutable context parameters used during endpoint resolution.
      * @return Returns the resolved endpoint.
      */
     Endpoint resolveEndpoint(Context parameters);
@@ -50,7 +51,7 @@ public interface EndpointProvider {
             }
 
             @Override
-            public Context context() {
+            public ReadableContext properties() {
                 return context;
             }
         };

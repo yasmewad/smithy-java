@@ -1,0 +1,14 @@
+plugins {
+    id 'smithy-java.module-conventions'
+}
+
+description = "This module provides the Smithy Java Identity API"
+
+ext {
+    displayName = "Smithy :: Java :: Identity :: API"
+    moduleName = "software.amazon.smithy.smithy-java.identity-api"
+}
+
+dependencies {
+    api(project(":context"))
+}

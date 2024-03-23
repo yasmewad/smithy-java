@@ -16,8 +16,14 @@ include ":client-interceptor-api"
 include ":client-core"
 include ":client-http"
 
+include ":client-auth-api"
+include ":identity-api"
+
 // Protocols
 include ":client-aws-rest-json1"
 
 // Examples
 include "examples:restjson-example"
+include 'identity-api'
+include 'client-auth'
+

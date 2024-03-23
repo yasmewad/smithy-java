@@ -6,7 +6,8 @@
 package software.amazon.smithy.java.runtime.api;
 
 import java.net.URI;
-import software.amazon.smithy.java.runtime.context.Context;
+import java.util.List;
+import software.amazon.smithy.java.runtime.context.ReadableContext;
 
 /**
  * A resolved endpoint.
@@ -20,9 +21,18 @@ public interface Endpoint {
     URI uri();
 
     /**
-     * Endpoint specific context map.
+     * Endpoint specific properties.
      *
-     * @return Returns the context map.
+     * @return Returns the properties.
      */
-    Context context();
+    ReadableContext properties();
+
+    /**
+     * Get the list of auth schemes supported at this endpoint.
+     *
+     * @return supported auth schemes.
+     */
+    default List<EndpointAuthScheme> supportedAuthSchemes() {
+        return List.of();
+    }
 }

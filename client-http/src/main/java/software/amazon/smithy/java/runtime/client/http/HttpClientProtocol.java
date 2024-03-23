@@ -85,9 +85,9 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
     @Override
     public final SmithyHttpRequest createRequest(ClientCall<?, ?> call) {
         // Initialize the context with more HTTP information.
-        call.context().setAttribute(HttpContext.PAYLOAD_CODEC, codec);
+        call.context().setProperty(HttpContext.PAYLOAD_CODEC, codec);
         var request = createHttpRequest(codec, call);
-        call.context().setAttribute(HttpContext.HTTP_REQUEST, request);
+        call.context().setProperty(HttpContext.HTTP_REQUEST, request);
         return request;
     }
 
@@ -95,13 +95,13 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
     public final SmithyHttpRequest signRequest(ClientCall<?, ?> call, SmithyHttpRequest request) {
         LOGGER.log(System.Logger.Level.TRACE, () -> "Signing HTTP request: " + request.startLine());
 
-        var signer = call.context().getAttribute(HttpContext.SIGNER);
+        var signer = call.context().getProperty(HttpContext.SIGNER);
         if (signer == null) {
             LOGGER.log(System.Logger.Level.TRACE, () -> "No signer registered for request: " + request.startLine());
         } else {
             var signedRequest = signer.sign(request, call.context());
             LOGGER.log(System.Logger.Level.TRACE, () -> "Signed HTTP request: " + signedRequest.startLine());
-            call.context().setAttribute(HttpContext.HTTP_REQUEST, signedRequest);
+            call.context().setProperty(HttpContext.HTTP_REQUEST, signedRequest);
         }
 
         return request;
@@ -112,7 +112,7 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
         LOGGER.log(System.Logger.Level.TRACE, () -> "Sending HTTP request: " + request.startLine());
         var response = sendHttpRequest(call, client, request);
         LOGGER.log(System.Logger.Level.TRACE, () -> "Got HTTP response: " + response.startLine());
-        call.context().setAttribute(HttpContext.HTTP_RESPONSE, response);
+        call.context().setProperty(HttpContext.HTTP_RESPONSE, response);
         return response;
     }
 

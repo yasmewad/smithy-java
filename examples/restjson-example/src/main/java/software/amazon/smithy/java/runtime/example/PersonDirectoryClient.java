@@ -106,7 +106,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     private Endpoint resolveEndpoint(SdkSchema operation) {
         Context endpointContext = Context.create();
-        endpointContext.setAttribute(EndpointParams.OPERATION_NAME, operation.id().getName());
+        endpointContext.setProperty(EndpointParams.OPERATION_NAME, operation.id().getName());
         return endpointProvider.resolveEndpoint(endpointContext);
     }
 

@@ -5,14 +5,21 @@
 
 package software.amazon.smithy.java.runtime.context;
 
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * A typed context map.
+ * A read/write typed context map.
  */
-public interface Context {
+public interface Context extends ReadableContext {
+    /**
+     * Set a Property.
+     *
+     * @param key   Property key.
+     * @param value Value to set.
+     * @param <T>   Returns the previously set value, or null if not present.
+     */
+    <T> void setProperty(Constant<T> key, T value);
 
     /**
      * Creates a context context map.
@@ -24,60 +31,24 @@ public interface Context {
             private final ConcurrentMap<Constant<?>, Object> attributes = new ConcurrentHashMap<>();
 
             @Override
-            public final <T> void setAttribute(Constant<T> key, T value) {
+            public <T> void setProperty(Constant<T> key, T value) {
                 attributes.put(key, value);
             }
 
             @Override
             @SuppressWarnings("unchecked")
-            public final <T> T getAttribute(Constant<T> key) {
+            public <T> T getProperty(Constant<T> key) {
                 return (T) attributes.get(key);
             }
+
+            @Override
+            public void forEachProperty(PropertyConsumer consumer) {
+                attributes.forEach((k, v) -> consumeProperty(k, consumer));
+            }
+
+            private <T> void consumeProperty(Constant<T> property, PropertyConsumer consumer) {
+                consumer.accept(property, getProperty(property));
+            }
         };
-    }
-
-    /**
-     * Set an attribute.
-     *
-     * @param key   Attribute key.
-     * @param value Value to set.
-     * @param <T>   Returns the previously set value, or null if not present.
-     */
-    <T> void setAttribute(Constant<T> key, T value);
-
-    /**
-     * Get an attribute.
-     *
-     * @param key   Attribute key to get by exact reference identity.
-     * @param <T>   Returns the value, or null if not present.
-     * @return Returns the nullable attribute value.
-     */
-    <T> T getAttribute(Constant<T> key);
-
-    /**
-     * Get an attribute or return a default if not found.
-     *
-     * @param key          Attribute key to get by exact reference identity.
-     * @param defaultValue Value to return if the attribute is null or non-existent.
-     * @param <T>          Returns the value, or null if not present.
-     * @return Returns the attribute value.
-     */
-    default <T> T getAttribute(Constant<T> key, T defaultValue) {
-        return Objects.requireNonNullElse(getAttribute(key), defaultValue);
-    }
-
-    /**
-     * Get an attribute and throw if it isn't present.
-     *
-     * @param key Attribute key to get by exact reference identity.
-     * @param <T> Returns the value.
-     * @throws IllegalArgumentException if the attribute isn't found.
-     */
-    default <T> T expectAttribute(Constant<T> key) {
-        T value = getAttribute(key);
-        if (value == null) {
-            throw new IllegalArgumentException("Unknown attribute: " + key);
-        }
-        return value;
     }
 }
