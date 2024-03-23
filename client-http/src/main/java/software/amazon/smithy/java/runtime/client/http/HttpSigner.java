@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
-import software.amazon.smithy.java.runtime.core.context.Context;
+import software.amazon.smithy.java.runtime.context.Context;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
 
 public interface HttpSigner {

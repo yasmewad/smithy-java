@@ -1,14 +1,23 @@
 rootProject.name = "smithy-java"
 
+include ":context"
 include ":core"
-include ":endpoint-provider"
-include ":sigv4"
-include ":http-core"
+
+include ":endpoint-provider-api"
+
+include ":http-api"
 include ":http-binding"
+
 include ":json-codec"
 
-include ":client-interceptor"
+include ":sigv4"
+
+include ":client-interceptor-api"
 include ":client-core"
 include ":client-http"
 
+// Protocols
+include ":client-aws-rest-json1"
+
+// Examples
 include "examples:restjson-example"

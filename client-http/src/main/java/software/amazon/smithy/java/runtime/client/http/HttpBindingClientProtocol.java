@@ -6,13 +6,13 @@
 package software.amazon.smithy.java.runtime.client.http;
 
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
+import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
-import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
+import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpClient;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;
-import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
 
 /**
  * An HTTP-based protocol that uses HTTP binding traits.

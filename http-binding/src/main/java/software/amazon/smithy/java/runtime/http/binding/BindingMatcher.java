@@ -6,7 +6,7 @@
 package software.amazon.smithy.java.runtime.http.binding;
 
 import java.util.Objects;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 import software.amazon.smithy.model.traits.HttpHeaderTrait;
 import software.amazon.smithy.model.traits.HttpLabelTrait;
 import software.amazon.smithy.model.traits.HttpPayloadTrait;

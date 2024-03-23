@@ -14,14 +14,14 @@ import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.function.Consumer;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.ListSerializer;
 import software.amazon.smithy.java.runtime.core.serde.MapSerializer;
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.StructSerializer;
 import software.amazon.smithy.java.runtime.core.serde.TimestampFormatter;
 import software.amazon.smithy.java.runtime.core.serde.any.Any;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
 import software.amazon.smithy.model.traits.TimestampFormatTrait;
 
 final class JsonSerializer implements ShapeSerializer {

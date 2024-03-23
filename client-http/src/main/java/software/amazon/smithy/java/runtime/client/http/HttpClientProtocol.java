@@ -5,21 +5,23 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
+import java.io.IOException;
 import java.net.http.HttpHeaders;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
+import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
+import software.amazon.smithy.java.runtime.core.schema.SdkException;
+import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
-import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
-import software.amazon.smithy.java.runtime.core.shapes.SdkException;
-import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
+import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpClient;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;
-import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
 
 /**
  * An abstract HTTP-Based protocol.
@@ -206,11 +208,11 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
             return new SdkException(message.toString(), fault);
         }
 
-        // Stream the response payload to the error message.
-        message.append(response.body().readToString(16384));
-
-        // Attempt to rewind the body, if possible.
-        response.body().rewind();
+        try {
+            message.append(new String(response.body().readNBytes(16384), StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            // ignore
+        }
 
         return new SdkException(message.toString(), fault);
     }

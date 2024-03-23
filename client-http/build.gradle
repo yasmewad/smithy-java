@@ -2,7 +2,7 @@ plugins {
     id 'smithy-java.module-conventions'
 }
 
-description = "This module provides client http functionality"
+description = "This module provides client HTTP functionality"
 
 ext {
     displayName = "Smithy :: Java :: Client Http"
@@ -12,6 +12,4 @@ ext {
 dependencies {
     api(project(":http-binding"))
     api(project(":client-core"))
-    api(project(":endpoint-provider"))
-    api(project(":json-codec")) // remove?
 }

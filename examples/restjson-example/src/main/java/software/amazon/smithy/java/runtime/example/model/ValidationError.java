@@ -8,9 +8,9 @@ package software.amazon.smithy.java.runtime.example.model;
 import software.amazon.smithy.java.runtime.core.serde.ShapeDeserializer;
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.ToStringSerializer;
-import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
-import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;
 

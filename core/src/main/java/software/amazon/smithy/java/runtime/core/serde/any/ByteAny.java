@@ -6,7 +6,7 @@
 package software.amazon.smithy.java.runtime.core.serde.any;
 
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 import software.amazon.smithy.model.shapes.ShapeType;
 
 final class ByteAny implements Any {

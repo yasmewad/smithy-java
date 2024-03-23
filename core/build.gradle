@@ -10,5 +10,6 @@ ext {
 }
 
 dependencies {
+    api(project(":context"))
     api(libs.smithy.model)
 }

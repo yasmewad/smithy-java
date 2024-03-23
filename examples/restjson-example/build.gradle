@@ -4,9 +4,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":json-codec"))
-    api(project(":http-binding"))
-    api(project(":client-http"))
+    api(project(":client-aws-rest-json1"))
 }
 
 jmh {

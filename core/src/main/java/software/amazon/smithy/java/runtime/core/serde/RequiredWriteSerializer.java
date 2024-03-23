@@ -12,8 +12,8 @@ import java.time.Instant;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import software.amazon.smithy.java.runtime.core.serde.any.Any;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 /**
  * Ensures that a value is written to a serializer when required (e.g., when writing structure members).

@@ -10,9 +10,9 @@ import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 import software.amazon.smithy.java.runtime.core.serde.SpecificShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.TimestampFormatter;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
 import software.amazon.smithy.model.traits.TimestampFormatTrait;
 
 final class HttpLabelSerializer extends SpecificShapeSerializer {

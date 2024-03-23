@@ -6,8 +6,8 @@
 package software.amazon.smithy.java.runtime.http.binding;
 
 import java.util.function.IntConsumer;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 import software.amazon.smithy.java.runtime.core.serde.SpecificShapeSerializer;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
 
 final class ResponseStatusSerializer extends SpecificShapeSerializer {
 

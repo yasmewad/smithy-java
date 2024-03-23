@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
-import software.amazon.smithy.java.runtime.core.context.Constant;
+import software.amazon.smithy.java.runtime.context.Constant;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;

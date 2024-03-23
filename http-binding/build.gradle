@@ -10,5 +10,6 @@ ext {
 }
 
 dependencies {
-    api(project(":http-core"))
+    api(project(":core"))
+    api(project(":http-api"))
 }

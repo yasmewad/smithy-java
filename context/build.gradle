@@ -1,0 +1,10 @@
+plugins {
+    id 'smithy-java.module-conventions'
+}
+
+description = "This module provides a simple typed context object used through smithy-java"
+
+ext {
+    displayName = "Smithy :: Java :: Context"
+    moduleName = "software.amazon.smithy.smithy-java.context"
+}

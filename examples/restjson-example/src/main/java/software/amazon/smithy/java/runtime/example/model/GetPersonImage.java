@@ -5,10 +5,10 @@
 
 package software.amazon.smithy.java.runtime.example.model;
 
-import software.amazon.smithy.java.runtime.core.shapes.SdkOperation;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
-import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
-import software.amazon.smithy.java.runtime.core.shapes.TypeRegistry;
+import software.amazon.smithy.java.runtime.core.schema.SdkOperation;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.core.schema.TypeRegistry;
 import software.amazon.smithy.model.pattern.UriPattern;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;

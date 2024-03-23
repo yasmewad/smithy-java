@@ -5,9 +5,10 @@
 
 package software.amazon.smithy.java.runtime.http.binding;
 
+import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
+import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
-import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
-import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;
 
 /**
@@ -42,7 +43,7 @@ public final class ResponseDeserializer {
         deserBuilder
                 .headers(response.headers())
                 .responseStatus(response.statusCode())
-                .body(response.body())
+                .body(DataStream.ofInputStream(response.body()))
                 .shapeBuilder(outputShapeBuilder);
         return this;
     }

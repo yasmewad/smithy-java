@@ -6,8 +6,8 @@
 package software.amazon.smithy.java.runtime.client.core;
 
 import software.amazon.smithy.java.runtime.client.interceptor.ClientInterceptor;
-import software.amazon.smithy.java.runtime.core.context.Context;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
+import software.amazon.smithy.java.runtime.context.Context;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 public final class CallPipeline<RequestT, ResponseT> {
 

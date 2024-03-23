@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import software.amazon.smithy.java.runtime.core.serde.ShapeDeserializer;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 
 /**
  * This essentially is responsible for sending the value of an Any into a builder.

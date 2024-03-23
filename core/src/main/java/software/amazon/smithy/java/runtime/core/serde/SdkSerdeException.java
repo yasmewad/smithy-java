@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.runtime.core.serde;
 
-import software.amazon.smithy.java.runtime.core.shapes.SdkException;
+import software.amazon.smithy.java.runtime.core.schema.SdkException;
 
 public class SdkSerdeException extends SdkException {
     public SdkSerdeException(String message) {

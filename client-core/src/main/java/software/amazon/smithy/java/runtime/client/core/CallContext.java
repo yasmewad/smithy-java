@@ -5,11 +5,11 @@
 
 package software.amazon.smithy.java.runtime.client.core;
 
-import software.amazon.smithy.java.runtime.core.context.Constant;
-import software.amazon.smithy.java.runtime.core.shapes.SdkException;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
-import software.amazon.smithy.java.runtime.endpointprovider.EndpointProvider;
+import software.amazon.smithy.java.runtime.api.EndpointProvider;
+import software.amazon.smithy.java.runtime.context.Constant;
+import software.amazon.smithy.java.runtime.core.schema.SdkException;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 /**
  * Context parameters made available to underlying transports like HTTP clients.

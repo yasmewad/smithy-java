@@ -6,10 +6,10 @@
 package software.amazon.smithy.java.runtime.http.binding;
 
 import java.util.Objects;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
 import software.amazon.smithy.java.runtime.core.serde.DataStream;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;
 import software.amazon.smithy.model.shapes.ShapeType;
 import software.amazon.smithy.model.traits.HttpTrait;
@@ -93,7 +93,7 @@ public final class ResponseSerializer {
         return SmithyHttpResponse.builder()
                 .statusCode(serializer.getResponseStatus())
                 .headers(serializer.getHeaders())
-                .body(serializer.getBody())
+                .body(serializer.getBody().inputStream())
                 .build();
     }
 }

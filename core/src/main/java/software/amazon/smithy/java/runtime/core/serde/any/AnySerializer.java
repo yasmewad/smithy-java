@@ -6,7 +6,7 @@
 package software.amazon.smithy.java.runtime.core.serde.any;
 
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 
 /**
  * This is essentially responsible for serializing an Any to JSON, XML, etc.

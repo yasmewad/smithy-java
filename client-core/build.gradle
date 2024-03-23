@@ -11,6 +11,6 @@ ext {
 
 dependencies {
     api(project(":core"))
-    api(project(":client-interceptor"))
-    api(project(":endpoint-provider"))
+    api(project(":client-interceptor-api"))
+    api(project(":endpoint-provider-api"))
 }

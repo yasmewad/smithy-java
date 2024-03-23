@@ -10,8 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import software.amazon.smithy.java.runtime.core.context.Context;
-import software.amazon.smithy.java.runtime.core.serde.DataStream;
+import software.amazon.smithy.java.runtime.context.Context;
 import software.amazon.smithy.java.runtime.http.core.HttpRequestOptions;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpClient;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
@@ -35,9 +34,7 @@ public final class JavaHttpClient implements SmithyHttpClient {
 
     @Override
     public SmithyHttpResponse send(SmithyHttpRequest request, Context context) {
-        var bodyPublisher = request.body().contentLength() == 0
-                ? HttpRequest.BodyPublishers.noBody()
-                : HttpRequest.BodyPublishers.ofInputStream(request.body()::inputStream);
+        var bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(request.body()::inputStream);
 
         HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder()
                 .version(smithyToHttpVersion(request.httpVersion()))
@@ -60,16 +57,13 @@ public final class JavaHttpClient implements SmithyHttpClient {
 
         try {
             var response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
-            var contentType = response.headers().firstValue("content-type").orElse(null);
-            var contentLength = response.headers().firstValue("content-length").map(Long::valueOf).orElse(-1L);
             LOGGER.log(System.Logger.Level.TRACE, () -> "Got response: " + response
-                                                        + "; Content-Type: " + contentType
-                                                        + "; Content-Length: " + contentLength);
+                                                        + "; headers: " + response.headers().map());
             return SmithyHttpResponse.builder()
                     .httpVersion(javaToSmithyVersion(response.version()))
                     .statusCode(response.statusCode())
                     .headers(response.headers())
-                    .body(DataStream.ofInputStream(response.body(), contentType, contentLength))
+                    .body(response.body())
                     .build();
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e); // todo

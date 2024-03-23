@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.runtime.core.serde;
 
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 /**
  * Wraps an input or output shape that can contain a stream of data.

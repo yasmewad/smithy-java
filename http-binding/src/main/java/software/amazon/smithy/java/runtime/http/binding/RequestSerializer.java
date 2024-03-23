@@ -7,10 +7,10 @@ package software.amazon.smithy.java.runtime.http.binding;
 
 import java.net.URI;
 import java.util.Objects;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
 import software.amazon.smithy.java.runtime.core.serde.DataStream;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
 import software.amazon.smithy.java.runtime.core.uri.URIBuilder;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
 import software.amazon.smithy.model.shapes.ShapeType;
@@ -120,7 +120,7 @@ public final class RequestSerializer {
                 .method(httpTrait.getMethod())
                 .uri(targetEndpoint)
                 .headers(serializer.getHeaders())
-                .body(serializer.getBody())
+                .body(new ContentStreamAdapter(serializer.getBody()))
                 .build();
     }
 }

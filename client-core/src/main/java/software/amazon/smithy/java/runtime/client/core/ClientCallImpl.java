@@ -8,14 +8,14 @@ package software.amazon.smithy.java.runtime.client.core;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import software.amazon.smithy.java.runtime.api.Endpoint;
 import software.amazon.smithy.java.runtime.client.interceptor.ClientInterceptor;
-import software.amazon.smithy.java.runtime.core.context.Context;
+import software.amazon.smithy.java.runtime.context.Context;
+import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
+import software.amazon.smithy.java.runtime.core.schema.SdkOperation;
+import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.DataStream;
-import software.amazon.smithy.java.runtime.core.shapes.ModeledSdkException;
-import software.amazon.smithy.java.runtime.core.shapes.SdkOperation;
-import software.amazon.smithy.java.runtime.core.shapes.SdkShapeBuilder;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
-import software.amazon.smithy.java.runtime.endpointprovider.Endpoint;
 
 /**
  * Basic implementation of {@link ClientCall}.

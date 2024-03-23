@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 import software.amazon.smithy.model.traits.TimestampFormatTrait;
 
 /**

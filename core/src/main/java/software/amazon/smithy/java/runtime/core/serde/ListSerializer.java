@@ -12,8 +12,8 @@ import java.math.BigInteger;
 import java.time.Instant;
 import java.util.function.Consumer;
 import software.amazon.smithy.java.runtime.core.serde.any.Any;
-import software.amazon.smithy.java.runtime.core.shapes.SdkSchema;
-import software.amazon.smithy.java.runtime.core.shapes.SerializableShape;
+import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 /**
  * Helper class that can be used to serialize content between values.

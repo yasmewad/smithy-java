@@ -1,0 +1,98 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package software.amazon.smithy.java.runtime.http.core;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.net.http.HttpHeaders;
+
+public interface SmithyHttpResponse extends SmithyHttpMessage, AutoCloseable {
+
+    @Override
+    default String startLine() {
+        return httpVersion() + " " + statusCode();
+    }
+
+    int statusCode();
+
+    SmithyHttpResponse withStatusCode(int statusCode);
+
+    /**
+     * Get the body of the response.
+     *
+     * @return Returns the response body.
+     */
+    InputStream body();
+
+    /**
+     * Create a new response from this response with the given body.
+     *
+     * @param body Body to set.
+     * @return Returns the new response.
+     */
+    SmithyHttpMessage withBody(InputStream body);
+
+    /**
+     * Close underlying resources, if necessary.
+     *
+     * <p>If the resource is already closed, this method does nothing.
+     */
+    @Override
+    default void close() {
+        try {
+            body().close();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    static Builder builder() {
+        return new Builder();
+    }
+
+    final class Builder {
+
+        int statusCode;
+        InputStream body;
+        HttpHeaders headers;
+        SmithyHttpVersion httpVersion = SmithyHttpVersion.HTTP_1_1;
+
+        private Builder() {}
+
+        public Builder httpVersion(SmithyHttpVersion httpVersion) {
+            this.httpVersion = httpVersion;
+            return this;
+        }
+
+        public Builder statusCode(int statusCode) {
+            this.statusCode = statusCode;
+            return this;
+        }
+
+        public Builder body(InputStream body) {
+            this.body = body;
+            return this;
+        }
+
+        public Builder headers(HttpHeaders headers) {
+            this.headers = headers;
+            return this;
+        }
+
+        public Builder with(SmithyHttpResponse response) {
+            this.httpVersion = response.httpVersion();
+            this.headers = response.headers();
+            this.body = response.body();
+            this.statusCode = response.statusCode();
+            return this;
+        }
+
+        public SmithyHttpResponse build() {
+            return new SmithyHttpResponseImpl(this);
+        }
+    }
+}
