@@ -12,12 +12,10 @@ include ":json-codec"
 
 include ":sigv4"
 
-include ":client-interceptor-api"
 include ":client-core"
 include ":client-http"
 
-include ":client-auth-api"
-include ":identity-api"
+include ":auth-api"
 
 // Protocols
 include ":client-aws-rest-json1"
@@ -26,4 +24,5 @@ include ":client-aws-rest-json1"
 include "examples:restjson-example"
 include 'identity-api'
 include 'client-auth'
+include 'auth-api'
 

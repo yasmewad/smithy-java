@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import software.amazon.smithy.java.runtime.api.Endpoint;
-import software.amazon.smithy.java.runtime.client.interceptor.ClientInterceptor;
+import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
 import software.amazon.smithy.java.runtime.context.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkOperation;
