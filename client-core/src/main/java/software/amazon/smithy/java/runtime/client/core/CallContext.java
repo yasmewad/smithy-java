@@ -5,6 +5,7 @@
 
 package software.amazon.smithy.java.runtime.client.core;
 
+import java.time.Duration;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
 import software.amazon.smithy.java.runtime.context.Context;
 import software.amazon.smithy.java.runtime.core.schema.SdkException;
@@ -44,6 +45,16 @@ public final class CallContext {
      * Contains the output schema of the operation being sent.
      */
     public static final Context.Key<SdkSchema> OUTPUT_SCHEMA = Context.key("Output schema");
+
+    /**
+     * The total amount of time to wait for an API call to complete, including retries, and serialization.
+     */
+    public static final Context.Key<Duration> API_CALL_TIMEOUT = Context.key("API call timeout");
+
+    /**
+     * The amount of time to wait for a single, underlying network request to complete before giving up and timing out.
+     */
+    public static final Context.Key<Duration> API_CALL_ATTEMPT_TIMEOUT = Context.key("API call attempt timeout");
 
     /**
      * The endpoint provider used to resolve the destination endpoint for a request.

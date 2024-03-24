@@ -5,6 +5,11 @@
 
 package software.amazon.smithy.java.runtime.client.core;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
 import software.amazon.smithy.java.runtime.context.Context;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
@@ -27,13 +32,29 @@ public final class CallPipeline<RequestT, ResponseT> {
      * @param <O> Output shape.
      */
     public <I extends SerializableShape, O extends SerializableShape> O send(ClientCall<I, O> call) {
-        ClientInterceptor interceptor = call.interceptor();
         var context = call.context();
         context.put(CallContext.INPUT, call.input());
         context.put(CallContext.OPERATION_SCHEMA, call.operation().schema());
         context.put(CallContext.INPUT_SCHEMA, call.operation().inputSchema());
         context.put(CallContext.OUTPUT_SCHEMA, call.operation().outputSchema());
+        var timeout = context.get(CallContext.API_CALL_TIMEOUT);
 
+        // Call the actual service in a virtual thread to support total-call timeout.
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Future<O> result = executor.submit(() -> doSend(call));
+            if (timeout == null) {
+                return result.get();
+            } else {
+                return result.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            }
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private <I extends SerializableShape, O extends SerializableShape> O doSend(ClientCall<I, O> call) {
+        ClientInterceptor interceptor = call.interceptor();
+        var context = call.context();
         interceptor.readBeforeExecution(context);
 
         context.put(CallContext.INPUT, interceptor.modifyInputBeforeSerialization(call.input(), context));
