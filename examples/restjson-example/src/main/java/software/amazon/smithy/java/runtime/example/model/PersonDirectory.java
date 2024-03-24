@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.runtime.example.model;
 
-import software.amazon.smithy.java.runtime.context.Context;
+import software.amazon.smithy.java.runtime.core.Context;
 
 // An example of a generated service interface.
 public interface PersonDirectory {

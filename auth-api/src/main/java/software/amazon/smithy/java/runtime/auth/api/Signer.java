@@ -5,7 +5,6 @@
 
 package software.amazon.smithy.java.runtime.auth.api;
 
-import java.time.Clock;
 import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
 
 /**
@@ -16,13 +15,6 @@ import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
  */
 @FunctionalInterface
 public interface Signer<RequestT, IdentityT extends Identity> {
-    /**
-     * A {@link Clock} to be used to derive the signing time. This property defaults to the system clock.
-     *
-     * <p>Note, signing time may not be relevant to some signers.
-     */
-    AuthProperties.Key<Clock> SIGNING_CLOCK = AuthProperties.key("SigningClock");
-
     /**
      * Sign the given request.
      *

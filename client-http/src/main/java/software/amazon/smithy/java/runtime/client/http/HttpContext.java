@@ -5,12 +5,15 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
-import software.amazon.smithy.java.runtime.context.Context;
+import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
+import software.amazon.smithy.java.runtime.http.api.HttpProperties;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpResponse;
 
 public final class HttpContext {
+
+    public static final Context.Key<HttpProperties> HTTP_PROPERTIES = Context.key("HTTP properties");
 
     public static final Context.Key<SmithyHttpRequest> HTTP_REQUEST = Context.key("HTTP Request");
 

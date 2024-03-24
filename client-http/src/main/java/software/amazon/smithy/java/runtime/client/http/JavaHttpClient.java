@@ -10,8 +10,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import software.amazon.smithy.java.runtime.http.api.HttpClientOptions;
 import software.amazon.smithy.java.runtime.http.api.HttpClientCall;
+import software.amazon.smithy.java.runtime.http.api.HttpProperty;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpClient;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpVersion;
@@ -34,7 +34,7 @@ public final class JavaHttpClient implements SmithyHttpClient {
     @Override
     public SmithyHttpResponse send(HttpClientCall call) {
         var request = call.request();
-        var context = call.context();
+        var properties = call.properties();
         var bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(request.body()::inputStream);
 
         HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder()
@@ -42,7 +42,8 @@ public final class JavaHttpClient implements SmithyHttpClient {
                 .method(request.method(), bodyPublisher)
                 .uri(request.uri());
 
-        Duration requestTimeout = context.get(HttpClientOptions.REQUEST_TIMEOUT);
+        Duration requestTimeout = properties.get(HttpProperty.REQUEST_TIMEOUT);
+
         if (requestTimeout != null) {
             httpRequestBuilder.timeout(requestTimeout);
         }

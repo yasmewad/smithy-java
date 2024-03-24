@@ -6,7 +6,6 @@
 package software.amazon.smithy.java.runtime.http.api;
 
 import java.util.Objects;
-import software.amazon.smithy.java.runtime.context.Context;
 
 /**
  * Contains the context necessary to send an HTTP request.
@@ -14,43 +13,78 @@ import software.amazon.smithy.java.runtime.context.Context;
 public final class HttpClientCall {
 
     private final SmithyHttpRequest request;
-    private final Context context;
+    private final HttpProperties properties;
 
     private HttpClientCall(Builder builder) {
         this.request = Objects.requireNonNull(builder.request, "request is null");
-        this.context = Objects.requireNonNullElseGet(builder.context, Context::create);
+        this.properties = Objects.requireNonNullElseGet(builder.properties, () -> HttpProperties.builder().build());
     }
 
+    /**
+     * Creates a builder used to build an {@link HttpClientCall}.
+     *
+     * @return the new builder.
+     */
     public static Builder builder() {
         return new Builder();
     }
 
+    /**
+     * Get the HTTP request to send.
+     *
+     * @return the HTTP request.
+     */
     public SmithyHttpRequest request() {
         return request;
     }
 
-    public Context context() {
-        return context;
+    /**
+     * Get the properties that can be used by the underlying client.
+     *
+     * @return the properties.
+     */
+    public HttpProperties properties() {
+        return properties;
     }
 
+    /**
+     * Builder used to create instances of {@link HttpClientCall}.
+     */
     public static final class Builder {
 
         private SmithyHttpRequest request;
-        private Context context;
+        private HttpProperties properties;
 
         private Builder() {}
 
+        /**
+         * Creates an {@link HttpClientCall} from the builder.
+         *
+         * @return the created {@link HttpClientCall}.
+         */
         public HttpClientCall build() {
             return new HttpClientCall(this);
         }
 
+        /**
+         * Set the required HTTP request to send.
+         *
+         * @param request Request to send.
+         * @return the builder.
+         */
         public Builder request(SmithyHttpRequest request) {
             this.request = request;
             return this;
         }
 
-        public Builder context(Context context) {
-            this.context = context;
+        /**
+         * Set HTTP-specific properties that are used by the underlying client.
+         *
+         * @param properties Properties to set.
+         * @return the builder.
+         */
+        public Builder properties(HttpProperties properties) {
+            this.properties = properties;
             return this;
         }
     }

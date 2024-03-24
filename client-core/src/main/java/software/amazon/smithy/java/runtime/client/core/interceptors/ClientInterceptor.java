@@ -6,7 +6,7 @@
 package software.amazon.smithy.java.runtime.client.core.interceptors;
 
 import java.util.List;
-import software.amazon.smithy.java.runtime.context.Context;
+import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 public interface ClientInterceptor {

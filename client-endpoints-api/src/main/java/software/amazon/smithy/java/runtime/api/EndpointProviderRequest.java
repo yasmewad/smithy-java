@@ -45,7 +45,7 @@ public final class EndpointProviderRequest {
      *
      * @return the keys of the request.
      */
-    public Set<EndpointKey<?>> keys() {
+    public Set<EndpointKey<?>> attributeKeys() {
         return immutableMap.keySet();
     }
 

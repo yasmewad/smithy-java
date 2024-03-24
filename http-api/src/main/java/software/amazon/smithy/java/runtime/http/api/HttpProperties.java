@@ -3,25 +3,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.auth.api;
+package software.amazon.smithy.java.runtime.http.api;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * An immutable collection of auth-related properties used for signing, identity resolution, etc.
+ * An immutable collection of HTTP-related properties.
+ *
+ * <p>Keys in the property bag are identity-based and associated with a strongly typed value.
  */
-public final class AuthProperties {
+public final class HttpProperties {
 
-    private final Map<AuthProperty<?>, Object> attributes;
+    private final Map<HttpProperty<?>, Object> attributes;
 
-    private AuthProperties(Map<AuthProperty<?>, Object> attributes) {
+    private HttpProperties(Map<HttpProperty<?>, Object> attributes) {
         this.attributes = attributes;
     }
 
     /**
-     * Creates a builder used to build {@link AuthProperties}.
+     * Creates a builder used to build {@link HttpProperties}.
      *
      * @return the builder.
      */
@@ -37,16 +39,16 @@ public final class AuthProperties {
      * @return Returns the nullable property value.
      */
     @SuppressWarnings("unchecked")
-    public <T> T get(AuthProperty<T> key) {
+    public <T> T get(HttpProperty<T> key) {
         return (T) attributes.get(key);
     }
 
     /**
-     * Get the set of property keys that are set on the AuthProperties object.
+     * Get the set of property keys that are set on the HttpProperties object.
      *
      * @return the set property keys.
      */
-    public Set<AuthProperty<?>> keys() {
+    public Set<HttpProperty<?>> httpProperties() {
         return attributes.keySet();
     }
 
@@ -62,33 +64,34 @@ public final class AuthProperties {
     }
 
     /**
-     * Creates an {@link AuthProperties}.
+     * Creates an {@link HttpProperties}.
      */
     public static final class Builder {
-        private Map<AuthProperty<?>, Object> attributes = new HashMap<>();
+
+        private Map<HttpProperty<?>, Object> attributes = new HashMap<>();
 
         private Builder() {}
 
         /**
-         * Create the {@code AuthProperties} object.
+         * Create the {@code HttpProperties} object.
          *
-         * @return the built AuthProperties object.
+         * @return the built HttpProperties object.
          */
-        public AuthProperties build() {
+        public HttpProperties build() {
             var copy = attributes;
             this.attributes = new HashMap<>();
-            return new AuthProperties(copy);
+            return new HttpProperties(copy);
         }
 
         /**
          * Put a strongly typed property on the builder.
          *
-         * @param key   AuthProperty of the property, accessed by identity.
+         * @param key   HttpProperty of the property, accessed by identity.
          * @param value Value associated with the property.
          * @return the builder.
          * @param <T> value type.
          */
-        public <T> Builder put(AuthProperty<T> key, T value) {
+        public <T> Builder put(HttpProperty<T> key, T value) {
             attributes.put(key, value);
             return this;
         }

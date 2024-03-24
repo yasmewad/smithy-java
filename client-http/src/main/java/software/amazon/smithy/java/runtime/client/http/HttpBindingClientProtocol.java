@@ -5,6 +5,7 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
+import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
@@ -24,7 +25,7 @@ public class HttpBindingClientProtocol extends HttpClientProtocol {
     }
 
     @Override
-    protected SmithyHttpRequest createHttpRequest(Codec codec, software.amazon.smithy.java.runtime.client.core.ClientCall<?, ?> call) {
+    protected SmithyHttpRequest createHttpRequest(Codec codec, ClientCall<?, ?> call) {
         return HttpBinding.requestSerializer()
                 .operation(call.operation().schema())
                 .payload(call.requestInputStream().orElse(null))
@@ -36,7 +37,7 @@ public class HttpBindingClientProtocol extends HttpClientProtocol {
 
     @Override
     protected <I extends SerializableShape, O extends SerializableShape> void deserializeHttpResponse(
-            software.amazon.smithy.java.runtime.client.core.ClientCall<I, O> call,
+            ClientCall<I, O> call,
             Codec codec,
             SmithyHttpRequest request,
             SmithyHttpResponse response,
@@ -50,7 +51,10 @@ public class HttpBindingClientProtocol extends HttpClientProtocol {
     }
 
     @Override
-    SmithyHttpResponse sendHttpRequest(software.amazon.smithy.java.runtime.client.core.ClientCall<?, ?> call, SmithyHttpClient client, SmithyHttpRequest request) {
-        return client.send(HttpClientCall.builder().request(request).context(call.context()).build());
+    SmithyHttpResponse sendHttpRequest(ClientCall<?, ?> call, SmithyHttpClient client, SmithyHttpRequest request) {
+        return client.send(HttpClientCall.builder()
+                                   .request(request)
+                                   .properties(call.context().get(HttpContext.HTTP_PROPERTIES))
+                                   .build());
     }
 }

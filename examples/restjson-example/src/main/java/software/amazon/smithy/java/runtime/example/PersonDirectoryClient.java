@@ -7,13 +7,13 @@ package software.amazon.smithy.java.runtime.example;
 
 import java.util.Objects;
 import software.amazon.smithy.java.runtime.api.Endpoint;
-import software.amazon.smithy.java.runtime.api.EndpointParams;
+import software.amazon.smithy.java.runtime.api.EndpointKey;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
 import software.amazon.smithy.java.runtime.api.EndpointProviderRequest;
 import software.amazon.smithy.java.runtime.client.core.CallPipeline;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
-import software.amazon.smithy.java.runtime.context.Context;
+import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkOperation;
 import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
@@ -107,7 +107,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     private Endpoint resolveEndpoint(SdkSchema operation) {
         var request = EndpointProviderRequest.builder()
-                .putAttribute(EndpointParams.OPERATION_NAME, operation.id().getName())
+                .putAttribute(EndpointKey.OPERATION_NAME, operation.id().getName())
                 .build();
         return endpointProvider.resolveEndpoint(request);
     }

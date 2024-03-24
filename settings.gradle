@@ -1,6 +1,5 @@
 rootProject.name = "smithy-java"
 
-include ":context"
 include ":core"
 
 include ":http-api"

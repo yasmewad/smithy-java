@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.context;
+package software.amazon.smithy.java.runtime.core;
 
 import java.util.Objects;
 import java.util.Set;
@@ -69,12 +69,12 @@ public interface Context {
      *
      * @param key property key to get by exact reference identity.
      * @param <T> Returns the value.
-     * @throws IllegalArgumentException if the property isn't found.
+     * @throws NullPointerException if the property isn't found.
      */
     default <T> T expect(Key<T> key) {
         T value = get(key);
         if (value == null) {
-            throw new IllegalArgumentException("Unknown property: " + key);
+            throw new NullPointerException("Unknown property: " + key);
         }
         return value;
     }
