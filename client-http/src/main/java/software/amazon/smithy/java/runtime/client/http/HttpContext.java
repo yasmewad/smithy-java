@@ -5,22 +5,20 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
-import software.amazon.smithy.java.runtime.context.Constant;
+import software.amazon.smithy.java.runtime.context.Context;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;
 
 public final class HttpContext {
 
-    public static final Constant<SmithyHttpRequest> HTTP_REQUEST = new Constant<>(
-            SmithyHttpRequest.class, "HTTP Request");
+    public static final Context.Key<SmithyHttpRequest> HTTP_REQUEST = Context.key("HTTP Request");
 
-    public static final Constant<SmithyHttpResponse> HTTP_RESPONSE = new Constant<>(
-            SmithyHttpResponse.class, "HTTP Response");
+    public static final Context.Key<SmithyHttpResponse> HTTP_RESPONSE = Context.key("HTTP Response");
 
-    public static final Constant<Codec> PAYLOAD_CODEC = new Constant<>(Codec.class, "Payload Codec");
+    public static final Context.Key<Codec> PAYLOAD_CODEC = Context.key("Payload Codec");
 
-    public static final Constant<HttpSigner> SIGNER = new Constant<>(HttpSigner.class, "HTTP signer");
+    public static final Context.Key<HttpSigner> SIGNER = Context.key("HTTP signer");
 
     private HttpContext() {}
 }

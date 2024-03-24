@@ -6,19 +6,20 @@
 package software.amazon.smithy.java.runtime.example;
 
 import java.util.Objects;
+import software.amazon.smithy.java.runtime.api.Endpoint;
+import software.amazon.smithy.java.runtime.api.EndpointParams;
+import software.amazon.smithy.java.runtime.api.EndpointProvider;
+import software.amazon.smithy.java.runtime.api.EndpointProviderRequest;
 import software.amazon.smithy.java.runtime.client.core.CallPipeline;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
 import software.amazon.smithy.java.runtime.context.Context;
-import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkOperation;
 import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.schema.TypeRegistry;
-import software.amazon.smithy.java.runtime.api.Endpoint;
-import software.amazon.smithy.java.runtime.api.EndpointParams;
-import software.amazon.smithy.java.runtime.api.EndpointProvider;
+import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.example.model.GetPersonImage;
 import software.amazon.smithy.java.runtime.example.model.GetPersonImageInput;
 import software.amazon.smithy.java.runtime.example.model.GetPersonImageOutput;
@@ -105,9 +106,10 @@ public final class PersonDirectoryClient implements PersonDirectory {
     }
 
     private Endpoint resolveEndpoint(SdkSchema operation) {
-        Context endpointContext = Context.create();
-        endpointContext.setProperty(EndpointParams.OPERATION_NAME, operation.id().getName());
-        return endpointProvider.resolveEndpoint(endpointContext);
+        var request = EndpointProviderRequest.builder()
+                .putAttribute(EndpointParams.OPERATION_NAME, operation.id().getName())
+                .build();
+        return endpointProvider.resolveEndpoint(request);
     }
 
     public static final class Builder implements SmithyBuilder<PersonDirectoryClient> {

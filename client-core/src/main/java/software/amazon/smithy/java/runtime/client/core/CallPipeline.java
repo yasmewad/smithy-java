@@ -29,14 +29,14 @@ public final class CallPipeline<RequestT, ResponseT> {
     public <I extends SerializableShape, O extends SerializableShape> O send(ClientCall<I, O> call) {
         ClientInterceptor interceptor = call.interceptor();
         var context = call.context();
-        context.setProperty(CallContext.INPUT, call.input());
-        context.setProperty(CallContext.OPERATION_SCHEMA, call.operation().schema());
-        context.setProperty(CallContext.INPUT_SCHEMA, call.operation().inputSchema());
-        context.setProperty(CallContext.OUTPUT_SCHEMA, call.operation().outputSchema());
+        context.put(CallContext.INPUT, call.input());
+        context.put(CallContext.OPERATION_SCHEMA, call.operation().schema());
+        context.put(CallContext.INPUT_SCHEMA, call.operation().inputSchema());
+        context.put(CallContext.OUTPUT_SCHEMA, call.operation().outputSchema());
 
         interceptor.readBeforeExecution(context);
 
-        context.setProperty(CallContext.INPUT, interceptor.modifyInputBeforeSerialization(call.input(), context));
+        context.put(CallContext.INPUT, interceptor.modifyInputBeforeSerialization(call.input(), context));
 
         interceptor.readBeforeSerialization(context);
 
@@ -82,7 +82,7 @@ public final class CallPipeline<RequestT, ResponseT> {
 
         var shape = protocol.deserializeResponse(call, request, modifiedResponse);
 
-        context.setProperty(CallContext.OUTPUT, shape);
+        context.put(CallContext.OUTPUT, shape);
         interceptor.readAfterDeserialization(context);
         shape = interceptor.modifyOutputBeforeAttemptCompletion(shape, context);
         interceptor.readAfterAttempt(context);

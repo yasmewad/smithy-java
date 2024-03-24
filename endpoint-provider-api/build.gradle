@@ -8,7 +8,3 @@ ext {
     displayName = "Smithy :: Java :: Endpoint Provider API"
     moduleName = "software.amazon.smithy.smithy-java.endpoint-provider-api"
 }
-
-dependencies {
-    api(project(":context"))
-}

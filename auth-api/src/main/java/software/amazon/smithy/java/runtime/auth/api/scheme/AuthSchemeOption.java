@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.runtime.auth.api.scheme;
 
-import software.amazon.smithy.java.runtime.context.ReadableContext;
+import software.amazon.smithy.java.runtime.context.Context;
 
 /**
  * An authentication scheme option, composed of the scheme ID and properties for use when resolving the identity and
@@ -30,14 +30,14 @@ public interface AuthSchemeOption {
      *
      * @return the identity properties.
      */
-    ReadableContext identityProperties();
+    Context identityProperties();
 
     /**
      * Get the resolved signer properties.
      *
      * @return the signer properties.
      */
-    ReadableContext signerProperties();
+    Context signerProperties();
 
     /**
      * Create a new AuthScheme option.
@@ -48,7 +48,7 @@ public interface AuthSchemeOption {
      * @return the created auth scheme option.
      */
     static AuthSchemeOption create(
-            String schemeId, ReadableContext identityProperties, ReadableContext signerProperties) {
+            String schemeId, Context identityProperties, Context signerProperties) {
         return new AuthSchemeOptionRecord(schemeId, identityProperties, signerProperties);
     }
 }

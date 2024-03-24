@@ -6,7 +6,7 @@
 package software.amazon.smithy.java.runtime.http.core;
 
 import java.time.Duration;
-import software.amazon.smithy.java.runtime.context.Constant;
+import software.amazon.smithy.java.runtime.context.Context;
 
 /**
  * Constants used to define HTTP client settings.
@@ -17,7 +17,7 @@ public final class HttpRequestOptions {
      * received in time, then the request is considered timed out. This setting does not apply to streaming
      * operations.
      */
-    public static final Constant<Duration> REQUEST_TIMEOUT = new Constant<>(Duration.class, "HTTP.RequestTimeout");
+    public static final Context.Key<Duration> REQUEST_TIMEOUT = Context.key("HTTP.RequestTimeout");
 
     private HttpRequestOptions() {}
 }

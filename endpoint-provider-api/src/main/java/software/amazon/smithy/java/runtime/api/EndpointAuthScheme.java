@@ -5,8 +5,6 @@
 
 package software.amazon.smithy.java.runtime.api;
 
-import software.amazon.smithy.java.runtime.context.ReadableContext;
-
 /**
  * An authentication scheme supported for the endpoint.
  */
@@ -19,9 +17,10 @@ public interface EndpointAuthScheme {
     String schemeId();
 
     /**
-     * Typed properties associated with the auth scheme.
+     * Get an auth scheme-specific property using a strongly typed key, or {@code null}.
      *
-     * @return the properties.
+     * @param key Key of the property to get.
+     * @return Returns the value or null of not found.
      */
-    ReadableContext properties();
+    <T> T attribute(EndpointKey<T> key);
 }

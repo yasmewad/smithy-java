@@ -9,14 +9,13 @@ import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
-import software.amazon.smithy.java.runtime.context.Context;
 
 public class EndpointProviderTest {
     @Test
     public void returnsStaticEndpoint() {
         EndpointProvider provider = EndpointProvider.staticEndpoint("https://example.com");
 
-        MatcherAssert.assertThat(provider.resolveEndpoint(Context.create()).uri().toString(),
+        MatcherAssert.assertThat(provider.resolveEndpoint().uri().toString(),
                                  Matchers.equalTo("https://example.com"));
     }
 }

@@ -7,8 +7,7 @@ package software.amazon.smithy.java.runtime.auth.api;
 
 import java.time.Clock;
 import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
-import software.amazon.smithy.java.runtime.context.Constant;
-import software.amazon.smithy.java.runtime.context.ReadableContext;
+import software.amazon.smithy.java.runtime.context.Context;
 
 /**
  * Signs the given request using the given identity and returns a signed request.
@@ -23,7 +22,7 @@ public interface Signer<RequestT, IdentityT extends Identity> {
      *
      * <p>Note, signing time may not be relevant to some signers.
      */
-    Constant<Clock> SIGNING_CLOCK = new Constant<>(Clock.class, "SigningClock");
+    Context.Key<Clock> SIGNING_CLOCK = Context.key("SigningClock");
 
     /**
      * Sign the given request.
@@ -34,5 +33,5 @@ public interface Signer<RequestT, IdentityT extends Identity> {
      * @return the signed request.
      * @throws UnsupportedOperationException if the given identity is incompatible with the signer.
      */
-    RequestT sign(RequestT request, IdentityT identityT, ReadableContext context);
+    RequestT sign(RequestT request, IdentityT identityT, Context context);
 }

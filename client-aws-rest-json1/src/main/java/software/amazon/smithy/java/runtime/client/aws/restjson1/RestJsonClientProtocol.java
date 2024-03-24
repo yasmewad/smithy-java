@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.client.http;
+package software.amazon.smithy.java.runtime.client.aws.restjson1;
 
+import software.amazon.smithy.java.runtime.client.http.HttpBindingClientProtocol;
 import software.amazon.smithy.java.runtime.http.core.SmithyHttpClient;
 import software.amazon.smithy.java.runtime.json.JsonCodec;
 
