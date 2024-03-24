@@ -10,12 +10,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import software.amazon.smithy.java.runtime.context.Context;
-import software.amazon.smithy.java.runtime.http.core.HttpRequestOptions;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpClient;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpVersion;
+import software.amazon.smithy.java.runtime.http.api.HttpClientOptions;
+import software.amazon.smithy.java.runtime.http.api.HttpClientCall;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpClient;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpResponse;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpVersion;
 
 /**
  * Provides a SmithyHttpClient implementation using Java's {@link HttpClient}.
@@ -33,7 +32,9 @@ public final class JavaHttpClient implements SmithyHttpClient {
     }
 
     @Override
-    public SmithyHttpResponse send(SmithyHttpRequest request, Context context) {
+    public SmithyHttpResponse send(HttpClientCall call) {
+        var request = call.request();
+        var context = call.context();
         var bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(request.body()::inputStream);
 
         HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder()
@@ -41,7 +42,7 @@ public final class JavaHttpClient implements SmithyHttpClient {
                 .method(request.method(), bodyPublisher)
                 .uri(request.uri());
 
-        Duration requestTimeout = context.get(HttpRequestOptions.REQUEST_TIMEOUT);
+        Duration requestTimeout = context.get(HttpClientOptions.REQUEST_TIMEOUT);
         if (requestTimeout != null) {
             httpRequestBuilder.timeout(requestTimeout);
         }

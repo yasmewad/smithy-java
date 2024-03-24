@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.http.core;
+package software.amazon.smithy.java.runtime.http.api;
 
 import java.time.Duration;
 import software.amazon.smithy.java.runtime.context.Context;
 
 /**
- * Constants used to define HTTP client settings.
+ * Defines client and request-specific options.
  */
-public final class HttpRequestOptions {
+public final class HttpClientOptions {
     /**
      * The time from when an HTTP request is sent, and when the response is received. If the response is not
      * received in time, then the request is considered timed out. This setting does not apply to streaming
@@ -19,5 +19,5 @@ public final class HttpRequestOptions {
      */
     public static final Context.Key<Duration> REQUEST_TIMEOUT = Context.key("HTTP.RequestTimeout");
 
-    private HttpRequestOptions() {}
+    private HttpClientOptions() {}
 }

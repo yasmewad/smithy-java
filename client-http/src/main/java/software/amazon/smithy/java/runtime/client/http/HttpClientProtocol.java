@@ -19,9 +19,9 @@ import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
 import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpClient;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpClient;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpRequest;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpResponse;
 
 /**
  * An abstract HTTP-Based protocol.

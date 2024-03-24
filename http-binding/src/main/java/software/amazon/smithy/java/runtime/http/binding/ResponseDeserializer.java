@@ -9,7 +9,7 @@ import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
 import software.amazon.smithy.java.runtime.core.serde.DataStream;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpResponse;
 
 /**
  * Deserializes the HTTP response of an operation that uses HTTP bindings into a builder.

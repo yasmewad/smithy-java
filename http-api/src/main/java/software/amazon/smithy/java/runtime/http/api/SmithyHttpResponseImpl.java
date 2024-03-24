@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.http.core;
+package software.amazon.smithy.java.runtime.http.api;
 
 import java.io.InputStream;
 import java.net.http.HttpHeaders;

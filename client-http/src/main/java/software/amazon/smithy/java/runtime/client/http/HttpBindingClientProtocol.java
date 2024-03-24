@@ -5,14 +5,14 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
-import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
+import software.amazon.smithy.java.runtime.http.api.HttpClientCall;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpClient;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpRequest;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpClient;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpRequest;
-import software.amazon.smithy.java.runtime.http.core.SmithyHttpResponse;
 
 /**
  * An HTTP-based protocol that uses HTTP binding traits.
@@ -24,7 +24,7 @@ public class HttpBindingClientProtocol extends HttpClientProtocol {
     }
 
     @Override
-    protected SmithyHttpRequest createHttpRequest(Codec codec, ClientCall<?, ?> call) {
+    protected SmithyHttpRequest createHttpRequest(Codec codec, software.amazon.smithy.java.runtime.client.core.ClientCall<?, ?> call) {
         return HttpBinding.requestSerializer()
                 .operation(call.operation().schema())
                 .payload(call.requestInputStream().orElse(null))
@@ -36,7 +36,7 @@ public class HttpBindingClientProtocol extends HttpClientProtocol {
 
     @Override
     protected <I extends SerializableShape, O extends SerializableShape> void deserializeHttpResponse(
-            ClientCall<I, O> call,
+            software.amazon.smithy.java.runtime.client.core.ClientCall<I, O> call,
             Codec codec,
             SmithyHttpRequest request,
             SmithyHttpResponse response,
@@ -50,7 +50,7 @@ public class HttpBindingClientProtocol extends HttpClientProtocol {
     }
 
     @Override
-    SmithyHttpResponse sendHttpRequest(ClientCall<?, ?> call, SmithyHttpClient client, SmithyHttpRequest request) {
-        return client.send(request, call.context());
+    SmithyHttpResponse sendHttpRequest(software.amazon.smithy.java.runtime.client.core.ClientCall<?, ?> call, SmithyHttpClient client, SmithyHttpRequest request) {
+        return client.send(HttpClientCall.builder().request(request).context(call.context()).build());
     }
 }
