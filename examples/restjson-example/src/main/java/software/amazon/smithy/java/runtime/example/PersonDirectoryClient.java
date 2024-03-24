@@ -13,6 +13,7 @@ import software.amazon.smithy.java.runtime.api.EndpointProviderRequest;
 import software.amazon.smithy.java.runtime.client.core.CallPipeline;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
+import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkOperation;
@@ -39,10 +40,12 @@ public final class PersonDirectoryClient implements PersonDirectory {
     private final EndpointProvider endpointProvider;
     private final CallPipeline<?, ?> pipeline;
     private final TypeRegistry typeRegistry;
+    private final ClientInterceptor interceptor;
 
     private PersonDirectoryClient(Builder builder) {
         this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
         this.pipeline = new CallPipeline<>(Objects.requireNonNull(builder.protocol, "protocol is null"));
+        this.interceptor = builder.interceptor;
         // Here is where you would register errors bound to the service on the registry.
         // ...
         this.typeRegistry = TypeRegistry.builder().build();
@@ -98,6 +101,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
                                      .context(context)
                                      .requestInputStream(inputStream)
                                      .requestEventStream(eventStream)
+                                     .interceptor(interceptor)
                                      .errorCreator((c, id) -> {
                                          ShapeId shapeId = ShapeId.from(id);
                                          return operationRegistry.create(shapeId, ModeledSdkException.class);
@@ -116,6 +120,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
         private ClientProtocol<?, ?> protocol;
         private EndpointProvider endpointProvider;
+        private ClientInterceptor interceptor;
 
         private Builder() {}
 
@@ -138,6 +143,11 @@ public final class PersonDirectoryClient implements PersonDirectory {
          */
         public Builder endpointProvider(EndpointProvider endpointProvider) {
             this.endpointProvider = endpointProvider;
+            return this;
+        }
+
+        public Builder interceptor(ClientInterceptor interceptor) {
+            this.interceptor = interceptor;
             return this;
         }
 

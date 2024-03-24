@@ -197,7 +197,7 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
          * @return Returns the builder.
          */
         public Builder<I, O> interceptor(ClientInterceptor interceptor) {
-            this.interceptor = Objects.requireNonNull(interceptor);
+            this.interceptor = Objects.requireNonNullElse(interceptor, ClientInterceptor.NOOP);
             return this;
         }
 

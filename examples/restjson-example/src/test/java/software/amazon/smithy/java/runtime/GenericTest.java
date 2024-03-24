@@ -13,7 +13,10 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
 import software.amazon.smithy.java.runtime.client.aws.restjson1.RestJsonClientProtocol;
+import software.amazon.smithy.java.runtime.client.core.CallContext;
+import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
 import software.amazon.smithy.java.runtime.client.http.JavaHttpClient;
+import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.schema.TypeRegistry;
@@ -29,6 +32,7 @@ import software.amazon.smithy.java.runtime.example.model.PutPersonImageOutput;
 import software.amazon.smithy.java.runtime.example.model.PutPersonInput;
 import software.amazon.smithy.java.runtime.example.model.PutPersonOutput;
 import software.amazon.smithy.java.runtime.example.model.ValidationError;
+import software.amazon.smithy.java.runtime.http.api.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.json.JsonCodec;
 
 public class GenericTest {
@@ -139,5 +143,34 @@ public class GenericTest {
 
         // Dump out the copy of the shape.
         System.out.println(codec.serializeToString(copy));
+    }
+
+    @Test
+    public void supportsInterceptors() throws Exception {
+        var interceptor = new ClientInterceptor() {
+            @Override
+            public void readBeforeTransmit(Context context) {
+                System.out.println("Calling with: " + context.get(CallContext.INPUT));
+            }
+
+            @Override
+            public <T> T modifyRequestBeforeTransmit(Context context, T request) {
+                if (request instanceof SmithyHttpRequest r) {
+                    return (T) r.withHeaders("X-foo", "Bar"); // TODO
+                }
+                return request;
+            }
+        };
+
+        HttpClient httpClient = HttpClient.newBuilder().build();
+        PersonDirectory client = PersonDirectoryClient.builder()
+                .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
+                .endpointProvider(EndpointProvider.staticEndpoint("https://httpbin.org"))
+                .interceptor(interceptor)
+                .build();
+
+        GetPersonImageInput input = GetPersonImageInput.builder().name("Michael").build();
+        GetPersonImageOutput output = client.getPersonImage(input);
+        System.out.println(output.image().readToString(1000));
     }
 }
