@@ -3,8 +3,6 @@ rootProject.name = "smithy-java"
 include ":context"
 include ":core"
 
-include ":endpoint-provider-api"
-
 include ":http-api"
 include ":http-binding"
 
@@ -13,6 +11,7 @@ include ":json-codec"
 include ":sigv4"
 
 include ":client-core"
+include ":client-endpoints-api"
 include ":client-http"
 
 include ":auth-api"
