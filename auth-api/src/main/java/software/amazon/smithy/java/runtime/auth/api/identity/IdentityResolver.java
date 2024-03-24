@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.runtime.auth.api.identity;
 
-import software.amazon.smithy.java.runtime.context.Context;
+import software.amazon.smithy.java.runtime.auth.api.AuthProperties;
 
 /**
  * Interface for loading {@link Identity} that is used for authentication.
@@ -21,11 +21,11 @@ public interface IdentityResolver<IdentityT extends Identity> {
     /**
      * Resolve the identity from this identity provider.
      *
-     * @param request The request context used to resolve an Identity.
+     * @param requestProperties The request properties used to resolve an Identity.
      * @return the resolved identity.
      * @param <ResolvedIdentityT> Resolved identity type.
      */
-    <ResolvedIdentityT extends IdentityT> ResolvedIdentityT resolveIdentity(Context request);
+    <ResolvedIdentityT extends IdentityT> ResolvedIdentityT resolveIdentity(AuthProperties requestProperties);
 
     /**
      * Resolve the identity from this identity provider.
@@ -34,6 +34,6 @@ public interface IdentityResolver<IdentityT extends Identity> {
      * @param <ResolvedIdentityT> Resolved identity type.
      */
     default <ResolvedIdentityT extends IdentityT> ResolvedIdentityT resolveIdentity() {
-        return resolveIdentity(Context.create());
+        return resolveIdentity(AuthProperties.builder().build());
     }
 }

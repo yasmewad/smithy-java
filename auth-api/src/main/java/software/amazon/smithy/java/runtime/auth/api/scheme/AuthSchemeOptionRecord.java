@@ -5,10 +5,10 @@
 
 package software.amazon.smithy.java.runtime.auth.api.scheme;
 
-import software.amazon.smithy.java.runtime.context.Context;
+import software.amazon.smithy.java.runtime.auth.api.AuthProperties;
 
 record AuthSchemeOptionRecord(
         String schemeId,
-        Context identityProperties,
-        Context signerProperties
+        AuthProperties identityProperties,
+        AuthProperties signerProperties
 ) implements AuthSchemeOption {}
