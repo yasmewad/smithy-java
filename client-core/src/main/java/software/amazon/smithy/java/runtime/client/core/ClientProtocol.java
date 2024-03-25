@@ -5,10 +5,16 @@
 
 package software.amazon.smithy.java.runtime.client.core;
 
+import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.SdkException;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 public interface ClientProtocol<RequestT, ResponseT> {
+
+    Context.Key<RequestT> requestKey();
+
+    Context.Key<ResponseT> responseKey();
+
     /**
      * Creates the underlying transport request.
      *

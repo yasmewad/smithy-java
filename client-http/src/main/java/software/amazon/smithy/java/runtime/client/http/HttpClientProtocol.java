@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.Set;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
+import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
@@ -38,6 +39,16 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
     public HttpClientProtocol(SmithyHttpClient client, Codec codec) {
         this.client = client;
         this.codec = codec;
+    }
+
+    @Override
+    public Context.Key<SmithyHttpRequest> requestKey() {
+        return HttpContext.HTTP_REQUEST;
+    }
+
+    @Override
+    public Context.Key<SmithyHttpResponse> responseKey() {
+        return HttpContext.HTTP_RESPONSE;
     }
 
     /**

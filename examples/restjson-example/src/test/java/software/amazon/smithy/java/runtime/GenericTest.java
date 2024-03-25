@@ -13,12 +13,13 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
 import software.amazon.smithy.java.runtime.client.aws.restjson1.RestJsonClientProtocol;
-import software.amazon.smithy.java.runtime.client.core.CallContext;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
+import software.amazon.smithy.java.runtime.client.http.HttpContext;
 import software.amazon.smithy.java.runtime.client.http.JavaHttpClient;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
+import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.schema.TypeRegistry;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
 import software.amazon.smithy.java.runtime.core.serde.DataStream;
@@ -32,7 +33,6 @@ import software.amazon.smithy.java.runtime.example.model.PutPersonImageOutput;
 import software.amazon.smithy.java.runtime.example.model.PutPersonInput;
 import software.amazon.smithy.java.runtime.example.model.PutPersonOutput;
 import software.amazon.smithy.java.runtime.example.model.ValidationError;
-import software.amazon.smithy.java.runtime.http.api.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.json.JsonCodec;
 
 public class GenericTest {
@@ -149,16 +149,15 @@ public class GenericTest {
     public void supportsInterceptors() throws Exception {
         var interceptor = new ClientInterceptor() {
             @Override
-            public void readBeforeTransmit(Context context) {
-                System.out.println("Calling with: " + context.get(CallContext.INPUT));
+            public <I extends SerializableShape, RequestT> void readBeforeTransmit(
+                    Context context, I input, Context.Value<RequestT> request) {
+                System.out.println("Sending request: " + input);
             }
 
             @Override
-            public <T> T modifyRequestBeforeTransmit(Context context, T request) {
-                if (request instanceof SmithyHttpRequest r) {
-                    return (T) r.withHeaders("X-foo", "Bar"); // TODO
-                }
-                return request;
+            public <I extends SerializableShape, RequestT> Context.Value<RequestT> modifyBeforeTransmit(
+                    Context context, I input, Context.Value<RequestT> request) {
+                return request.mapIf(HttpContext.HTTP_REQUEST, r -> r.withHeaders("X-Foo", "Bar"));
             }
         };
 

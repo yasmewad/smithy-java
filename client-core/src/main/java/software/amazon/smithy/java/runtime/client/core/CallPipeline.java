@@ -12,6 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
 import software.amazon.smithy.java.runtime.core.Context;
+import software.amazon.smithy.java.runtime.core.Either;
+import software.amazon.smithy.java.runtime.core.schema.SdkException;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 public final class CallPipeline<RequestT, ResponseT> {
@@ -55,32 +57,32 @@ public final class CallPipeline<RequestT, ResponseT> {
     private <I extends SerializableShape, O extends SerializableShape> O doSend(ClientCall<I, O> call) {
         ClientInterceptor interceptor = call.interceptor();
         var context = call.context();
-        interceptor.readBeforeExecution(context);
+        var input = call.input();
+        var requestKey = protocol.requestKey();
 
-        context.put(CallContext.INPUT, interceptor.modifyInputBeforeSerialization(call.input(), context));
+        interceptor.readBeforeExecution(context, input);
+        context.put(CallContext.INPUT, interceptor.modifyBeforeSerialization(context, input));
 
-        interceptor.readBeforeSerialization(context);
-
+        interceptor.readBeforeSerialization(context, input);
         RequestT request = protocol.createRequest(call);
+        interceptor.readAfterSerialization(context, input, Context.value(requestKey, request));
 
-        interceptor.readAfterSerialization(context);
-
-        request = interceptor.modifyRequestBeforeRetryLoop(context, request);
+        request = interceptor.modifyBeforeRetryLoop(context, input, Context.value(requestKey, request)).value();
 
         // Retry loop
 
-        interceptor.readBeforeAttempt(context);
+        interceptor.readBeforeAttempt(context, input, Context.value(requestKey, request));
 
-        request = interceptor.modifyRequestBeforeSigning(context, request);
+        // Signing.
+        request = interceptor.modifyBeforeSigning(context, input, Context.value(requestKey, request)).value();
+        interceptor.readBeforeSigning(context, input, Context.value(requestKey, request));
+        request = protocol.signRequest(call, request);
+        interceptor.readAfterSigning(context, input, Context.value(requestKey, request));
 
-        interceptor.readBeforeSigning(context);
-
-        var signedRequest = protocol.signRequest(call, request);
-        interceptor.readAfterSigning(context);
-        signedRequest = interceptor.modifyRequestBeforeTransmit(context, signedRequest);
-        interceptor.readBeforeTransmit(context);
-        var response = protocol.sendRequest(call, signedRequest);
-        return deserialize(call, signedRequest, response, interceptor);
+        request = interceptor.modifyBeforeTransmit(context, input, Context.value(requestKey, request)).value();
+        interceptor.readBeforeTransmit(context, input, Context.value(requestKey, request));
+        var response = protocol.sendRequest(call, request);
+        return deserialize(call, request, response, interceptor);
     }
 
     private <I extends SerializableShape, O extends SerializableShape> O deserialize(
@@ -89,29 +91,49 @@ public final class CallPipeline<RequestT, ResponseT> {
             ResponseT response,
             ClientInterceptor interceptor
     ) {
+        var input = call.input();
+        var requestKey = protocol.requestKey();
+        var responseKey = protocol.responseKey();
         LOGGER.log(System.Logger.Level.TRACE, () -> "Deserializing response with "
                                                     + protocol.getClass()
                                                     + " for " + request + ": " + response);
 
         Context context = call.context();
 
-        interceptor.readAfterTransmit(context);
+        interceptor.readAfterTransmit(context, input, Context.value(requestKey, request),
+                                      Context.value(responseKey, response));
 
-        ResponseT modifiedResponse = interceptor.modifyResponseBeforeDeserialization(context, response);
+        ResponseT modifiedResponse = interceptor.modifyBeforeDeserialization(
+                        context, input, Context.value(requestKey, request), Context.value(responseKey, response))
+                .value();
 
-        interceptor.readResponseBeforeDeserialization(context);
+        interceptor.readBeforeDeserialization(context, input, Context.value(requestKey, request),
+                                              Context.value(responseKey, response));
 
         var shape = protocol.deserializeResponse(call, request, modifiedResponse);
-
         context.put(CallContext.OUTPUT, shape);
-        interceptor.readAfterDeserialization(context);
-        shape = interceptor.modifyOutputBeforeAttemptCompletion(shape, context);
-        interceptor.readAfterAttempt(context);
+        Either<O, SdkException> result = Either.left(shape);
+
+        interceptor.readAfterDeserialization(context, input, Context.value(requestKey, request),
+                                             Context.value(responseKey, response), result);
+
+        result = interceptor.modifyBeforeAttemptCompletion(context, input, Context.value(requestKey, request),
+                                                           Context.value(responseKey, response), result);
+
+        interceptor.readAfterAttempt(context, input, Context.value(requestKey, request),
+                                     Context.value(responseKey, response), result);
 
         // End of retry loop
-        shape = interceptor.modifyOutputBeforeCompletion(shape, context);
-        interceptor.readAfterExecution(context);
+        result = interceptor.modifyBeforeCompletion(context, input, Context.value(requestKey, request),
+                                                    Context.value(responseKey, response), result);
 
-        return shape;
+        interceptor.readAfterExecution(context, input, Context.value(requestKey, request),
+                                       Context.value(responseKey, response), result);
+
+        if (result.isLeft()) {
+            return shape;
+        } else {
+            throw result.right();
+        }
     }
 }
