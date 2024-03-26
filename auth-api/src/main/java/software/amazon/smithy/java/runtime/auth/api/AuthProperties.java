@@ -14,10 +14,20 @@ import java.util.Set;
  */
 public final class AuthProperties {
 
+    private static final AuthProperties EMPTY = AuthProperties.builder().build();
     private final Map<AuthProperty<?>, Object> attributes;
 
     private AuthProperties(Map<AuthProperty<?>, Object> attributes) {
         this.attributes = attributes;
+    }
+
+    /**
+     * Get an empty AuthProperties object.
+     *
+     * @return the empty AuthProperties.
+     */
+    public static AuthProperties empty() {
+        return EMPTY;
     }
 
     /**

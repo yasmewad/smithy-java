@@ -5,9 +5,6 @@
 
 package software.amazon.smithy.java.runtime.api;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-
 /**
  * Resolves an endpoint for an operation.
  */
@@ -26,31 +23,7 @@ public interface EndpointProvider {
      * @param endpoint Endpoint to always resolve.
      * @return Returns the endpoint provider.
      */
-    static EndpointProvider staticEndpoint(String endpoint) {
-        try {
-            return staticEndpoint(new URI(endpoint));
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Invalid URI: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Create an endpoint provider that always returns the same endpoint.
-     *
-     * @param endpoint Endpoint to always resolve.
-     * @return Returns the endpoint provider.
-     */
-    static EndpointProvider staticEndpoint(URI endpoint) {
-        return params -> new Endpoint() {
-            @Override
-            public URI uri() {
-                return endpoint;
-            }
-
-            @Override
-            public <T> T endpointAttribute(EndpointKey<T> key) {
-                return null;
-            }
-        };
+    static EndpointProvider staticEndpoint(Endpoint endpoint) {
+        return params -> endpoint;
     }
 }

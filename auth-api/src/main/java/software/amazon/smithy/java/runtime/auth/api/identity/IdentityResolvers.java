@@ -6,11 +6,14 @@
 package software.amazon.smithy.java.runtime.auth.api.identity;
 
 /**
- * An interface to allow retrieving an IdentityProvider based on the identity type.
+ * An interface to allow retrieving an IdentityProvider based on the identity class.
  */
 public interface IdentityResolvers {
     /**
      * Retrieve an identity provider for the provided identity type.
+     *
+     * @param identityClass Identity type to retrieve.
+     * @return the identity resolver or null if not found.
      */
-    <T extends Identity> IdentityResolver<T> identityResolver(Class<T> identityType);
+    <T extends Identity> IdentityResolver<T> identityResolver(Class<T> identityClass);
 }

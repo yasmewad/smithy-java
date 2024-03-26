@@ -5,18 +5,17 @@
 
 package software.amazon.smithy.java.runtime.example;
 
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import software.amazon.smithy.java.runtime.api.Endpoint;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
-import software.amazon.smithy.java.runtime.auth.api.AuthProperties;
-import software.amazon.smithy.java.runtime.auth.api.Signer;
 import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolver;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
-import software.amazon.smithy.java.runtime.auth.api.identity.TokenIdentity;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthScheme;
-import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeOption;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeResolver;
 import software.amazon.smithy.java.runtime.client.core.CallPipeline;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
@@ -38,9 +37,7 @@ import software.amazon.smithy.java.runtime.example.model.PutPersonImageInput;
 import software.amazon.smithy.java.runtime.example.model.PutPersonImageOutput;
 import software.amazon.smithy.java.runtime.example.model.PutPersonInput;
 import software.amazon.smithy.java.runtime.example.model.PutPersonOutput;
-import software.amazon.smithy.java.runtime.http.api.SmithyHttpRequest;
 import software.amazon.smithy.model.shapes.ShapeId;
-import software.amazon.smithy.utils.SmithyBuilder;
 
 // Example of a potentially generated client.
 public final class PersonDirectoryClient implements PersonDirectory {
@@ -49,11 +46,26 @@ public final class PersonDirectoryClient implements PersonDirectory {
     private final CallPipeline<?, ?> pipeline;
     private final TypeRegistry typeRegistry;
     private final ClientInterceptor interceptor;
+    private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
+    private final AuthSchemeResolver authSchemeResolver;
+    private final IdentityResolvers identityResolvers;
 
     private PersonDirectoryClient(Builder builder) {
         this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
         this.pipeline = new CallPipeline<>(Objects.requireNonNull(builder.protocol, "protocol is null"));
-        this.interceptor = builder.interceptor;
+        this.interceptor = ClientInterceptor.chain(builder.interceptors);
+        this.supportedAuthSchemes.addAll(builder.supportedAuthSchemes);
+
+        // TODO: Better defaults? Require these?
+        this.authSchemeResolver = Objects.requireNonNullElseGet(builder.authSchemeResolver, () -> params -> List.of());
+        this.identityResolvers = Objects.requireNonNullElseGet(builder.identityResolvers,
+                () -> new IdentityResolvers() {
+                    @Override
+                    public <T extends Identity> IdentityResolver<T> identityResolver(Class<T> identityType) {
+                        return null;
+                    }
+                });
+
         // Here is where you would register errors bound to the service on the registry.
         // ...
         this.typeRegistry = TypeRegistry.builder().build();
@@ -100,70 +112,6 @@ public final class PersonDirectoryClient implements PersonDirectory {
                 .putAllTypes(typeRegistry, operation.typeRegistry())
                 .build();
 
-        // TODO: this is just to test.
-        IdentityResolvers identityResolvers = new IdentityResolvers() {
-            @SuppressWarnings("unchecked")
-            @Override
-            public <T extends Identity> IdentityResolver<T> identityResolver(Class<T> identityType) {
-                if (identityType.equals(TokenIdentity.class)) {
-                    return (IdentityResolver<T>) new TokenResolver();
-                } else {
-                    return null;
-                }
-            }
-        };
-
-        // TODO: Just for testing.
-        var supportedAuthScheme = new AuthScheme<SmithyHttpRequest, TokenIdentity>() {
-            @Override
-            public String schemeId() {
-                return "smithy.api#bearerAuth";
-            }
-
-            @Override
-            public Class<SmithyHttpRequest> requestType() {
-                return SmithyHttpRequest.class;
-            }
-
-            @Override
-            public Class<TokenIdentity> identityType() {
-                return TokenIdentity.class;
-            }
-
-            @Override
-            public Optional<IdentityResolver<TokenIdentity>> identityResolver(IdentityResolvers resolvers) {
-                return Optional.ofNullable(resolvers.identityResolver(TokenIdentity.class));
-            }
-
-            @Override
-            public Signer<SmithyHttpRequest, TokenIdentity> signer() {
-                return (request, tokenIdentity, properties) -> request;
-            }
-        };
-
-        // TODO: for testing.
-        var authSchemeResolver = new AuthSchemeResolver() {
-            @Override
-            public List<AuthSchemeOption> resolveAuthScheme(Params params) {
-                return List.of(new AuthSchemeOption() {
-                    @Override
-                    public String schemeId() {
-                        return "smithy.api#bearerAuth";
-                    }
-
-                    @Override
-                    public AuthProperties identityProperties() {
-                        return AuthProperties.builder().build();
-                    }
-
-                    @Override
-                    public AuthProperties signerProperties() {
-                        return AuthProperties.builder().build();
-                    }
-                });
-            }
-        };
-
         return pipeline.send(ClientCall.<I, O>builder()
                 .input(input)
                 .operation(operation)
@@ -172,7 +120,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
                 .requestInputStream(inputStream)
                 .requestEventStream(eventStream)
                 .interceptor(interceptor)
-                .addSupportedAuthScheme(supportedAuthScheme)
+                .supportedAuthSchemes(supportedAuthSchemes)
                 .authSchemeResolver(authSchemeResolver)
                 .identityResolvers(identityResolvers)
                 .errorCreator((c, id) -> {
@@ -182,24 +130,14 @@ public final class PersonDirectoryClient implements PersonDirectory {
                 .build());
     }
 
-    // TODO: move this.
-    private static final class TokenResolver implements IdentityResolver<TokenIdentity> {
-        @Override
-        public Class<TokenIdentity> identityType() {
-            return TokenIdentity.class;
-        }
-
-        @Override
-        public TokenIdentity resolveIdentity(AuthProperties requestProperties) {
-            return TokenIdentity.create("xyz");
-        }
-    }
-
-    public static final class Builder implements SmithyBuilder<PersonDirectoryClient> {
+    public static final class Builder {
 
         private ClientProtocol<?, ?> protocol;
         private EndpointProvider endpointProvider;
-        private ClientInterceptor interceptor;
+        private final List<ClientInterceptor> interceptors = new ArrayList<>();
+        private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
+        private AuthSchemeResolver authSchemeResolver;
+        private IdentityResolvers identityResolvers;
 
         private Builder() {}
 
@@ -225,14 +163,103 @@ public final class PersonDirectoryClient implements PersonDirectory {
             return this;
         }
 
-        public Builder interceptor(ClientInterceptor interceptor) {
-            this.interceptor = interceptor;
+        /**
+         * Configure the client to use a static endpoint.
+         *
+         * @param endpoint Endpoint to connect to.
+         * @return the builder.
+         */
+        public Builder endpoint(Endpoint endpoint) {
+            return endpointProvider(EndpointProvider.staticEndpoint(endpoint));
+        }
+
+        /**
+         * Configure the client to use a static endpoint.
+         *
+         * @param endpoint Endpoint to connect to.
+         * @return the builder.
+         */
+        public Builder endpoint(URI endpoint) {
+            return endpoint(Endpoint.builder().uri(endpoint).build());
+        }
+
+        /**
+         * Configure the client to use a static endpoint.
+         *
+         * @param endpoint Endpoint to connect to.
+         * @return the builder.
+         */
+        public Builder endpoint(String endpoint) {
+            return endpoint(Endpoint.builder().uri(endpoint).build());
+        }
+
+        /**
+         * Add an interceptor to the client.
+         *
+         * @param interceptor Interceptor to add.
+         * @return the builder.
+         */
+        public Builder addInterceptor(ClientInterceptor interceptor) {
+            interceptors.add(interceptor);
             return this;
         }
 
-        @Override
+        /**
+         * Set the auth scheme resolver of the client.
+         *
+         * @param authSchemeResolver Auth scheme resolver to use.
+         * @return the builder.
+         */
+        public Builder authSchemeResolver(AuthSchemeResolver authSchemeResolver) {
+            this.authSchemeResolver = authSchemeResolver;
+            return this;
+        }
+
+        /**
+         * Add supported auth schemes to the client that works in tandem with the {@link AuthSchemeResolver}.
+         *
+         * @param authSchemes Auth schemes to add.
+         * @return the builder.
+         */
+        public Builder addSupportedAuthSchemes(AuthScheme<?, ?>... authSchemes) {
+            supportedAuthSchemes.addAll(Arrays.asList(authSchemes));
+            return this;
+        }
+
+        /**
+         * Set the supported auth schemes of the client, used in tandem with the {@link AuthSchemeResolver}.
+         *
+         * @param supportedAuthSchemes Auth schemes to set.
+         * @return the builder.
+         */
+        public Builder supportedAuthSchemes(List<AuthScheme<?, ?>> supportedAuthSchemes) {
+            this.supportedAuthSchemes.clear();
+            this.supportedAuthSchemes.addAll(supportedAuthSchemes);
+            return this;
+        }
+
+        /**
+         * Set the identity resolvers supported by the client.
+         *
+         * @param identityResolvers Client identity resolvers.
+         * @return the builder.
+         */
+        public Builder identityResolvers(IdentityResolvers identityResolvers) {
+            this.identityResolvers = identityResolvers;
+            return this;
+        }
+
+        /**
+         * Creates the client.
+         *
+         * @return the created client.
+         */
         public PersonDirectoryClient build() {
             return new PersonDirectoryClient(this);
         }
+    }
+
+    record AuthEntry<RequestT, IdentityT extends Identity>(AuthScheme<RequestT, IdentityT> authScheme,
+            IdentityResolver<IdentityT> resolver) {
     }
 }

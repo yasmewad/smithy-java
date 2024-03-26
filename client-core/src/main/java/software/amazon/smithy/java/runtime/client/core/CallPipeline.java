@@ -71,7 +71,13 @@ public final class CallPipeline<RequestT, ResponseT> {
                 return result.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             }
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            throw new RuntimeException(e);
+            if (e.getCause() != null) {
+                String message = "Error calling " + call.operation().schema().id().getName() + ": "
+                        + e.getCause().getMessage();
+                throw new SdkException(message, e.getCause());
+            } else {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -131,7 +137,7 @@ public final class CallPipeline<RequestT, ResponseT> {
         for (var authSchemeOption : authSchemeOptions) {
             for (var supportedAuthScheme : call.supportedAuthSchemes()) {
                 if (supportedAuthScheme.schemeId().equals(authSchemeOption.schemeId())) {
-                    if (supportedAuthScheme.requestType().isAssignableFrom(request.getClass())) {
+                    if (supportedAuthScheme.requestClass().isAssignableFrom(request.getClass())) {
                         AuthScheme<RequestT, ?> castAuthScheme = (AuthScheme<RequestT, ?>) supportedAuthScheme;
                         var resolved = createResolvedSchema(call.identityResolvers(), castAuthScheme, authSchemeOption)
                                 .orElse(null);
@@ -143,7 +149,6 @@ public final class CallPipeline<RequestT, ResponseT> {
             }
         }
 
-        // TODO: Is this right?
         throw new SdkException("No auth scheme could be resolved for " + call.operation().schema().id());
     }
 

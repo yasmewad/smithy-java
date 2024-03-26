@@ -11,7 +11,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import software.amazon.smithy.java.runtime.api.EndpointProvider;
 import software.amazon.smithy.java.runtime.client.aws.restjson1.RestJsonClientProtocol;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
 import software.amazon.smithy.java.runtime.client.http.HttpContext;
@@ -42,7 +41,7 @@ public class GenericTest {
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
                 .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
-                .endpointProvider(EndpointProvider.staticEndpoint("https://httpbin.org/anything"))
+                .endpoint("https://httpbin.org/anything")
                 .build();
         PutPersonInput input = PutPersonInput.builder()
                 .name("Michael")
@@ -58,7 +57,7 @@ public class GenericTest {
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
                 .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
-                .endpointProvider(EndpointProvider.staticEndpoint("https://httpbin.org"))
+                .endpoint("https://httpbin.org")
                 .build();
         GetPersonImageInput input = GetPersonImageInput.builder().name("Michael").build();
         GetPersonImageOutput output = client.getPersonImage(input);
@@ -72,7 +71,7 @@ public class GenericTest {
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
                 .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
-                .endpointProvider(EndpointProvider.staticEndpoint("https://example.com"))
+                .endpoint("https://httpbin.org")
                 .build();
         PutPersonImageInput input = PutPersonImageInput.builder()
                 .name("Michael")
@@ -156,15 +155,15 @@ public class GenericTest {
             public <I extends SerializableShape, RequestT> Context.Value<RequestT> modifyBeforeTransmit(Context context,
                     I input,
                     Context.Value<RequestT> request) {
-                return request.mapIf(HttpContext.HTTP_REQUEST, r -> r.withHeaders("X-Foo", "Bar"));
+                return request.mapIf(HttpContext.HTTP_REQUEST, r -> r.withAddedHeaders("X-Foo", "Bar"));
             }
         };
 
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
                 .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
-                .endpointProvider(EndpointProvider.staticEndpoint("https://httpbin.org"))
-                .interceptor(interceptor)
+                .endpoint("https://httpbin.org")
+                .addInterceptor(interceptor)
                 .build();
 
         GetPersonImageInput input = GetPersonImageInput.builder().name("Michael").build();

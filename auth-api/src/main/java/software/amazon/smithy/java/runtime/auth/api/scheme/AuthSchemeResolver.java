@@ -12,6 +12,7 @@ import software.amazon.smithy.java.runtime.auth.api.AuthProperties;
 /**
  * Resolves the authentication scheme that should be used to sign a request.
  */
+@FunctionalInterface
 public interface AuthSchemeResolver {
     /**
      * Resolve the auth scheme options using the given parameters.

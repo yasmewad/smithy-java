@@ -200,7 +200,7 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
         private ClientInterceptor interceptor = ClientInterceptor.NOOP;
         private DataStream requestInputStream;
         private AuthSchemeResolver authSchemeResolver;
-        private List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
+        private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
         private IdentityResolvers identityResolvers;
         private Object requestEventStream;
 
@@ -276,6 +276,12 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
             return this;
         }
 
+        /**
+         * Set the request input stream of the call.
+         *
+         * @param requestInputStream Input stream to set.
+         * @return the builder.
+         */
         public Builder<I, O> requestInputStream(DataStream requestInputStream) {
             if (requestInputStream != null) {
                 this.requestInputStream = requestInputStream;
@@ -284,6 +290,12 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
             return this;
         }
 
+        /**
+         * Set the request event stream of the call.
+         *
+         * @param requestEventStream Event stream to set.
+         * @return the builder.
+         */
         public Builder<I, O> requestEventStream(Object requestEventStream) {
             if (requestEventStream != null) {
                 this.requestEventStream = requestEventStream;
@@ -292,22 +304,46 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
             return this;
         }
 
+        /**
+         * Set the auth scheme resolver of the call.
+         *
+         * @param authSchemeResolver Auth scheme resolver to set.
+         * @return the builder.
+         */
         public Builder<I, O> authSchemeResolver(AuthSchemeResolver authSchemeResolver) {
             this.authSchemeResolver = authSchemeResolver;
             return this;
         }
 
         /**
-         * Add a supported auth scheme to the call.
+         * Sets the list of supported auth schemes for the call.
          *
-         * @param authScheme Supported auth scheme.
+         * @param supportedAuthSchemes Supported auth schemes.
          * @return the builder.
          */
-        public Builder<I, O> addSupportedAuthScheme(AuthScheme<?, ?> authScheme) {
-            supportedAuthSchemes.add(authScheme);
+        public Builder<I, O> supportedAuthSchemes(List<AuthScheme<?, ?>> supportedAuthSchemes) {
+            this.supportedAuthSchemes.clear();
+            supportedAuthSchemes.forEach(this::addSupportedAuthScheme);
             return this;
         }
 
+        /**
+         * Adds a supported auth scheme.
+         *
+         * @param supportedAuthScheme Supported scheme to add.
+         * @return the builder.
+         */
+        public Builder<I, O> addSupportedAuthScheme(AuthScheme<?, ?> supportedAuthScheme) {
+            supportedAuthSchemes.add(Objects.requireNonNull(supportedAuthScheme));
+            return this;
+        }
+
+        /**
+         * Set the identity resolvers of the call.
+         *
+         * @param identityResolvers Identity resolvers to set.
+         * @return the builder.
+         */
         public Builder<I, O> identityResolvers(IdentityResolvers identityResolvers) {
             this.identityResolvers = identityResolvers;
             return this;
