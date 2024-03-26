@@ -85,10 +85,7 @@ public class GenericTest {
 
     @Test
     public void testAny() {
-        Codec codec = JsonCodec.builder()
-                .useJsonName(true)
-                .useTimestampFormat(true)
-                .build();
+        Codec codec = JsonCodec.builder().useJsonName(true).useTimestampFormat(true).build();
 
         PutPersonInput input = PutPersonInput.builder()
                 .name("Michael")
@@ -149,15 +146,17 @@ public class GenericTest {
     public void supportsInterceptors() throws Exception {
         var interceptor = new ClientInterceptor() {
             @Override
-            public <I extends SerializableShape, RequestT> void readBeforeTransmit(
-                    Context context, I input, Context.Value<RequestT> request) {
+            public <I extends SerializableShape, RequestT> void readBeforeTransmit(Context context,
+                    I input,
+                    Context.Value<RequestT> request) {
                 System.out.println("Sending request: " + input);
             }
 
             @Override
-            public <I extends SerializableShape, RequestT> Context.Value<RequestT> modifyBeforeTransmit(
-                    Context context, I input, Context.Value<RequestT> request) {
-                return request.mapIf(HttpContext.HTTP_REQUEST, r -> r.withAddedHeaders("X-Foo", "Bar"));
+            public <I extends SerializableShape, RequestT> Context.Value<RequestT> modifyBeforeTransmit(Context context,
+                    I input,
+                    Context.Value<RequestT> request) {
+                return request.mapIf(HttpContext.HTTP_REQUEST, r -> r.withHeaders("X-Foo", "Bar"));
             }
         };
 
