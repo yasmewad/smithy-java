@@ -157,7 +157,7 @@ public class GenericTest {
             @Override
             public <I extends SerializableShape, RequestT> Context.Value<RequestT> modifyBeforeTransmit(
                     Context context, I input, Context.Value<RequestT> request) {
-                return request.mapIf(HttpContext.HTTP_REQUEST, r -> r.withHeaders("X-Foo", "Bar"));
+                return request.mapIf(HttpContext.HTTP_REQUEST, r -> r.withAddedHeaders("X-Foo", "Bar"));
             }
         };
 
