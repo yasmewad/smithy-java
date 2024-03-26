@@ -5,10 +5,15 @@
 
 package software.amazon.smithy.java.runtime.client.core;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
-import software.amazon.smithy.java.runtime.api.Endpoint;
+import software.amazon.smithy.java.runtime.api.EndpointProvider;
+import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
+import software.amazon.smithy.java.runtime.auth.api.scheme.AuthScheme;
+import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeResolver;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
@@ -23,48 +28,98 @@ import software.amazon.smithy.java.runtime.core.serde.DataStream;
  * @param <I> Input to send.
  * @param <O> Output to return.
  */
-public interface ClientCall<I extends SerializableShape, O extends SerializableShape> {
+public final class ClientCall<I extends SerializableShape, O extends SerializableShape> {
+
+    private final I input;
+    private final EndpointProvider endpointProvider;
+    private final SdkOperation<I, O> operation;
+    private final Context context;
+    private final BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
+    private final ClientInterceptor interceptor;
+    private final DataStream requestInputStream;
+    private final AuthSchemeResolver authSchemeResolver;
+    private final List<AuthScheme<?, ?>> supportedAuthSchemes;
+    private final IdentityResolvers identityResolvers;
+    private final Object requestEventStream;
+
+    private ClientCall(Builder<I, O> builder) {
+        input = Objects.requireNonNull(builder.input, "input is null");
+        operation = Objects.requireNonNull(builder.operation, "operation is null");
+        context = Objects.requireNonNull(builder.context, "context is null");
+        errorCreator = Objects.requireNonNull(builder.errorCreator, "errorCreator is null");
+        endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
+        interceptor = Objects.requireNonNull(builder.interceptor, "interceptor is null");
+        authSchemeResolver = Objects.requireNonNull(builder.authSchemeResolver, "authSchemeResolver is null");
+        identityResolvers = Objects.requireNonNull(builder.identityResolvers, "identityResolvers is null");
+        supportedAuthSchemes = builder.supportedAuthSchemes;
+        requestInputStream = builder.requestInputStream;
+        requestEventStream = builder.requestEventStream;
+    }
+
+    /**
+     * Create a ClientCall builder.
+     *
+     * @return Returns the created builder.
+     * @param <I> Input type.
+     * @param <O> Output type.
+     */
+    public static <I extends SerializableShape, O extends SerializableShape> Builder<I, O> builder() {
+        return new Builder<>();
+    }
+
     /**
      * Get the input of the operation.
      *
      * @return Return the operation input.
      */
-    I input();
+    public I input() {
+        return input;
+    }
 
     /**
      * Get the operation definition.
      *
      * @return Returns the operation definition.
      */
-    SdkOperation<I, O> operation();
+    public SdkOperation<I, O> operation() {
+        return operation;
+    }
 
     /**
-     * The endpoint of the call.
+     * The endpoint provider to use with the call.
      *
-     * @return Returns the resolved endpoint of the call.
+     * @return Returns the endpoint provider.
      */
-    Endpoint endpoint();
+    public EndpointProvider endpointProvider() {
+        return endpointProvider;
+    }
 
     /**
      * Gets the client interceptor used by the call.
      *
      * @return Returns the client interceptor.
      */
-    ClientInterceptor interceptor();
+    public ClientInterceptor interceptor() {
+        return interceptor;
+    }
 
     /**
      * Get the context of the call.
      *
      * @return Return the call context.
      */
-    Context context();
+    public Context context() {
+        return context;
+    }
 
     /**
      * Contains the optionally present input stream.
      *
      * @return the optionally present input stream to send in a request.
      */
-    Optional<DataStream> requestInputStream();
+    public Optional<DataStream> requestInputStream() {
+        return Optional.ofNullable(requestInputStream);
+    }
 
     /**
      * Contains the optionally present event stream of the input shape.
@@ -72,19 +127,19 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
      * <p>TODO: Implement event streams.
      * @return the optionally present input event stream.
      */
-    Optional<Object> requestEventStream();
+    public Optional<Object> requestEventStream() {
+        return Optional.ofNullable(requestEventStream());
+    }
 
     /**
      * Create a builder for the output of the operation.
-     *
-     * <p>This is typically done by delegating to the underlying operation. This method allows creation to be
-     * intercepted.
      *
      * @param context Context to pass to the creator.
      * @param shapeId Nullable ID of the error shape to create, if known.
      * @return Returns the created output builder.
      */
-    default SdkShapeBuilder<O> createOutputBuilder(Context context, String shapeId) {
+    public SdkShapeBuilder<O> createOutputBuilder(Context context, String shapeId) {
+        // TODO: Allow customizing this if needed.
         return operation().outputBuilder();
     }
 
@@ -98,17 +153,35 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
      *                only information we have is just a name.
      * @return Returns the error deserializer if present.
      */
-    Optional<SdkShapeBuilder<ModeledSdkException>> createExceptionBuilder(Context context, String shapeId);
+    public Optional<SdkShapeBuilder<ModeledSdkException>> createExceptionBuilder(Context context, String shapeId) {
+        return errorCreator.apply(context, shapeId);
+    }
 
     /**
-     * Create a ClientCall builder.
+     * Get the resolver used to determine the authentication scheme for the client call.
      *
-     * @return Returns the created builder.
-     * @param <I> Input type.
-     * @param <O> Output type.
+     * @return the resolver.
      */
-    static <I extends SerializableShape, O extends SerializableShape> Builder<I, O> builder() {
-        return new Builder<>();
+    public AuthSchemeResolver authSchemeResolver() {
+        return authSchemeResolver;
+    }
+
+    /**
+     * Get the priority-ordered list of supported auth schemes.
+     *
+     * @return supported auth schemes.
+     */
+    public List<AuthScheme<?, ?>> supportedAuthSchemes() {
+        return supportedAuthSchemes;
+    }
+
+    /**
+     * Get the IdentityResolvers used to find an identity resolver by type.
+     *
+     * @return the IdentityResolvers.
+     */
+    public IdentityResolvers identityResolvers() {
+        return identityResolvers;
     }
 
     /**
@@ -117,16 +190,19 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
      * @param <I> Input to send.
      * @param <O> Expected output.
      */
-    final class Builder<I extends SerializableShape, O extends SerializableShape> {
+    public static final class Builder<I extends SerializableShape, O extends SerializableShape> {
 
-        I input;
-        Endpoint endpoint;
-        SdkOperation<I, O> operation;
-        Context context;
-        BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
-        ClientInterceptor interceptor = ClientInterceptor.NOOP;
-        DataStream requestInputStream;
-        Object requestEventStream;
+        private I input;
+        private EndpointProvider endpointProvider;
+        private SdkOperation<I, O> operation;
+        private Context context;
+        private BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
+        private ClientInterceptor interceptor = ClientInterceptor.NOOP;
+        private DataStream requestInputStream;
+        private AuthSchemeResolver authSchemeResolver;
+        private List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
+        private IdentityResolvers identityResolvers;
+        private Object requestEventStream;
 
         private Builder() {}
 
@@ -180,13 +256,13 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
         }
 
         /**
-         * Set the resolved endpoint for the call.
+         * Set the endpoint provider used to resolve endpoints for the call.
          *
-         * @param endpoint Endpoint to set.
+         * @param endpointProvider Endpoint provider to set.
          * @return Returns the builder.
          */
-        public Builder<I, O> endpoint(Endpoint endpoint) {
-            this.endpoint = endpoint;
+        public Builder<I, O> endpointProvider(EndpointProvider endpointProvider) {
+            this.endpointProvider = endpointProvider;
             return this;
         }
 
@@ -217,8 +293,35 @@ public interface ClientCall<I extends SerializableShape, O extends SerializableS
             return this;
         }
 
+        public Builder<I, O> authSchemeResolver(AuthSchemeResolver authSchemeResolver) {
+            this.authSchemeResolver = authSchemeResolver;
+            return this;
+        }
+
+        /**
+         * Add a supported auth scheme to the call.
+         *
+         * @param authScheme Supported auth scheme.
+         * @return the builder.
+         */
+        public Builder<I, O> addSupportedAuthScheme(AuthScheme<?, ?> authScheme) {
+            supportedAuthSchemes.add(authScheme);
+            return this;
+        }
+
+        public Builder<I, O> identityResolvers(IdentityResolvers identityResolvers) {
+            this.identityResolvers = identityResolvers;
+            return this;
+        }
+
+        /**
+         * Create the call.
+         *
+         * @return the created call.
+         * @throws NullPointerException when required values are missing.
+         */
         public ClientCall<I, O> build() {
-            return new ClientCallImpl<>(this);
+            return new ClientCall<>(this);
         }
     }
 }

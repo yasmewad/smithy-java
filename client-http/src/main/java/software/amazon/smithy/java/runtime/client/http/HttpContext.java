@@ -19,9 +19,7 @@ public final class HttpContext {
 
     public static final Context.Key<SmithyHttpResponse> HTTP_RESPONSE = Context.key("HTTP Response");
 
-    public static final Context.Key<Codec> PAYLOAD_CODEC = Context.key("Payload Codec");
-
-    public static final Context.Key<HttpSigner> SIGNER = Context.key("HTTP signer");
+    public static final Context.Key<Codec> HTTP_PAYLOAD_CODEC = Context.key("HTTP payload Codec");
 
     private HttpContext() {}
 }

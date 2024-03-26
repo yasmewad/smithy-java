@@ -20,12 +20,14 @@ public interface Endpoint {
     URI uri();
 
     /**
-     * Get an endpoint-specific property using a strongly typed key, or {@code null}..
+     * Get an endpoint-specific property using a strongly typed key, or {@code null}.
+     *
+     * <p>For example, in some AWS use cases, this might contain HTTP headers to add to each request.
      *
      * @param key Endpoint key to get.
      * @return Returns the value or null of not found.
      */
-    <T> T attribute(EndpointKey<T> key);
+    <T> T endpointAttribute(EndpointKey<T> key);
 
     /**
      * Get the list of auth schemes supported at this endpoint.

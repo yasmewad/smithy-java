@@ -7,6 +7,7 @@ package software.amazon.smithy.java.runtime.client.core;
 
 import java.time.Duration;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
+import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.SdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
@@ -60,6 +61,11 @@ public final class CallContext {
      * The endpoint provider used to resolve the destination endpoint for a request.
      */
     public static final Context.Key<EndpointProvider> ENDPOINT_PROVIDER = Context.key("EndpointProvider");
+
+    /**
+     * The identity resolved for the request.
+     */
+    public static final Context.Key<Identity> IDENTITY = Context.key("Identity of the caller");
 
     private CallContext() {}
 }

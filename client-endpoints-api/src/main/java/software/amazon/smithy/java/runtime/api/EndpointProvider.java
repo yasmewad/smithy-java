@@ -21,15 +21,6 @@ public interface EndpointProvider {
     Endpoint resolveEndpoint(EndpointProviderRequest request);
 
     /**
-     * Resolves an endpoint with no context.
-     *
-     * @return Returns the resolved endpoint.
-     */
-    default Endpoint resolveEndpoint() {
-        return resolveEndpoint(EndpointProviderRequest.builder().build());
-    }
-
-    /**
      * Create an endpoint provider that always returns the same endpoint.
      *
      * @param endpoint Endpoint to always resolve.
@@ -57,7 +48,7 @@ public interface EndpointProvider {
             }
 
             @Override
-            public <T> T attribute(EndpointKey<T> key) {
+            public <T> T endpointAttribute(EndpointKey<T> key) {
                 return null;
             }
         };

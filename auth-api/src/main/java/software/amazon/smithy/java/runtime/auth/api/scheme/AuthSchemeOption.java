@@ -18,7 +18,7 @@ import software.amazon.smithy.java.runtime.auth.api.AuthProperties;
  */
 public interface AuthSchemeOption {
     /**
-     * Retrieve the scheme ID, a unique identifier for the authentication scheme
+     * Retrieve the authentication scheme ID, a unique identifier for the authentication scheme
      * (aws.auth#sigv4, smithy.api#httpBearerAuth).
      *
      * @return the scheme ID.

@@ -135,11 +135,17 @@ public final class URIBuilder {
      * @return Returns the builder.
      */
     public URIBuilder concatPath(String path) {
-        boolean needsPath = !(this.path.endsWith("/") || path.startsWith("/"));
-        if (needsPath) {
-            this.path += '/';
+        if (this.path.endsWith("/")) {
+            if (path.startsWith("/")) {
+                this.path += path.substring(1);
+            } else {
+                this.path += path;
+            }
+        } else if (path.startsWith("/")) {
+            this.path += path;
+        } else {
+            this.path += "/" + path;
         }
-        this.path += path;
         return this;
     }
 }

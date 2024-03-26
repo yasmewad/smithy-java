@@ -23,17 +23,15 @@ public interface IdentityResolver<IdentityT extends Identity> {
      *
      * @param requestProperties The request properties used to resolve an Identity.
      * @return the resolved identity.
-     * @param <ResolvedIdentityT> Resolved identity type.
      */
-    <ResolvedIdentityT extends IdentityT> ResolvedIdentityT resolveIdentity(AuthProperties requestProperties);
+    IdentityT resolveIdentity(AuthProperties requestProperties);
 
     /**
      * Resolve the identity from this identity provider.
      *
      * @return the resolved identity.
-     * @param <ResolvedIdentityT> Resolved identity type.
      */
-    default <ResolvedIdentityT extends IdentityT> ResolvedIdentityT resolveIdentity() {
+    default IdentityT resolveIdentity() {
         return resolveIdentity(AuthProperties.builder().build());
     }
 }

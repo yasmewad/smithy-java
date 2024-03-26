@@ -5,6 +5,7 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
+import java.net.URI;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
@@ -20,18 +21,18 @@ import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
  */
 public class HttpBindingClientProtocol extends HttpClientProtocol {
 
-    public HttpBindingClientProtocol(SmithyHttpClient client, Codec codec) {
-        super(client, codec);
+    public HttpBindingClientProtocol(String id, SmithyHttpClient client, Codec codec) {
+        super(id, client, codec);
     }
 
     @Override
-    protected SmithyHttpRequest createHttpRequest(Codec codec, ClientCall<?, ?> call) {
+    protected SmithyHttpRequest createHttpRequest(ClientCall<?, ?> call, Codec codec, URI endpoint) {
         return HttpBinding.requestSerializer()
                 .operation(call.operation().schema())
                 .payload(call.requestInputStream().orElse(null))
                 .payloadCodec(codec)
                 .shapeValue(call.input())
-                .endpoint(call.endpoint().uri())
+                .endpoint(endpoint)
                 .serializeRequest();
     }
 

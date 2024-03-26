@@ -14,11 +14,6 @@ import java.util.Objects;
  */
 public class EndpointKey<T> {
 
-    /**
-     * Contains the name of the operation being called.
-     */
-    public static final EndpointKey<String> OPERATION_NAME = of("Name of the operation");
-
     private final String name;
 
     /**

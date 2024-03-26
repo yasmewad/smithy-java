@@ -6,18 +6,21 @@
 package software.amazon.smithy.java.runtime.api;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 
 /**
  * Encapsulates endpoint provider request parameters.
  */
 public final class EndpointProviderRequest {
 
+    private final String operationName;
     private final Map<EndpointKey<?>, Object> immutableMap;
 
-    private EndpointProviderRequest(Map<EndpointKey<?>, Object> map) {
+    private EndpointProviderRequest(Map<EndpointKey<?>, Object> map, String operationName) {
         this.immutableMap = new HashMap<>(map);
+        this.operationName = Objects.requireNonNull(operationName, "operationName is null");
     }
 
     /**
@@ -45,8 +48,17 @@ public final class EndpointProviderRequest {
      *
      * @return the keys of the request.
      */
-    public Set<EndpointKey<?>> attributeKeys() {
-        return immutableMap.keySet();
+    public Iterator<EndpointKey<?>> attributeKeys() {
+        return immutableMap.keySet().iterator();
+    }
+
+    /**
+     * Get the name of the operation to resolve the endpoint for.
+     *
+     * @return name of the operation.
+     */
+    public String operationName() {
+        return operationName;
     }
 
     /**
@@ -57,6 +69,7 @@ public final class EndpointProviderRequest {
     public Builder toBuilder() {
         Builder builder = builder();
         builder.map.putAll(immutableMap);
+        builder.operationName(operationName);
         return builder;
     }
 
@@ -65,6 +78,7 @@ public final class EndpointProviderRequest {
      */
     public static final class Builder {
 
+        private String operationName;
         private final Map<EndpointKey<?>, Object> map = new HashMap<>();
 
         /**
@@ -72,7 +86,7 @@ public final class EndpointProviderRequest {
          * @return the built request.
          */
         public EndpointProviderRequest build() {
-            return new EndpointProviderRequest(map);
+            return new EndpointProviderRequest(map, operationName);
         }
 
         /**
@@ -85,6 +99,17 @@ public final class EndpointProviderRequest {
          */
         public <T> Builder putAttribute(EndpointKey<T> key, T value) {
             map.put(key, value);
+            return this;
+        }
+
+        /**
+         * Set the name of the operation to resolve.
+         *
+         * @param operationName Name of the operation.
+         * @return the builder.
+         */
+        public Builder operationName(String operationName) {
+            this.operationName = operationName;
             return this;
         }
     }

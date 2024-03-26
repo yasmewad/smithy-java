@@ -14,7 +14,7 @@ public interface EndpointAuthScheme {
      *
      * @return the auth scheme ID.
      */
-    String schemeId();
+    String authSchemeId();
 
     /**
      * Get an auth scheme-specific property using a strongly typed key, or {@code null}.

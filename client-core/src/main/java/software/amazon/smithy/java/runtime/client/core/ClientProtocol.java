@@ -5,32 +5,51 @@
 
 package software.amazon.smithy.java.runtime.client.core;
 
+import java.net.URI;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.SdkException;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 public interface ClientProtocol<RequestT, ResponseT> {
 
+    /**
+     * Get the ID of the protocol (e.g., aws.protocols#restJson1).
+     *
+     * @return the protocol ID.
+     */
+    String id();
+
+    /**
+     * The request type and context key used by the client protocol.
+     *
+     * @return the context key.
+     */
     Context.Key<RequestT> requestKey();
 
+    /**
+     * The response type and context key used by the client protocol.
+     *
+     * @return the context key.
+     */
     Context.Key<ResponseT> responseKey();
 
     /**
      * Creates the underlying transport request.
      *
-     * @param call Call being sent.
+     * @param call     Call being sent.
+     * @param endpoint Where to send the request.
      * @return Returns the request to send.
      */
-    RequestT createRequest(ClientCall<?, ?> call);
+    RequestT createRequest(ClientCall<?, ?> call, URI endpoint);
 
     /**
-     * Signs and returns the underlying transport request.
+     * Updates the underlying transport request with the given URI.
      *
-     * @param call    Call being sent.
-     * @param request Request to sign.
-     * @return Returns the signed request.
+     * @param request  Request to update.
+     * @param endpoint Where to send the request.
+     * @return Returns the request to send.
      */
-    RequestT signRequest(ClientCall<?, ?> call, RequestT request);
+    RequestT updateRequest(RequestT request, URI endpoint);
 
     /**
      * Sends the underlying transport request and returns the response.

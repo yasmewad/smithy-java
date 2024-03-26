@@ -6,6 +6,7 @@
 package software.amazon.smithy.java.runtime.client.http;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
@@ -19,6 +20,7 @@ import software.amazon.smithy.java.runtime.core.schema.SdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
+import software.amazon.smithy.java.runtime.core.uri.URIBuilder;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpClient;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpResponse;
@@ -33,12 +35,19 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
     private static final String X_AMZN_ERROR_TYPE = "X-Amzn-Errortype";
     private static final Set<String> TEXT_CONTENT_TYPES = Set.of("application/json", "application/xml");
 
+    private final String id;
     private final SmithyHttpClient client;
     private final Codec codec;
 
-    public HttpClientProtocol(SmithyHttpClient client, Codec codec) {
+    public HttpClientProtocol(String id, SmithyHttpClient client, Codec codec) {
+        this.id = id;
         this.client = client;
         this.codec = codec;
+    }
+
+    @Override
+    public String id() {
+        return id;
     }
 
     @Override
@@ -51,14 +60,25 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
         return HttpContext.HTTP_RESPONSE;
     }
 
+    // TODO: Figure out a better name and approach for this.
+    @Override
+    public SmithyHttpRequest updateRequest(SmithyHttpRequest request, URI endpoint) {
+        URIBuilder builder = URIBuilder.of(request.uri());
+        builder.scheme(endpoint.getScheme());
+        builder.host(endpoint.getHost());
+        builder.port(endpoint.getPort());
+        return request.withUri(builder.build());
+    }
+
     /**
      * Create an unsigned HTTP request for the given call.
      *
-     * @param codec Codec used to serialize structured payloads.
-     * @param call  Call being invoked.s
+     * @param call     Call being invoked.s
+     * @param codec    Codec used to serialize structured payloads.
+     * @param endpoint Where to send the request.
      * @return Returns the serialized request.
      */
-    abstract protected SmithyHttpRequest createHttpRequest(Codec codec, ClientCall<?, ?> call);
+    abstract protected SmithyHttpRequest createHttpRequest(ClientCall<?, ?> call, Codec codec, URI endpoint);
 
     /**
      * Send the HTTP request and return the eventually completed response.
@@ -94,27 +114,11 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
     );
 
     @Override
-    public final SmithyHttpRequest createRequest(ClientCall<?, ?> call) {
+    public final SmithyHttpRequest createRequest(ClientCall<?, ?> call, URI endpoint) {
         // Initialize the context with more HTTP information.
-        call.context().put(HttpContext.PAYLOAD_CODEC, codec);
-        var request = createHttpRequest(codec, call);
+        call.context().put(HttpContext.HTTP_PAYLOAD_CODEC, codec);
+        var request = createHttpRequest(call, codec, endpoint);
         call.context().put(HttpContext.HTTP_REQUEST, request);
-        return request;
-    }
-
-    @Override
-    public final SmithyHttpRequest signRequest(ClientCall<?, ?> call, SmithyHttpRequest request) {
-        LOGGER.log(System.Logger.Level.TRACE, () -> "Signing HTTP request: " + request.startLine());
-
-        var signer = call.context().get(HttpContext.SIGNER);
-        if (signer == null) {
-            LOGGER.log(System.Logger.Level.TRACE, () -> "No signer registered for request: " + request.startLine());
-        } else {
-            var signedRequest = signer.sign(request, call.context());
-            LOGGER.log(System.Logger.Level.TRACE, () -> "Signed HTTP request: " + signedRequest.startLine());
-            call.context().put(HttpContext.HTTP_REQUEST, signedRequest);
-        }
-
         return request;
     }
 
