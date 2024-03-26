@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.util.function.Consumer;
-import software.amazon.smithy.java.runtime.core.serde.any.Any;
 import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
+import software.amazon.smithy.java.runtime.core.serde.any.Any;
 
 /**
  * Drives structure serialization.
@@ -187,9 +187,5 @@ public interface StructSerializer {
 
     default void mapMember(SdkSchema member, Consumer<MapSerializer> consumer) {
         member(member, writer -> writer.beginMap(member, consumer));
-    }
-
-    default void structMember(SdkSchema member, Consumer<StructSerializer> consumer) {
-        member(member, writer -> writer.beginStruct(member, consumer));
     }
 }
