@@ -107,4 +107,22 @@ final class SmithyHttpRequestImpl implements SmithyHttpRequest {
 
         return result.toString();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        SmithyHttpRequestImpl that = (SmithyHttpRequestImpl) o;
+        return httpVersion == that.httpVersion && method.equals(that.method) && uri.equals(that.uri)
+                && body.equals(that.body) && headers.equals(that.headers);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(httpVersion, method, uri, body, headers);
+    }
 }

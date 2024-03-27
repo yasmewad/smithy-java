@@ -74,4 +74,22 @@ public final class SmithyHttpResponseImpl implements SmithyHttpResponse {
     public SmithyHttpResponse withBody(InputStream body) {
         return SmithyHttpResponse.builder().with(this).body(body).build();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        SmithyHttpResponseImpl that = (SmithyHttpResponseImpl) o;
+        return statusCode == that.statusCode && httpVersion == that.httpVersion && Objects.equals(body, that.body)
+                && Objects.equals(headers, that.headers);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(httpVersion, statusCode, body, headers);
+    }
 }

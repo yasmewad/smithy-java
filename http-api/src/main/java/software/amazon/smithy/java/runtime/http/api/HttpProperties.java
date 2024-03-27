@@ -7,6 +7,7 @@ package software.amazon.smithy.java.runtime.http.api;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -61,6 +62,23 @@ public final class HttpProperties {
         var builder = builder();
         builder.attributes.putAll(attributes);
         return builder;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        HttpProperties that = (HttpProperties) o;
+        return Objects.equals(attributes, that.attributes);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(attributes);
     }
 
     /**

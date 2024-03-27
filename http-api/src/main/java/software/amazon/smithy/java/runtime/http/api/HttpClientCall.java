@@ -48,6 +48,35 @@ public final class HttpClientCall {
     }
 
     /**
+     * Create a builder based on this HttpClientCall.
+     *
+     * @return the created builder.
+     */
+    public Builder toBuilder() {
+        var builder = builder();
+        builder.request(request);
+        builder.properties(properties);
+        return builder;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        HttpClientCall that = (HttpClientCall) o;
+        return Objects.equals(request, that.request) && Objects.equals(properties, that.properties);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(request, properties);
+    }
+
+    /**
      * Builder used to create instances of {@link HttpClientCall}.
      */
     public static final class Builder {

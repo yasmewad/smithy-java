@@ -61,6 +61,24 @@ public final class EndpointProviderRequest {
         return operationName;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        EndpointProviderRequest request = (EndpointProviderRequest) o;
+        return Objects.equals(operationName, request.operationName)
+                && Objects.equals(immutableMap, request.immutableMap);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(operationName, immutableMap);
+    }
+
     /**
      * Create a builder from this request.
      *
