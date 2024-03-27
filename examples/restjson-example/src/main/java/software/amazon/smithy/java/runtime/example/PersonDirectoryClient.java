@@ -43,7 +43,7 @@ import software.amazon.smithy.model.shapes.ShapeId;
 public final class PersonDirectoryClient implements PersonDirectory {
 
     private final EndpointProvider endpointProvider;
-    private final CallPipeline<?, ?> pipeline;
+    private final ClientProtocol<?, ?> protocol;
     private final TypeRegistry typeRegistry;
     private final ClientInterceptor interceptor;
     private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
@@ -52,7 +52,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     private PersonDirectoryClient(Builder builder) {
         this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
-        this.pipeline = new CallPipeline<>(Objects.requireNonNull(builder.protocol, "protocol is null"));
+        this.protocol = Objects.requireNonNull(builder.protocol, "protocol is null");
         this.interceptor = ClientInterceptor.chain(builder.interceptors);
         this.supportedAuthSchemes.addAll(builder.supportedAuthSchemes);
 
@@ -112,6 +112,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
                 .putAllTypes(typeRegistry, operation.typeRegistry())
                 .build();
 
+        var pipeline = new CallPipeline<>(protocol);
         return pipeline.send(ClientCall.<I, O>builder()
                 .input(input)
                 .operation(operation)
@@ -257,9 +258,5 @@ public final class PersonDirectoryClient implements PersonDirectory {
         public PersonDirectoryClient build() {
             return new PersonDirectoryClient(this);
         }
-    }
-
-    record AuthEntry<RequestT, IdentityT extends Identity>(AuthScheme<RequestT, IdentityT> authScheme,
-            IdentityResolver<IdentityT> resolver) {
     }
 }
