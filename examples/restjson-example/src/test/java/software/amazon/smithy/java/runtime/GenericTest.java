@@ -13,6 +13,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import software.amazon.smithy.java.runtime.client.aws.restjson1.RestJsonClientProtocol;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
+import software.amazon.smithy.java.runtime.client.http.HttpClientTransport;
 import software.amazon.smithy.java.runtime.client.http.HttpContext;
 import software.amazon.smithy.java.runtime.client.http.JavaHttpClient;
 import software.amazon.smithy.java.runtime.core.Context;
@@ -38,17 +39,23 @@ public class GenericTest {
 
     @Test
     public void putPerson() {
-        HttpClient httpClient = HttpClient.newBuilder().build();
+        // Create a client that uses Java's built-in HTTP client.
+        var httpClient = HttpClient.newBuilder().build();
+        var javaClient = new JavaHttpClient(httpClient);
+
+        // Create a generated client using rest-json and a fixed endpoint.
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
+                .protocol(new RestJsonClientProtocol(), new HttpClientTransport(javaClient))
                 .endpoint("https://httpbin.org/anything")
                 .build();
+
         PutPersonInput input = PutPersonInput.builder()
                 .name("Michael")
                 .age(999)
                 .favoriteColor("Green")
                 .birthday(Instant.now())
                 .build();
+
         PutPersonOutput output = client.putPerson(input);
     }
 
@@ -56,11 +63,13 @@ public class GenericTest {
     public void getPersonImage() throws Exception {
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
+                .protocol(new RestJsonClientProtocol(), new HttpClientTransport(new JavaHttpClient(httpClient)))
                 .endpoint("https://httpbin.org")
                 .build();
+
         GetPersonImageInput input = GetPersonImageInput.builder().name("Michael").build();
         GetPersonImageOutput output = client.getPersonImage(input);
+
         try (InputStream is = output.image().inputStream()) {
             System.out.println(new String(is.readAllBytes(), StandardCharsets.UTF_8));
         }
@@ -70,9 +79,10 @@ public class GenericTest {
     public void streamingRequestPayload() {
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
+                .protocol(new RestJsonClientProtocol(), new HttpClientTransport(new JavaHttpClient(httpClient)))
                 .endpoint("https://httpbin.org")
                 .build();
+
         PutPersonImageInput input = PutPersonImageInput.builder()
                 .name("Michael")
                 .tags(List.of("Foo", "Bar"))
@@ -161,7 +171,7 @@ public class GenericTest {
 
         HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientProtocol(new JavaHttpClient(httpClient)))
+                .protocol(new RestJsonClientProtocol(), new HttpClientTransport(new JavaHttpClient(httpClient)))
                 .endpoint("https://httpbin.org")
                 .addInterceptor(interceptor)
                 .build();

@@ -10,8 +10,6 @@ import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
-import software.amazon.smithy.java.runtime.http.api.HttpClientCall;
-import software.amazon.smithy.java.runtime.http.api.SmithyHttpClient;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
@@ -21,8 +19,8 @@ import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
  */
 public class HttpBindingClientProtocol extends HttpClientProtocol {
 
-    public HttpBindingClientProtocol(String id, SmithyHttpClient client, Codec codec) {
-        super(id, client, codec);
+    public HttpBindingClientProtocol(String id, Codec codec) {
+        super(id, codec);
     }
 
     @Override
@@ -48,13 +46,5 @@ public class HttpBindingClientProtocol extends HttpClientProtocol {
                 .outputShapeBuilder(builder)
                 .response(response)
                 .deserialize();
-    }
-
-    @Override
-    SmithyHttpResponse sendHttpRequest(ClientCall<?, ?> call, SmithyHttpClient client, SmithyHttpRequest request) {
-        return client.send(HttpClientCall.builder()
-                .request(request)
-                .properties(call.context().get(HttpContext.HTTP_PROPERTIES))
-                .build());
     }
 }

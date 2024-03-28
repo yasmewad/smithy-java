@@ -32,7 +32,7 @@ public final class CallPipeline<RequestT, ResponseT> {
 
     private static final System.Logger LOGGER = System.getLogger(CallPipeline.class.getName());
     private static final URI UNRESOLVED;
-    private final ClientProtocol<RequestT, ResponseT> protocol;
+    private final ClientWireHandler<RequestT, ResponseT> handler;
 
     static {
         try {
@@ -42,8 +42,8 @@ public final class CallPipeline<RequestT, ResponseT> {
         }
     }
 
-    public CallPipeline(ClientProtocol<RequestT, ResponseT> protocol) {
-        this.protocol = protocol;
+    public CallPipeline(ClientWireHandler<RequestT, ResponseT> handler) {
+        this.handler = handler;
     }
 
     /**
@@ -85,7 +85,8 @@ public final class CallPipeline<RequestT, ResponseT> {
         ClientInterceptor interceptor = call.interceptor();
         var context = call.context();
         var input = call.input();
-        var requestKey = protocol.requestKey();
+        var requestKey = handler.protocol().requestKey();
+        var protocol = handler.protocol();
 
         interceptor.readBeforeExecution(context, input);
         context.put(CallContext.INPUT, interceptor.modifyBeforeSerialization(context, input));
@@ -118,7 +119,7 @@ public final class CallPipeline<RequestT, ResponseT> {
 
         request = interceptor.modifyBeforeTransmit(context, input, Context.value(requestKey, request)).value();
         interceptor.readBeforeTransmit(context, input, Context.value(requestKey, request));
-        var response = protocol.sendRequest(call, request);
+        var response = handler.transport().sendRequest(call, request);
         return deserialize(call, request, response, interceptor);
     }
 
@@ -127,7 +128,7 @@ public final class CallPipeline<RequestT, ResponseT> {
             ClientCall<I, O> call,
             RequestT request) {
         var params = AuthSchemeResolver.paramsBuilder()
-                .protocolId(protocol.id())
+                .protocolId(handler.protocol().id())
                 .operationName(call.operation().schema().id().getName())
                 // TODO: .properties(?)
                 .build();
@@ -173,6 +174,7 @@ public final class CallPipeline<RequestT, ResponseT> {
             ResponseT response,
             ClientInterceptor interceptor) {
         var input = call.input();
+        var protocol = handler.protocol();
         var requestKey = protocol.requestKey();
         var responseKey = protocol.responseKey();
         LOGGER.log(System.Logger.Level.TRACE,

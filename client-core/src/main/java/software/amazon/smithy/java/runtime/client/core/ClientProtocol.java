@@ -58,15 +58,6 @@ public interface ClientProtocol<RequestT, ResponseT> {
     RequestT setServiceEndpoint(RequestT request, Endpoint endpoint);
 
     /**
-     * Sends the underlying transport request and returns the response.
-     *
-     * @param call    Call being sent.
-     * @param request Request to send.
-     * @return Returns the response.
-     */
-    ResponseT sendRequest(ClientCall<?, ?> call, RequestT request);
-
-    /**
      * Deserializes the output from the transport response or throws a modeled or unmodeled exception.
      *
      * @param call     Call being sent.

@@ -20,6 +20,8 @@ import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeResolver;
 import software.amazon.smithy.java.runtime.client.core.CallPipeline;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
+import software.amazon.smithy.java.runtime.client.core.ClientTransport;
+import software.amazon.smithy.java.runtime.client.core.ClientWireHandler;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
@@ -43,7 +45,7 @@ import software.amazon.smithy.model.shapes.ShapeId;
 public final class PersonDirectoryClient implements PersonDirectory {
 
     private final EndpointProvider endpointProvider;
-    private final ClientProtocol<?, ?> protocol;
+    private final ClientWireHandler<?, ?> handler;
     private final TypeRegistry typeRegistry;
     private final ClientInterceptor interceptor;
     private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
@@ -52,7 +54,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     private PersonDirectoryClient(Builder builder) {
         this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
-        this.protocol = Objects.requireNonNull(builder.protocol, "protocol is null");
+        this.handler = Objects.requireNonNull(builder.handler, "protocol and transport is null");
         this.interceptor = ClientInterceptor.chain(builder.interceptors);
         this.supportedAuthSchemes.addAll(builder.supportedAuthSchemes);
 
@@ -112,7 +114,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
                 .putAllTypes(typeRegistry, operation.typeRegistry())
                 .build();
 
-        var pipeline = new CallPipeline<>(protocol);
+        var pipeline = new CallPipeline<>(handler);
         return pipeline.send(ClientCall.<I, O>builder()
                 .input(input)
                 .operation(operation)
@@ -133,7 +135,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     public static final class Builder {
 
-        private ClientProtocol<?, ?> protocol;
+        private ClientWireHandler<?, ?> handler;
         private EndpointProvider endpointProvider;
         private final List<ClientInterceptor> interceptors = new ArrayList<>();
         private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
@@ -143,13 +145,14 @@ public final class PersonDirectoryClient implements PersonDirectory {
         private Builder() {}
 
         /**
-         * Set the protocol to use to call the service.
+         * Set the protocol and transport to when calling the service.
          *
          * @param protocol Protocol to use.
          * @return Returns the builder.
          */
-        public Builder protocol(ClientProtocol<?, ?> protocol) {
-            this.protocol = protocol;
+        public <RequestT, ResponseT> Builder protocol(ClientProtocol<RequestT, ResponseT> protocol,
+                ClientTransport<RequestT, ResponseT> transport) {
+            this.handler = new ClientWireHandler<>(protocol, transport);
             return this;
         }
 

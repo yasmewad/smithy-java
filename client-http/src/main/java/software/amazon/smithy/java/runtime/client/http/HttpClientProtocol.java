@@ -22,7 +22,6 @@ import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.Codec;
 import software.amazon.smithy.java.runtime.core.uri.URIBuilder;
-import software.amazon.smithy.java.runtime.http.api.SmithyHttpClient;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpRequest;
 import software.amazon.smithy.java.runtime.http.api.SmithyHttpResponse;
 import software.amazon.smithy.java.runtime.http.binding.HttpBinding;
@@ -37,12 +36,10 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
     private static final Set<String> TEXT_CONTENT_TYPES = Set.of("application/json", "application/xml");
 
     private final String id;
-    private final SmithyHttpClient client;
     private final Codec codec;
 
-    public HttpClientProtocol(String id, SmithyHttpClient client, Codec codec) {
+    public HttpClientProtocol(String id, Codec codec) {
         this.id = id;
-        this.client = client;
         this.codec = codec;
     }
 
@@ -104,18 +101,6 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
     abstract protected SmithyHttpRequest createHttpRequest(ClientCall<?, ?> call, Codec codec, URI endpoint);
 
     /**
-     * Send the HTTP request and return the eventually completed response.
-     *
-     * @param call    Call being invoked.
-     * @param client  Client used to send the request.
-     * @param request Request to send.
-     * @return the response.
-     */
-    abstract SmithyHttpResponse sendHttpRequest(ClientCall<?, ?> call,
-            SmithyHttpClient client,
-            SmithyHttpRequest request);
-
-    /**
      * Deserializes the HTTP response and returns the updated output stream.
      *
      * @param call     Call being invoked.
@@ -140,15 +125,6 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
         var request = createHttpRequest(call, codec, endpoint);
         call.context().put(HttpContext.HTTP_REQUEST, request);
         return request;
-    }
-
-    @Override
-    public final SmithyHttpResponse sendRequest(ClientCall<?, ?> call, SmithyHttpRequest request) {
-        LOGGER.log(System.Logger.Level.TRACE, () -> "Sending HTTP request: " + request.startLine());
-        var response = sendHttpRequest(call, client, request);
-        LOGGER.log(System.Logger.Level.TRACE, () -> "Got HTTP response: " + response.startLine());
-        call.context().put(HttpContext.HTTP_RESPONSE, response);
-        return response;
     }
 
     @Override
