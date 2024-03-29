@@ -13,9 +13,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import software.amazon.smithy.java.runtime.client.aws.restjson1.RestJsonClientProtocol;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
-import software.amazon.smithy.java.runtime.client.http.HttpClientTransport;
 import software.amazon.smithy.java.runtime.client.http.HttpContext;
-import software.amazon.smithy.java.runtime.client.http.JavaHttpClient;
+import software.amazon.smithy.java.runtime.client.http.JavaHttpClientTransport;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkShapeBuilder;
@@ -39,13 +38,9 @@ public class GenericTest {
 
     @Test
     public void putPerson() {
-        // Create a client that uses Java's built-in HTTP client.
-        var httpClient = HttpClient.newBuilder().build();
-        var javaClient = new JavaHttpClient(httpClient);
-
         // Create a generated client using rest-json and a fixed endpoint.
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientProtocol(), new HttpClientTransport(javaClient))
+                .transport(new JavaHttpClientTransport(HttpClient.newHttpClient(), new RestJsonClientProtocol()))
                 .endpoint("https://httpbin.org/anything")
                 .build();
 
@@ -61,9 +56,8 @@ public class GenericTest {
 
     @Test
     public void getPersonImage() throws Exception {
-        HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientProtocol(), new HttpClientTransport(new JavaHttpClient(httpClient)))
+                .transport(new JavaHttpClientTransport(HttpClient.newHttpClient(), new RestJsonClientProtocol()))
                 .endpoint("https://httpbin.org")
                 .build();
 
@@ -77,9 +71,8 @@ public class GenericTest {
 
     @Test
     public void streamingRequestPayload() {
-        HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientProtocol(), new HttpClientTransport(new JavaHttpClient(httpClient)))
+                .transport(new JavaHttpClientTransport(HttpClient.newHttpClient(), new RestJsonClientProtocol()))
                 .endpoint("https://httpbin.org")
                 .build();
 
@@ -169,9 +162,8 @@ public class GenericTest {
             }
         };
 
-        HttpClient httpClient = HttpClient.newBuilder().build();
         PersonDirectory client = PersonDirectoryClient.builder()
-                .protocol(new RestJsonClientProtocol(), new HttpClientTransport(new JavaHttpClient(httpClient)))
+                .transport(new JavaHttpClientTransport(HttpClient.newHttpClient(), new RestJsonClientProtocol()))
                 .endpoint("https://httpbin.org")
                 .addInterceptor(interceptor)
                 .build();

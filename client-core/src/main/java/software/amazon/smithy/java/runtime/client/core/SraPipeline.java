@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import software.amazon.smithy.java.runtime.api.Endpoint;
 import software.amazon.smithy.java.runtime.api.EndpointProviderRequest;
 import software.amazon.smithy.java.runtime.auth.api.Signer;
@@ -27,12 +28,23 @@ import software.amazon.smithy.java.runtime.core.Either;
 import software.amazon.smithy.java.runtime.core.schema.SdkException;
 import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
-// TODO: actually implement the workflow for interceptors with error handling and retries.
-public final class CallPipeline<RequestT, ResponseT> {
+/**
+ * Handles the requests/response pipeline to turn an input into a request, emit the appropriate SRA interceptors,
+ * auth resolution, send requests using a wire transport, deserialize responses, and error handling.
+ *
+ * <p>This class is typically used by SRA-compliant {@link ClientTransport}s to implement a transport.
+ *
+ * @param <I> Input to send.
+ * @param <O> Output to deserialize.
+ * @param <RequestT> Request type to send.
+ * @param <ResponseT> Response type to receive.
+ */
+// TODO: Should more of this class be separated out into pieces (like resolving auth)?
+// TODO: Implement the real SRA interceptors workflow and error handling.
+public final class SraPipeline<I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> {
 
-    private static final System.Logger LOGGER = System.getLogger(CallPipeline.class.getName());
+    private static final System.Logger LOGGER = System.getLogger(SraPipeline.class.getName());
     private static final URI UNRESOLVED;
-    private final ClientWireHandler<RequestT, ResponseT> handler;
 
     static {
         try {
@@ -42,19 +54,30 @@ public final class CallPipeline<RequestT, ResponseT> {
         }
     }
 
-    public CallPipeline(ClientWireHandler<RequestT, ResponseT> handler) {
-        this.handler = handler;
+    private final ClientCall<I, O> call;
+    private final ClientProtocol<RequestT, ResponseT> protocol;
+    private final Context.Key<RequestT> requestKey;
+    private final Context.Key<ResponseT> responseKey;
+    private final Function<RequestT, ResponseT> wireTransport;
+
+    private SraPipeline(ClientCall<I, O> call,
+            ClientProtocol<RequestT, ResponseT> protocol,
+            Function<RequestT, ResponseT> wireTransport) {
+        this.call = call;
+        this.protocol = protocol;
+        this.wireTransport = wireTransport;
+        this.requestKey = protocol.requestKey();
+        this.responseKey = protocol.responseKey();
     }
 
-    /**
-     * Send the input and deserialize a response or throw errors.
-     *
-     * @param call Call to invoke.
-     * @return Returns the deserialized response if successful.
-     * @param <I> Input shape.
-     * @param <O> Output shape.
-     */
-    public <I extends SerializableShape, O extends SerializableShape> O send(ClientCall<I, O> call) {
+    public static <I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> O send(
+            ClientCall<I, O> call,
+            ClientProtocol<RequestT, ResponseT> protocol,
+            Function<RequestT, ResponseT> wireTransport) {
+        return new SraPipeline<>(call, protocol, wireTransport).send();
+    }
+
+    private O send() {
         var context = call.context();
         context.put(CallContext.INPUT, call.input());
         context.put(CallContext.OPERATION_SCHEMA, call.operation().schema());
@@ -85,8 +108,6 @@ public final class CallPipeline<RequestT, ResponseT> {
         ClientInterceptor interceptor = call.interceptor();
         var context = call.context();
         var input = call.input();
-        var requestKey = handler.protocol().requestKey();
-        var protocol = handler.protocol();
 
         interceptor.readBeforeExecution(context, input);
         context.put(CallContext.INPUT, interceptor.modifyBeforeSerialization(context, input));
@@ -106,20 +127,27 @@ public final class CallPipeline<RequestT, ResponseT> {
         interceptor.readBeforeSigning(context, input, Context.value(requestKey, request));
 
         var resolvedIdentity = resolveIdentity(call, request);
-        var identity = resolvedIdentity.identity();
-        context.put(CallContext.IDENTITY, identity);
+
+        // TODO: Make it so we always return an identity.
+        if (resolvedIdentity != null) {
+            var identity = resolvedIdentity.identity();
+            context.put(CallContext.IDENTITY, identity);
+        }
 
         // TODO: what to do with supportedAuthSchemes of an endpoint?
         Endpoint endpoint = resolveEndpoint(call);
         request = protocol.setServiceEndpoint(request, endpoint);
 
-        request = resolvedIdentity.sign(request);
+        // TODO: Make No-op signer.
+        if (resolvedIdentity != null) {
+            request = resolvedIdentity.sign(request);
+        }
 
         interceptor.readAfterSigning(context, input, Context.value(requestKey, request));
 
         request = interceptor.modifyBeforeTransmit(context, input, Context.value(requestKey, request)).value();
         interceptor.readBeforeTransmit(context, input, Context.value(requestKey, request));
-        var response = handler.transport().sendRequest(call, request);
+        var response = wireTransport.apply(request);
         return deserialize(call, request, response, interceptor);
     }
 
@@ -128,7 +156,7 @@ public final class CallPipeline<RequestT, ResponseT> {
             ClientCall<I, O> call,
             RequestT request) {
         var params = AuthSchemeResolver.paramsBuilder()
-                .protocolId(handler.protocol().id())
+                .protocolId(protocol.id())
                 .operationName(call.operation().schema().id().getName())
                 // TODO: .properties(?)
                 .build();
@@ -150,7 +178,9 @@ public final class CallPipeline<RequestT, ResponseT> {
             }
         }
 
-        throw new SdkException("No auth scheme could be resolved for " + call.operation().schema().id());
+        // TODO: Throw here
+        // throw new SdkException("No auth scheme could be resolved for " + call.operation().schema().id());
+        return null;
     }
 
     private <IdentityT extends Identity> Optional<ResolvedScheme<IdentityT, RequestT>> createResolvedSchema(
@@ -174,9 +204,6 @@ public final class CallPipeline<RequestT, ResponseT> {
             ResponseT response,
             ClientInterceptor interceptor) {
         var input = call.input();
-        var protocol = handler.protocol();
-        var requestKey = protocol.requestKey();
-        var responseKey = protocol.responseKey();
         LOGGER.log(System.Logger.Level.TRACE,
                 () -> "Deserializing response with " + protocol.getClass() + " for " + request + ": " + response);
 

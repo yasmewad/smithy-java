@@ -17,11 +17,8 @@ import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolver;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthScheme;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeResolver;
-import software.amazon.smithy.java.runtime.client.core.CallPipeline;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
-import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
 import software.amazon.smithy.java.runtime.client.core.ClientTransport;
-import software.amazon.smithy.java.runtime.client.core.ClientWireHandler;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
@@ -45,7 +42,7 @@ import software.amazon.smithy.model.shapes.ShapeId;
 public final class PersonDirectoryClient implements PersonDirectory {
 
     private final EndpointProvider endpointProvider;
-    private final ClientWireHandler<?, ?> handler;
+    private final ClientTransport transport;
     private final TypeRegistry typeRegistry;
     private final ClientInterceptor interceptor;
     private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
@@ -54,7 +51,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     private PersonDirectoryClient(Builder builder) {
         this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
-        this.handler = Objects.requireNonNull(builder.handler, "protocol and transport is null");
+        this.transport = Objects.requireNonNull(builder.transport, "transport is null");
         this.interceptor = ClientInterceptor.chain(builder.interceptors);
         this.supportedAuthSchemes.addAll(builder.supportedAuthSchemes);
 
@@ -114,8 +111,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
                 .putAllTypes(typeRegistry, operation.typeRegistry())
                 .build();
 
-        var pipeline = new CallPipeline<>(handler);
-        return pipeline.send(ClientCall.<I, O>builder()
+        return transport.send(ClientCall.<I, O>builder()
                 .input(input)
                 .operation(operation)
                 .endpointProvider(endpointProvider)
@@ -135,7 +131,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     public static final class Builder {
 
-        private ClientWireHandler<?, ?> handler;
+        private ClientTransport transport;
         private EndpointProvider endpointProvider;
         private final List<ClientInterceptor> interceptors = new ArrayList<>();
         private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
@@ -147,12 +143,11 @@ public final class PersonDirectoryClient implements PersonDirectory {
         /**
          * Set the protocol and transport to when calling the service.
          *
-         * @param protocol Protocol to use.
+         * @param transport Client transport used to send requests.
          * @return Returns the builder.
          */
-        public <RequestT, ResponseT> Builder protocol(ClientProtocol<RequestT, ResponseT> protocol,
-                ClientTransport<RequestT, ResponseT> transport) {
-            this.handler = new ClientWireHandler<>(protocol, transport);
+        public Builder transport(ClientTransport transport) {
+            this.transport = transport;
             return this;
         }
 
