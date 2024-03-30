@@ -8,6 +8,7 @@ package software.amazon.smithy.java.runtime.client.core.interceptors;
 import static software.amazon.smithy.java.runtime.core.Context.Value;
 
 import java.util.List;
+import java.util.function.Consumer;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.Either;
 import software.amazon.smithy.java.runtime.core.schema.SdkException;
@@ -15,6 +16,7 @@ import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 
 final class ClientInterceptorChain implements ClientInterceptor {
 
+    private static final System.Logger LOGGER = System.getLogger(ClientInterceptorChain.class.getName());
     private final List<ClientInterceptor> interceptors;
 
     public ClientInterceptorChain(List<ClientInterceptor> interceptors) {
@@ -23,8 +25,25 @@ final class ClientInterceptorChain implements ClientInterceptor {
 
     @Override
     public <I extends SerializableShape> void readBeforeExecution(Context context, I input) {
+        applyToEachThrowLastError(interceptor -> interceptor.readBeforeExecution(context, input));
+    }
+
+    // Many interceptors require running each hook, logging errors if multiple are encountered, and throwing the last.
+    private void applyToEachThrowLastError(Consumer<ClientInterceptor> consumer) {
+        RuntimeException error = null;
         for (var interceptor : interceptors) {
-            interceptor.readBeforeExecution(context, input);
+            try {
+                consumer.accept(interceptor);
+            } catch (RuntimeException e) {
+                if (error != null) {
+                    LOGGER.log(System.Logger.Level.ERROR, e);
+                }
+                error = e;
+            }
+        }
+
+        if (error != null) {
+            throw error;
         }
     }
 
@@ -66,9 +85,7 @@ final class ClientInterceptorChain implements ClientInterceptor {
     public <I extends SerializableShape, RequestT> void readBeforeAttempt(Context context,
             I input,
             Value<RequestT> request) {
-        for (var interceptor : interceptors) {
-            interceptor.readBeforeAttempt(context, input, request);
-        }
+        applyToEachThrowLastError(interceptor -> interceptor.readBeforeAttempt(context, input, request));
     }
 
     @Override
@@ -182,9 +199,8 @@ final class ClientInterceptorChain implements ClientInterceptor {
             Value<RequestT> request,
             Value<ResponseT> responseIfAvailable,
             Either<O, SdkException> result) {
-        for (var interceptor : interceptors) {
-            interceptor.readAfterAttempt(context, input, request, responseIfAvailable, result);
-        }
+        applyToEachThrowLastError(
+                interceptor -> interceptor.readAfterAttempt(context, input, request, responseIfAvailable, result));
     }
 
     @Override
@@ -208,8 +224,7 @@ final class ClientInterceptorChain implements ClientInterceptor {
             Value<RequestT> requestIfAvailable,
             Value<ResponseT> responseIfAvailable,
             Either<O, SdkException> result) {
-        for (var interceptor : interceptors) {
-            interceptor.readAfterExecution(context, input, requestIfAvailable, responseIfAvailable, result);
-        }
+        applyToEachThrowLastError(interceptor -> interceptor.readAfterExecution(context, input, requestIfAvailable,
+                responseIfAvailable, result));
     }
 }
