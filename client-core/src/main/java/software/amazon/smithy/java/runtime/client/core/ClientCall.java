@@ -54,6 +54,13 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
         supportedAuthSchemes = builder.supportedAuthSchemes;
         requestInputStream = builder.requestInputStream;
         requestEventStream = builder.requestEventStream;
+
+        // Initialize the context.
+        context.put(CallContext.INPUT, input());
+        context.put(CallContext.OPERATION_SCHEMA, operation().schema());
+        context.put(CallContext.INPUT_SCHEMA, operation().inputSchema());
+        context.put(CallContext.OUTPUT_SCHEMA, operation().outputSchema());
+        context.put(CallContext.CLIENT_INTERCEPTOR, interceptor());
     }
 
     /**

@@ -17,6 +17,7 @@ import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolver;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthScheme;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeResolver;
+import software.amazon.smithy.java.runtime.client.core.ApiCallTimeoutTransport;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientTransport;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
@@ -51,7 +52,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
     private PersonDirectoryClient(Builder builder) {
         this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
-        this.transport = Objects.requireNonNull(builder.transport, "transport is null");
+        this.transport = new ApiCallTimeoutTransport(Objects.requireNonNull(builder.transport, "transport is null"));
         this.interceptor = ClientInterceptor.chain(builder.interceptors);
         this.supportedAuthSchemes.addAll(builder.supportedAuthSchemes);
 

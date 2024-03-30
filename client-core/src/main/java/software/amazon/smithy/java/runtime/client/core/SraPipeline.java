@@ -8,11 +8,6 @@ package software.amazon.smithy.java.runtime.client.core;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import software.amazon.smithy.java.runtime.api.Endpoint;
 import software.amazon.smithy.java.runtime.api.EndpointProviderRequest;
@@ -79,35 +74,8 @@ public final class SraPipeline<I extends SerializableShape, O extends Serializab
 
     private O send() {
         var context = call.context();
-        context.put(CallContext.INPUT, call.input());
-        context.put(CallContext.OPERATION_SCHEMA, call.operation().schema());
-        context.put(CallContext.INPUT_SCHEMA, call.operation().inputSchema());
-        context.put(CallContext.OUTPUT_SCHEMA, call.operation().outputSchema());
-        var timeout = context.get(CallContext.API_CALL_TIMEOUT);
-
-        // Call the actual service in a virtual thread to support total-call timeout.
-        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            Future<O> result = executor.submit(() -> doSend(call));
-            if (timeout == null) {
-                return result.get();
-            } else {
-                return result.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            }
-        } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            if (e.getCause() != null) {
-                String message = "Error calling " + call.operation().schema().id().getName() + ": "
-                        + e.getCause().getMessage();
-                throw new SdkException(message, e.getCause());
-            } else {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private <I extends SerializableShape, O extends SerializableShape> O doSend(ClientCall<I, O> call) {
-        ClientInterceptor interceptor = call.interceptor();
-        var context = call.context();
         var input = call.input();
+        var interceptor = call.interceptor();
 
         interceptor.readBeforeExecution(context, input);
         context.put(CallContext.INPUT, interceptor.modifyBeforeSerialization(context, input));
