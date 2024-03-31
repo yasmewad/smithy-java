@@ -120,7 +120,6 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
     @Override
     public final SmithyHttpRequest createRequest(ClientCall<?, ?> call, URI endpoint) {
         // Initialize the context with more HTTP information.
-        call.context().put(HttpContext.HTTP_PAYLOAD_CODEC, codec);
         var request = createHttpRequest(call, codec, endpoint);
         call.context().put(HttpContext.HTTP_REQUEST, request);
         return request;
