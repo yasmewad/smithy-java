@@ -7,7 +7,6 @@ package software.amazon.smithy.java.runtime.client.core;
 
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -40,8 +39,8 @@ public final class ApiCallTimeoutTransport implements ClientTransport {
         }
 
         // Call the actual service in a virtual thread to support total-call timeout.
-        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            Future<O> result = executor.submit(() -> delegate.send(call));
+        try {
+            Future<O> result = call.executor().submit(() -> delegate.send(call));
             try {
                 return result.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {

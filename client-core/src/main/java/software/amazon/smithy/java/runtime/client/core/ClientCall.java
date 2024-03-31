@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
@@ -41,6 +43,7 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
     private final List<AuthScheme<?, ?>> supportedAuthSchemes;
     private final IdentityResolvers identityResolvers;
     private final Object requestEventStream;
+    private final ExecutorService executor;
 
     private ClientCall(Builder<I, O> builder) {
         input = Objects.requireNonNull(builder.input, "input is null");
@@ -54,6 +57,7 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
         supportedAuthSchemes = builder.supportedAuthSchemes;
         requestInputStream = builder.requestInputStream;
         requestEventStream = builder.requestEventStream;
+        executor = builder.executor == null ? Executors.newVirtualThreadPerTaskExecutor() : builder.executor;
 
         // Initialize the context.
         context.put(CallContext.INPUT, input());
@@ -192,6 +196,15 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
     }
 
     /**
+     * Get the executor service to use with the call.
+     *
+     * @return the executor to use.
+     */
+    public ExecutorService executor() {
+        return executor;
+    }
+
+    /**
      * Builds the default implementation of a client call.
      *
      * @param <I> Input to send.
@@ -210,6 +223,7 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
         private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
         private IdentityResolvers identityResolvers;
         private Object requestEventStream;
+        private ExecutorService executor;
 
         private Builder() {}
 
@@ -353,6 +367,17 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
          */
         public Builder<I, O> identityResolvers(IdentityResolvers identityResolvers) {
             this.identityResolvers = identityResolvers;
+            return this;
+        }
+
+        /**
+         * Set the ExecutorService to use with the call.
+         *
+         * @param executor Executor to use.
+         * @return ths builder.
+         */
+        public Builder<I, O> executor(ExecutorService executor) {
+            this.executor = executor;
             return this;
         }
 
