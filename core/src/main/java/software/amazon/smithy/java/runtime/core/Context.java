@@ -5,8 +5,8 @@
 
 package software.amazon.smithy.java.runtime.core;
 
+import java.util.Iterator;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
@@ -132,7 +132,7 @@ public interface Context {
     default <T> T expect(Key<T> key) {
         T value = get(key);
         if (value == null) {
-            throw new NullPointerException("Unknown property: " + key);
+            throw new NullPointerException("Unknown context property: " + key);
         }
         return value;
     }
@@ -142,35 +142,7 @@ public interface Context {
      *
      * @return the keys.
      */
-    Set<Key<?>> keys();
-
-    /**
-     * Get each key-value pair of the context object.
-     *
-     * @param consumer Receives each context key value pair.
-     */
-    default void forEach(PropertyConsumer consumer) {
-        keys().forEach(k -> consume(k, consumer));
-    }
-
-    private <T> void consume(Key<T> key, PropertyConsumer consumer) {
-        consumer.accept(key, expect(key));
-    }
-
-    /**
-     * Interface for receiving all {@link Context} entries.
-     */
-    @FunctionalInterface
-    interface PropertyConsumer {
-        /**
-         * A method to operate on a {@link Context} and it's values.
-         *
-         * @param key   The context key.
-         * @param value The context value.
-         * @param <T> The value type.
-         */
-        <T> void accept(Key<T> key, T value);
-    }
+    Iterator<Key<?>> keys();
 
     /**
      * Creates a thread-safe, mutable context map.
@@ -193,8 +165,8 @@ public interface Context {
             }
 
             @Override
-            public Set<Key<?>> keys() {
-                return attributes.keySet();
+            public Iterator<Key<?>> keys() {
+                return attributes.keySet().iterator();
             }
         };
     }

@@ -190,7 +190,7 @@ public final class SraPipeline<I extends SerializableShape, O extends Serializab
 
         var shape = protocol.deserializeResponse(call, request, modifiedResponse);
         context.put(CallContext.OUTPUT, shape);
-        Either<O, SdkException> result = Either.left(shape);
+        Either<SdkException, O> result = Either.right(shape);
 
         interceptor.readAfterDeserialization(context, input, Context.value(requestKey, request),
                 Context.value(responseKey, response), result);
@@ -208,10 +208,10 @@ public final class SraPipeline<I extends SerializableShape, O extends Serializab
         interceptor.readAfterExecution(context, input, Context.value(requestKey, request),
                 Context.value(responseKey, response), result);
 
-        if (result.isLeft()) {
-            return shape;
+        if (result.isRight()) {
+            return result.right();
         } else {
-            throw result.right();
+            throw result.left();
         }
     }
 

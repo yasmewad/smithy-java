@@ -432,7 +432,7 @@ public interface ClientInterceptor {
             I input,
             Value<RequestT> request,
             Value<ResponseT> response,
-            Either<O, SdkException> result) {}
+            Either<SdkException, O> result) {}
 
     /**
      * A hook called when an attempt is completed. This method can modify and return a new output or error matching
@@ -457,12 +457,12 @@ public interface ClientInterceptor {
      * @param <RequestT> Protocol-specific request type.
      * @param <ResponseT> Protocol-specific response type.
      */
-    default <I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> Either<O, SdkException> modifyBeforeAttemptCompletion(
+    default <I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> Either<SdkException, O> modifyBeforeAttemptCompletion(
             Context context,
             I input,
             Value<RequestT> request,
             Value<ResponseT> response,
-            Either<O, SdkException> result) {
+            Either<SdkException, O> result) {
         return result;
     }
 
@@ -495,7 +495,7 @@ public interface ClientInterceptor {
             I input,
             Value<RequestT> request,
             Value<ResponseT> responseIfAvailable,
-            Either<O, SdkException> result) {}
+            Either<SdkException, O> result) {}
 
     /**
      * A hook called when an execution is completed.
@@ -521,12 +521,12 @@ public interface ClientInterceptor {
      * @param <RequestT>  Protocol-specific request type.
      * @param <ResponseT> Protocol-specific response type.
      */
-    default <I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> Either<O, SdkException> modifyBeforeCompletion(
+    default <I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> Either<SdkException, O> modifyBeforeCompletion(
             Context context,
             I input,
             Value<RequestT> requestIfAvailable,
             Value<ResponseT> responseIfAvailable,
-            Either<O, SdkException> result) {
+            Either<SdkException, O> result) {
         return result;
     }
 
@@ -559,5 +559,5 @@ public interface ClientInterceptor {
             I input,
             Value<RequestT> requestIfAvailable,
             Value<ResponseT> responseIfAvailable,
-            Either<O, SdkException> result) {}
+            Either<SdkException, O> result) {}
 }

@@ -173,19 +173,19 @@ final class ClientInterceptorChain implements ClientInterceptor {
             I input,
             Value<RequestT> request,
             Value<ResponseT> response,
-            Either<O, SdkException> result) {
+            Either<SdkException, O> result) {
         for (var interceptor : interceptors) {
             interceptor.readAfterDeserialization(context, input, request, response, result);
         }
     }
 
     @Override
-    public <I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> Either<O, SdkException> modifyBeforeAttemptCompletion(
+    public <I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> Either<SdkException, O> modifyBeforeAttemptCompletion(
             Context context,
             I input,
             Value<RequestT> request,
             Value<ResponseT> response,
-            Either<O, SdkException> result) {
+            Either<SdkException, O> result) {
         for (var interceptor : interceptors) {
             result = interceptor.modifyBeforeAttemptCompletion(context, input, request, response, result);
         }
@@ -198,18 +198,18 @@ final class ClientInterceptorChain implements ClientInterceptor {
             I input,
             Value<RequestT> request,
             Value<ResponseT> responseIfAvailable,
-            Either<O, SdkException> result) {
+            Either<SdkException, O> result) {
         applyToEachThrowLastError(
                 interceptor -> interceptor.readAfterAttempt(context, input, request, responseIfAvailable, result));
     }
 
     @Override
-    public <I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> Either<O, SdkException> modifyBeforeCompletion(
+    public <I extends SerializableShape, O extends SerializableShape, RequestT, ResponseT> Either<SdkException, O> modifyBeforeCompletion(
             Context context,
             I input,
             Value<RequestT> requestIfAvailable,
             Value<ResponseT> responseIfAvailable,
-            Either<O, SdkException> result) {
+            Either<SdkException, O> result) {
         for (var interceptor : interceptors) {
             result = interceptor.modifyBeforeCompletion(context, input, requestIfAvailable, responseIfAvailable,
                     result);
@@ -223,7 +223,7 @@ final class ClientInterceptorChain implements ClientInterceptor {
             I input,
             Value<RequestT> requestIfAvailable,
             Value<ResponseT> responseIfAvailable,
-            Either<O, SdkException> result) {
+            Either<SdkException, O> result) {
         applyToEachThrowLastError(interceptor -> interceptor.readAfterExecution(context, input, requestIfAvailable,
                 responseIfAvailable, result));
     }

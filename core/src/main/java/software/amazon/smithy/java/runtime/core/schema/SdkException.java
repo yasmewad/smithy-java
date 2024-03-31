@@ -37,7 +37,23 @@ public class SdkException extends RuntimeException {
         /**
          * The fault isn't necessarily client or server.
          */
-        OTHER
+        OTHER;
+
+        /**
+         * Create a Fault based on an HTTP status code.
+         *
+         * @param statusCode HTTP status code to check.
+         * @return the created fault.
+         */
+        public static Fault ofHttpStatusCode(int statusCode) {
+            if (statusCode >= 400 && statusCode <= 499) {
+                return SdkException.Fault.CLIENT;
+            } else if (statusCode >= 500 && statusCode <= 599) {
+                return SdkException.Fault.SERVER;
+            } else {
+                return SdkException.Fault.OTHER;
+            }
+        }
     }
 
     private final Fault errorType;

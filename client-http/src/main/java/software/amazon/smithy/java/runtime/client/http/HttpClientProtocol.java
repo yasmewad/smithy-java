@@ -58,7 +58,6 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
         return HttpContext.HTTP_RESPONSE;
     }
 
-    // TODO: Figure out a better name and approach for this.
     @Override
     public SmithyHttpRequest setServiceEndpoint(SmithyHttpRequest request, Endpoint endpoint) {
         var uri = endpoint.uri();
@@ -191,7 +190,8 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
         LOGGER.log(System.Logger.Level.WARNING,
                 () -> "Unknown " + response.statusCode() + " error response from " + call.operation().schema().id());
 
-        SdkException.Fault fault = determineFault(response.statusCode());
+        var id = call.operation().schema().id();
+        SdkException.Fault fault = SdkException.Fault.ofHttpStatusCode(response.statusCode());
         StringBuilder message = new StringBuilder();
         message.append(switch (fault) {
             case CLIENT -> "Client error ";
@@ -199,7 +199,7 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
             default -> "Unknown error ";
         });
 
-        message.append("encountered from operation ").append(call.operation().schema().id());
+        message.append("encountered from operation ").append(id);
         message.append(System.lineSeparator());
         message.append(response.httpVersion()).append(' ').append(response.statusCode()).append(System.lineSeparator());
         writeHeaders(message, response.headers());
@@ -217,7 +217,7 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
         try {
             message.append(new String(response.body().readNBytes(16384), StandardCharsets.UTF_8));
         } catch (IOException e) {
-            // ignore
+            LOGGER.log(System.Logger.Level.TRACE, () -> "Unable to append response body to exception for " + id);
         }
 
         return new SdkException(message.toString(), fault);
@@ -226,16 +226,6 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
     private boolean isText(String contentType) {
         return contentType.startsWith("text/") || contentType.contains("charset=utf-8") || contentType.endsWith("+json")
                 || contentType.endsWith("+xml") || TEXT_CONTENT_TYPES.contains(contentType);
-    }
-
-    private SdkException.Fault determineFault(int statusCode) {
-        if (statusCode >= 400 && statusCode <= 499) {
-            return SdkException.Fault.CLIENT;
-        } else if (statusCode >= 500 && statusCode <= 599) {
-            return SdkException.Fault.SERVER;
-        } else {
-            return SdkException.Fault.OTHER;
-        }
     }
 
     private void writeHeaders(StringBuilder builder, HttpHeaders headers) {
