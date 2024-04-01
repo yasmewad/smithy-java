@@ -112,7 +112,10 @@ public class SdkSchema {
         if (isMember()) {
             return memberName;
         }
-        throw new UnsupportedOperationException("Schema is not for a member: " + this);
+        throw new UnsupportedOperationException(
+                "Attempted to get the member name of a schema that is not a member: "
+                        + this
+        );
     }
 
     public int memberIndex() {
@@ -260,6 +263,26 @@ public class SdkSchema {
             }
         }
         return toBuilder().members(filtered).build();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        SdkSchema sdkSchema = (SdkSchema) o;
+        return memberIndex == sdkSchema.memberIndex && Objects.equals(id, sdkSchema.id) && type == sdkSchema.type
+                && Objects.equals(traits, sdkSchema.traits) && Objects.equals(members, sdkSchema.members)
+                && Objects.equals(memberName, sdkSchema.memberName)
+                && Objects.equals(memberTarget, sdkSchema.memberTarget);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, type, traits, members, memberName, memberTarget, memberIndex);
     }
 
     public static final class Builder implements SmithyBuilder<SdkSchema> {

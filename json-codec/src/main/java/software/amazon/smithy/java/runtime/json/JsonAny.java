@@ -44,12 +44,12 @@ final class JsonAny implements Any {
     }
 
     @Override
-    public SdkSchema getSchema() {
+    public SdkSchema schema() {
         return schema;
     }
 
     @Override
-    public ShapeType getType() {
+    public ShapeType type() {
         if (schema.type() != ShapeType.DOCUMENT) {
             return schema.type();
         } else {
@@ -124,7 +124,7 @@ final class JsonAny implements Any {
         TimestampFormatter format = defaultTimestampFormat;
 
         if (useTimestampFormat) {
-            format = getSchema().getTrait(TimestampFormatTrait.class).map(TimestampFormatter::of).orElse(format);
+            format = schema().getTrait(TimestampFormatTrait.class).map(TimestampFormatter::of).orElse(format);
         }
 
         return switch (any.valueType()) {

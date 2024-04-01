@@ -48,7 +48,11 @@ final class AnyParser implements ShapeSerializer {
             public void member(SdkSchema member, Consumer<ShapeSerializer> memberWriter) {
                 AnyParser parser = new AnyParser();
                 memberWriter.accept(parser);
-                members.put(member.memberName(), parser.result);
+                var result = parser.result;
+                //System.out.println(result.getSchema() + " VS " + member);
+                //var memberEntry = SdkSchema.memberBuilder(-1, member.memberName(), result.getSchema());
+
+                members.put(member.memberName(), result);
             }
         };
     }

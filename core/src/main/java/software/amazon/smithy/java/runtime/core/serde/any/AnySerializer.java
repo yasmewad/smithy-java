@@ -20,8 +20,8 @@ final class AnySerializer {
     }
 
     void serialize(ShapeSerializer encoder) {
-        SdkSchema schema = value.getSchema();
-        switch (value.getType()) {
+        SdkSchema schema = value.schema();
+        switch (value.type()) {
             case BOOLEAN -> encoder.writeBoolean(schema, value.asBoolean());
             case BYTE -> encoder.writeByte(schema, value.asByte());
             case SHORT -> encoder.writeShort(schema, value.asShort());
@@ -37,14 +37,14 @@ final class AnySerializer {
             case DOCUMENT -> encoder.writeDocument(schema, value);
             case MAP -> encoder.beginMap(schema, mapSerializer -> {
                 for (var entry : value.asMap().entrySet()) {
-                    switch (entry.getKey().getType()) {
+                    switch (entry.getKey().type()) {
                         case INTEGER, INT_ENUM ->
                             mapSerializer.entry(entry.getKey().asInteger(), c -> entry.getValue().serialize(c));
                         case LONG -> mapSerializer.entry(entry.getKey().asLong(), c -> entry.getValue().serialize(c));
                         case STRING, ENUM ->
                             mapSerializer.entry(entry.getKey().asString(), c -> entry.getValue().serialize(c));
                         default -> throw new UnsupportedOperationException(
-                                "Unsupported document type map key: " + entry.getKey().getType()
+                                "Unsupported document type map key: " + entry.getKey().type()
                         );
                     }
                 }
@@ -64,7 +64,7 @@ final class AnySerializer {
                     }
                 }
             });
-            default -> throw new UnsupportedOperationException("Cannot serialize document of type " + value.getType());
+            default -> throw new UnsupportedOperationException("Cannot serialize document of type " + value.type());
         }
     }
 }

@@ -217,7 +217,7 @@ public final class ToStringSerializer implements ShapeSerializer {
 
     @Override
     public void writeDocument(SdkSchema schema, Any value) {
-        append("Document (" + value.getSchema()).append(") :");
+        append("Document (" + value.schema()).append(") :");
         append(System.lineSeparator());
         indent();
         value.serialize(this);
