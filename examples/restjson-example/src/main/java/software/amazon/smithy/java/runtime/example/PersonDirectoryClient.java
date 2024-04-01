@@ -53,6 +53,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
     private PersonDirectoryClient(Builder builder) {
         this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
         this.transport = new ApiCallTimeoutTransport(Objects.requireNonNull(builder.transport, "transport is null"));
+        // TODO: Add an interceptor to throw service-specific exceptions (e.g., PersonDirectoryClientException).
         this.interceptor = ClientInterceptor.chain(builder.interceptors);
         this.supportedAuthSchemes.addAll(builder.supportedAuthSchemes);
 
