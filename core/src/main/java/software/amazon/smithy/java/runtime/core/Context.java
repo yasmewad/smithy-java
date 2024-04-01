@@ -138,6 +138,18 @@ public interface Context {
     }
 
     /**
+     * Get a property or set and get a default if not present.
+     *
+     * <p>The mapping function should not modify the context during computation.
+     *
+     * @param key property key to get by exact reference identity.
+     * @param mappingFunction A function that computes a value for this key if the value is not assigned.
+     * @return the value assigned to the key.
+     * @param <T> the value assigned to the key.
+     */
+    <T> T computeIfAbsent(Key<T> key, Function<Key<T>, ? extends T> mappingFunction);
+
+    /**
      * Get the keys added to the context.
      *
      * @return the keys.
@@ -167,6 +179,12 @@ public interface Context {
             @Override
             public Iterator<Key<?>> keys() {
                 return attributes.keySet().iterator();
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> T computeIfAbsent(Key<T> key, Function<Key<T>, ? extends T> mappingFunction) {
+                return (T) attributes.computeIfAbsent(key, k -> mappingFunction.apply((Key<T>) k));
             }
         };
     }
