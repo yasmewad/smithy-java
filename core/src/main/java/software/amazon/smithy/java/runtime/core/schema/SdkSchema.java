@@ -218,7 +218,12 @@ public class SdkSchema {
                 return memberSchema;
             }
         }
-        return defaultValue;
+        // Delegate to the member target members if it's a member.
+        if (memberTarget != null) {
+            return memberTarget.member(memberName, defaultValue);
+        } else {
+            return defaultValue;
+        }
     }
 
     /**

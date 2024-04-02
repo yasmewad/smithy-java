@@ -360,7 +360,9 @@ public interface Any extends SerializableShape {
     SdkSchema schema();
 
     /**
-     * Get the Any shape type.
+     * Get the Any shape type for the Smithy data model.
+     *
+     * <p>This could differ from the result of {@code schema().type()} if the schema of the Any is a document schema.
      *
      * @return the Any type.
      */

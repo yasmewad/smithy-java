@@ -49,9 +49,6 @@ final class AnyParser implements ShapeSerializer {
                 AnyParser parser = new AnyParser();
                 memberWriter.accept(parser);
                 var result = parser.result;
-                //System.out.println(result.getSchema() + " VS " + member);
-                //var memberEntry = SdkSchema.memberBuilder(-1, member.memberName(), result.getSchema());
-
                 members.put(member.memberName(), result);
             }
         };
@@ -67,35 +64,41 @@ final class AnyParser implements ShapeSerializer {
             elementParser.result = null;
         });
         consumer.accept(serializer);
-        result = Any.of(elements);
+        result = Any.of(elements, schema);
     }
 
     @Override
     public void beginMap(SdkSchema schema, Consumer<MapSerializer> consumer) {
         Map<Any, Any> entries = new LinkedHashMap<>();
+
+        var keySchema = schema.member("key");
+        if (keySchema == null) {
+            throw new NullPointerException("Required 'key' member not found in map schema: " + schema);
+        }
+
         consumer.accept(new MapSerializer() {
             @Override
             public void entry(String key, Consumer<ShapeSerializer> valueSerializer) {
                 AnyParser p = new AnyParser();
                 valueSerializer.accept(p);
-                entries.put(Any.of(key), p.result);
+                entries.put(Any.of(key, keySchema), p.result);
             }
 
             @Override
             public void entry(int key, Consumer<ShapeSerializer> valueSerializer) {
                 AnyParser p = new AnyParser();
                 valueSerializer.accept(p);
-                entries.put(Any.of(key), p.result);
+                entries.put(Any.of(key, keySchema), p.result);
             }
 
             @Override
             public void entry(long key, Consumer<ShapeSerializer> valueSerializer) {
                 AnyParser p = new AnyParser();
                 valueSerializer.accept(p);
-                entries.put(Any.of(key), p.result);
+                entries.put(Any.of(key, keySchema), p.result);
             }
         });
-        result = Any.of(entries);
+        result = Any.of(entries, schema);
     }
 
     @Override

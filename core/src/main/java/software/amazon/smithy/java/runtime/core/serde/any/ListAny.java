@@ -26,22 +26,19 @@ final class ListAny implements Any {
         // Ensure each element in the Any has the same schema and is a member.
         if (!value.isEmpty()) {
             var first = value.getFirst();
-
-            // If the list has a schema, then make sure every element inside it has a member schema.
-            if (schema.type() != ShapeType.DOCUMENT && !first.schema().isMember()) {
-                throw new SdkSerdeException(
-                        "Each element of a list Any type must have a member schema, "
-                                + "but found " + first + " in the list for " + schema
-                );
-            }
-
             for (int i = 1; i < value.size(); i++) {
-                if (!first.schema().equals(value.get(i).schema())) {
+                var current = value.get(i);
+                if (!first.schema().equals(current.schema())) {
                     throw new SdkSerdeException(
-                            "Every member of a list Any must use the same exact Schema. "
-                                    + "Expected element " + i + " of the list to be " + first.schema()
-                                    + ", but found " + value.get(i).schema() + " in the list for "
-                                    + schema
+                            "Every member of a list Any must use the same exact Schema. Expected element " + i
+                                    + " of the list to be " + first.schema() + ", but found " + current.schema()
+                                    + " in the list for " + schema
+                    );
+                } else if (current.schema().isMember() && !current.schema().memberName().equals("member")) {
+                    throw new SdkSerdeException(
+                            "List Any member at position " + i + " has a member name of '"
+                                    + current.schema().memberName() + "', but list members must be named "
+                                    + "'member': " + current
                     );
                 }
             }
