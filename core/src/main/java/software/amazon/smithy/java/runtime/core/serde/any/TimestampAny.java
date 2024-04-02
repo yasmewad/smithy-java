@@ -68,6 +68,6 @@ final class TimestampAny implements Any {
 
     @Override
     public String toString() {
-        return "TimestampAny{schema=" + schema + ", value=" + value + '}';
+        return "TimestampAny{value=" + value + ", schema=" + schema + '}';
     }
 }

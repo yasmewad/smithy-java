@@ -67,6 +67,6 @@ final class BlobAny implements Any {
 
     @Override
     public String toString() {
-        return "BlobAny{schema=" + schema + ", value=" + Arrays.toString(value) + '}';
+        return "BlobAny{value=" + Arrays.toString(value) + "schema=" + schema + '}';
     }
 }

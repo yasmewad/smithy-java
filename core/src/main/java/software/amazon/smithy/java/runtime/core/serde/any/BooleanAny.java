@@ -67,6 +67,6 @@ final class BooleanAny implements Any {
 
     @Override
     public String toString() {
-        return "BooleanAny{schema=" + schema + ", value=" + value + '}';
+        return "BooleanAny{value=" + value + ", schema=" + schema + '}';
     }
 }

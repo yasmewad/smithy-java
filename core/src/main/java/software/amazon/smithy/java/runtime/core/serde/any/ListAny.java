@@ -24,8 +24,17 @@ final class ListAny implements Any {
         }
 
         // Ensure each element in the Any has the same schema and is a member.
+        // If it's a member, ensure that each member is named 'member'.
         if (!value.isEmpty()) {
             var first = value.getFirst();
+            if (first.schema().isMember() && !first.schema().memberName().equals("member")) {
+                throw new SdkSerdeException(
+                        "List Any member at position 0 has a member name of '" + first.schema().memberName() + "', "
+                                + "but list members must be named 'member': " + first
+                );
+            } else if (!first.schema().isMember() && first.schema().type() != ShapeType.DOCUMENT) {
+                throw new SdkSerdeException("Members of a list Any must be a member or a document, but found " + first);
+            }
             for (int i = 1; i < value.size(); i++) {
                 var current = value.get(i);
                 if (!first.schema().equals(current.schema())) {
@@ -33,12 +42,6 @@ final class ListAny implements Any {
                             "Every member of a list Any must use the same exact Schema. Expected element " + i
                                     + " of the list to be " + first.schema() + ", but found " + current.schema()
                                     + " in the list for " + schema
-                    );
-                } else if (current.schema().isMember() && !current.schema().memberName().equals("member")) {
-                    throw new SdkSerdeException(
-                            "List Any member at position " + i + " has a member name of '"
-                                    + current.schema().memberName() + "', but list members must be named "
-                                    + "'member': " + current
                     );
                 }
             }
@@ -91,6 +94,6 @@ final class ListAny implements Any {
 
     @Override
     public String toString() {
-        return "ListAny{schema=" + schema + ", value=" + value + '}';
+        return "ListAny{value=" + value + ", schema=" + schema + '}';
     }
 }

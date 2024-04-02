@@ -72,6 +72,6 @@ final class StructAny implements Any {
 
     @Override
     public String toString() {
-        return "StructAny{schema=" + schema + ", value=" + value + '}';
+        return "StructAny{value=" + value + ", schema=" + schema + '}';
     }
 }

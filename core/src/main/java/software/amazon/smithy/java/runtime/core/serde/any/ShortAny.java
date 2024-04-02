@@ -84,6 +84,6 @@ final class ShortAny implements Any {
 
     @Override
     public String toString() {
-        return "ShortAny{schema=" + schema + ", value=" + value + '}';
+        return "ShortAny{value=" + value + ", schema=" + schema + '}';
     }
 }

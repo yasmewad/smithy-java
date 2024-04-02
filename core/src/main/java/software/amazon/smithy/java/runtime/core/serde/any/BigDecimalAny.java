@@ -68,6 +68,6 @@ final class BigDecimalAny implements Any {
 
     @Override
     public String toString() {
-        return "BigDecimalAny{schema=" + schema + ", value=" + value + '}';
+        return "BigDecimalAny{value=" + value + ", schema=" + schema + '}';
     }
 }

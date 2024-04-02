@@ -64,6 +64,6 @@ final class LongAny implements Any {
 
     @Override
     public String toString() {
-        return "LongAny{schema=" + schema + ", value=" + value + '}';
+        return "LongAny{value=" + value + ", schema=" + schema + '}';
     }
 }

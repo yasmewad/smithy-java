@@ -19,7 +19,6 @@ import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;
 
 public class BooleanAnyTest {
-
     @Test
     public void createsAnyWithoutSchema() {
         var any = Any.of(true);

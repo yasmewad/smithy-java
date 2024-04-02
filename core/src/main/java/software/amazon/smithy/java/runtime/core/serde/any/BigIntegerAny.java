@@ -68,6 +68,6 @@ final class BigIntegerAny implements Any {
 
     @Override
     public String toString() {
-        return "BigIntegerAny{schema=" + schema + ", value=" + value + '}';
+        return "BigIntegerAny{value=" + value + ", schema=" + schema + '}';
     }
 }

@@ -89,6 +89,6 @@ final class ByteAny implements Any {
 
     @Override
     public String toString() {
-        return "ByteAny{schema=" + schema + ", value=" + value + '}';
+        return "ByteAny{value=" + value + ", schema=" + schema + '}';
     }
 }

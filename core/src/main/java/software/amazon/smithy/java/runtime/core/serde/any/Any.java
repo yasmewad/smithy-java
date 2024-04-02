@@ -286,7 +286,7 @@ public interface Any extends SerializableShape {
      * @param value Value to wrap.
      * @param schema Schema of the value. The Schema must have the same type or use the catch-all {@link #SCHEMA}.
      * @return the Any type.
-     * @throws SdkSerdeException if the schema type is incompatible with the Any type.
+     * @throws SdkSerdeException if the schema or a member schema is invalid.
      */
     static Any of(BigDecimal value, SdkSchema schema) {
         return new BigDecimalAny(value, schema);
@@ -295,8 +295,12 @@ public interface Any extends SerializableShape {
     /**
      * Create a list Any that has no schema.
      *
+     * <p>Every member of the list must have the same schema (if any). If the member schema is a member shape, the
+     * member must have a name of "member". If the member is not a member schema, it must be a document schema.
+     *
      * @param value Value to wrap.
      * @return the Any type.
+     * @throws SdkSerdeException if the schema or a member schema is invalid.
      */
     static Any of(List<Any> value) {
         return of(value, SCHEMA);
@@ -305,12 +309,14 @@ public interface Any extends SerializableShape {
     /**
      * Create a List Any with a Schema.
      *
-     * <p>Every element in the list must use the same Schema, and it must be a member Schema.
+     * <p>The Schema must have a list or document type. Every member of the list must have the same schema (if any).
+     * If the member schema is a member shape, the member must have a name of "member". If the member is not a member
+     * schema, it must be a document schema.
      *
      * @param value Value to wrap.
      * @param schema Schema of the value. The Schema must have the same type or use the catch-all {@link #SCHEMA}.
      * @return the Any type.
-     * @throws SdkSerdeException if the schema type is incompatible with the Any type.
+     * @throws SdkSerdeException if the schema, a key schema, or a value schema is invalid.
      */
     static Any of(List<Any> value, SdkSchema schema) {
         return new ListAny(value, schema);
@@ -319,8 +325,14 @@ public interface Any extends SerializableShape {
     /**
      * Create a Map Any.
      *
+     * <p>Every key and value member of the map must have the same schema. If the key member schema is a member shape,
+     * the member must have a name of "key". If the member is not a member schema, it must be a document schema. If the
+     * value member schema is a member shape, the member must have a name of "value". If the member is not a member
+     * schema, it must be a document schema.
+     *
      * @param value Value to wrap.
      * @return the Any type.
+     * @throws SdkSerdeException if the schema, key schema, or value schema is invalid.
      */
     static Any of(Map<Any, Any> value) {
         return of(value, SCHEMA);
@@ -328,6 +340,11 @@ public interface Any extends SerializableShape {
 
     /**
      * Create a Map Any with a Schema.
+     *
+     * <p>The Schema must have a map or document type. Every key and value member of the map must have the same schema.
+     * If the key member schema is a member shape, the member must have a name of "key". If the member is not a member
+     * schema, it must be a document schema. If the value member schema is a member shape, the member must have a name
+     * of "value". If the member is not a member schema, it must be a document schema.
      *
      * @param value Value to wrap.
      * @param schema Schema of the value. The Schema must have the same type or use the catch-all {@link #SCHEMA}.
