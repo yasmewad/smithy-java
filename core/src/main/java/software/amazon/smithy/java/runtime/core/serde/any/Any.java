@@ -612,6 +612,6 @@ public interface Any extends SerializableShape {
 
     @Override
     default void serialize(ShapeSerializer encoder) {
-        new AnySerializer(this).serialize(encoder);
+        AnySerializer.serialize(this, encoder);
     }
 }

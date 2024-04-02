@@ -9,17 +9,17 @@ import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
 
 /**
- * This is essentially responsible for serializing an Any to JSON, XML, etc.
+ * A generic implementation to serialize an Any type.
+ *
+ * <p>The built-in Any types override {@link Any#serialize(ShapeSerializer)}, but some implementations might choose
+ * to delegate to the default implementation (e.g., see JsonAny from json-codec).
  */
 final class AnySerializer {
 
-    private final Any value;
-
-    AnySerializer(Any value) {
-        this.value = value;
+    private AnySerializer() {
     }
 
-    void serialize(ShapeSerializer encoder) {
+    static void serialize(Any value, ShapeSerializer encoder) {
         SdkSchema schema = value.schema();
         switch (value.type()) {
             case BOOLEAN -> encoder.writeBoolean(schema, value.asBoolean());
@@ -50,8 +50,8 @@ final class AnySerializer {
                 }
             });
             case LIST -> encoder.beginList(schema, c -> {
-                for (Any value : value.asList()) {
-                    value.serialize(c);
+                for (Any entry : value.asList()) {
+                    entry.serialize(c);
                 }
             });
             case STRUCTURE, UNION -> encoder.beginStruct(schema, structSerializer -> {

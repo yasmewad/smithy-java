@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.core.uri;
+package software.amazon.smithy.java.runtime.core.uri;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -11,8 +11,6 @@ import static org.hamcrest.Matchers.equalTo;
 import java.net.URI;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
-import software.amazon.smithy.java.runtime.core.uri.PathBuilder;
-import software.amazon.smithy.java.runtime.core.uri.URIBuilder;
 
 public class URIBuilderTest {
     @Test

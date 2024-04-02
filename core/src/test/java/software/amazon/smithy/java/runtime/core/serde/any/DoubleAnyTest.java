@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.core.serde.any;
+package software.amazon.smithy.java.runtime.core.serde.any;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -14,62 +14,62 @@ import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
 import software.amazon.smithy.java.runtime.core.serde.SdkSerdeException;
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.SpecificShapeSerializer;
-import software.amazon.smithy.java.runtime.core.serde.any.Any;
 import software.amazon.smithy.model.shapes.ShapeId;
 import software.amazon.smithy.model.shapes.ShapeType;
 
-public class BooleanAnyTest {
+public class DoubleAnyTest {
+
     @Test
     public void createsAnyWithoutSchema() {
-        var any = Any.of(true);
+        var any = Any.of(1.0);
 
-        assertThat(any.type(), equalTo(ShapeType.BOOLEAN));
+        assertThat(any.type(), equalTo(ShapeType.DOUBLE));
         assertThat(any.schema().id(), equalTo(Any.SCHEMA.id()));
-        assertThat(any.asBoolean(), equalTo(true));
-        assertThat(any, equalTo(Any.of(true)));
+        assertThat(any.asDouble(), equalTo(1.0));
+        assertThat(any, equalTo(Any.of(1.0)));
     }
 
     @Test
     public void validatesSchemaType() {
         Assertions.assertThrows(SdkSerdeException.class, () -> {
-            Any.of(true, SdkSchema.builder().id("smithy.example#Shape").type(ShapeType.BYTE).build());
+            Any.of(1.0, SdkSchema.builder().id("smithy.example#Shape").type(ShapeType.BYTE).build());
         });
     }
 
     @Test
     public void createsAnyWithSchema() {
         var targetSchema = SdkSchema.builder()
-            .type(ShapeType.BOOLEAN)
+            .type(ShapeType.DOUBLE)
             .id(ShapeId.from("smithy.example#Shape"))
             .build();
         var schema = SdkSchema.memberBuilder(0, "mymember", targetSchema)
             .id(targetSchema.id())
             .build();
-        var any = Any.of(true, schema);
+        var any = Any.of(1.0, schema);
 
-        assertThat(any.type(), equalTo(ShapeType.BOOLEAN));
+        assertThat(any.type(), equalTo(ShapeType.DOUBLE));
         assertThat(any.schema(), equalTo(schema));
-        assertThat(any.asBoolean(), equalTo(true));
-        assertThat(any, equalTo(Any.of(true, schema)));
+        assertThat(any.asDouble(), equalTo(1.0));
+        assertThat(any, equalTo(Any.of(1.0, schema)));
     }
 
     @Test
     public void serializesShape() {
         var targetSchema = SdkSchema.builder()
-            .type(ShapeType.BOOLEAN)
+            .type(ShapeType.DOUBLE)
             .id(ShapeId.from("smithy.example#Shape"))
             .build();
         var schema = SdkSchema.memberBuilder(0, "mymember", targetSchema)
             .id(targetSchema.id())
             .build();
 
-        var any = Any.of(true, schema);
+        var any = Any.of(1.0, schema);
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            public void writeBoolean(SdkSchema schema, boolean value) {
+            public void writeDouble(SdkSchema schema, double value) {
                 assertThat(schema, equalTo(schema));
-                assertThat(value, equalTo(true));
+                assertThat(value, equalTo(1.0));
             }
         };
 

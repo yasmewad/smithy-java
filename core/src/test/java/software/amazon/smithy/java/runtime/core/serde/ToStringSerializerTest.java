@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.core.serde;
+package software.amazon.smithy.java.runtime.core.serde;
 
 import org.junit.jupiter.api.Test;
 
