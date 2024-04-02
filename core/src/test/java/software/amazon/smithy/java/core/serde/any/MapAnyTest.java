@@ -146,11 +146,6 @@ public class MapAnyTest {
         var keys = new ArrayList<>();
         map.serialize(new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                throw new UnsupportedOperationException("Expected a map: " + schema);
-            }
-
-            @Override
             public void beginMap(SdkSchema schema, Consumer<MapSerializer> consumer) {
                 assertThat(schema, equalTo(mapSchema));
                 consumer.accept(new MapSerializer() {
@@ -158,11 +153,6 @@ public class MapAnyTest {
                     public void entry(String key, Consumer<ShapeSerializer> valueSerializer) {
                         keys.add(key);
                         valueSerializer.accept(new SpecificShapeSerializer() {
-                            @Override
-                            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                                throw new UnsupportedOperationException("Expected an integer value: " + schema);
-                            }
-
                             @Override
                             public void writeInteger(SdkSchema schema, int value) {
                                 assertThat(schema, equalTo(valueMember));

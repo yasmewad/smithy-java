@@ -23,7 +23,7 @@ import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.StructSerializer;
 
 /**
- * Responsible for turning a shape into an Any using it's serializeShape method.
+ * Responsible for turning a shape into an Any using its serializeShape method.
  */
 final class AnyParser implements ShapeSerializer {
 

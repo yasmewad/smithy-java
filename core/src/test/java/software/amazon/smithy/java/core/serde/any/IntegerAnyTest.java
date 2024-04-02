@@ -68,11 +68,6 @@ public class IntegerAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeInteger(SdkSchema schema, int value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo(10));

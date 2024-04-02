@@ -68,11 +68,6 @@ public class DoubleAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeDouble(SdkSchema schema, double value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo(1.0));

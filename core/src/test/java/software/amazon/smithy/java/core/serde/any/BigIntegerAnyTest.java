@@ -69,11 +69,6 @@ public class BigIntegerAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeBigInteger(SdkSchema schema, BigInteger value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo(BigInteger.valueOf(10)));

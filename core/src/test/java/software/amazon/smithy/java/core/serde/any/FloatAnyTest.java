@@ -68,11 +68,6 @@ public class FloatAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeFloat(SdkSchema schema, float value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo(1.0f));

@@ -79,11 +79,6 @@ public class TimestampAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeTimestamp(SdkSchema schema, Instant value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo(time));

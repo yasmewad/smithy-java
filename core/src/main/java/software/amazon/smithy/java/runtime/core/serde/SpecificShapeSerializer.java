@@ -24,7 +24,9 @@ public abstract class SpecificShapeSerializer implements ShapeSerializer {
      * @param schema Unexpected encountered schema.
      * @return Returns an exception to throw.
      */
-    protected abstract RuntimeException throwForInvalidState(SdkSchema schema);
+    protected RuntimeException throwForInvalidState(SdkSchema schema) {
+        throw new SdkSerdeException("Unexpected schema type: " + schema);
+    }
 
     @Override
     public void flush() {

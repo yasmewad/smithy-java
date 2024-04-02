@@ -69,11 +69,6 @@ public class BigDecimalAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeBigDecimal(SdkSchema schema, BigDecimal value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo(new BigDecimal(10)));

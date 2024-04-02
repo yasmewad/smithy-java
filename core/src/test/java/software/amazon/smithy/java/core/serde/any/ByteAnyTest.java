@@ -68,11 +68,6 @@ public class ByteAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeByte(SdkSchema schema, byte value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo((byte) 1));

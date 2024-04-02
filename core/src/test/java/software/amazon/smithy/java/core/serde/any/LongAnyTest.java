@@ -68,11 +68,6 @@ public class LongAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeLong(SdkSchema schema, long value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo(10L));

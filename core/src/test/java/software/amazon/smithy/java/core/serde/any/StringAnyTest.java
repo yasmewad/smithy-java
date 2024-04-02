@@ -68,11 +68,6 @@ public class StringAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeString(SdkSchema schema, String value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo("hi"));

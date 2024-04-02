@@ -67,11 +67,6 @@ public class BooleanAnyTest {
 
         ShapeSerializer serializer = new SpecificShapeSerializer() {
             @Override
-            protected RuntimeException throwForInvalidState(SdkSchema schema) {
-                return new RuntimeException("Unexpected " + schema);
-            }
-
-            @Override
             public void writeBoolean(SdkSchema schema, boolean value) {
                 assertThat(schema, equalTo(schema));
                 assertThat(value, equalTo(true));

@@ -356,6 +356,31 @@ public interface Any extends SerializableShape {
     }
 
     /**
+     * Create a structure or union Any type.
+     *
+     * <p>Each member must use a document schema or a member schema.
+     *
+     * @param value Map of member name to value.
+     * @return the Any type.
+     */
+    static Any ofStruct(Map<String, Any> value) {
+        return ofStruct(value, SCHEMA);
+    }
+
+    /**
+     * Create a structure or union Any type with a specific schema.
+     *
+     * <p>Each member must use a document schema or a member schema.
+     *
+     * @param value Map of member name to value.
+     * @param schema Schema of the created Any.
+     * @return the Any type.
+     */
+    static Any ofStruct(Map<String, Any> value, SdkSchema schema) {
+        return new StructAny(value, schema);
+    }
+
+    /**
      * Create an Any from a shape.
      *
      * @param shape Shape to turn into an Any.
@@ -536,10 +561,16 @@ public interface Any extends SerializableShape {
     }
 
     /**
-     * Get the map contents of the Any if it is a map.
+     * Get the map contents of the Any if it is a map, a structure, or union.
+     *
+     * <p>If the Any is a map, the map entries are returned.
+     *
+     * <p>If the Any is a structure or union, it's heterogeneous result is returned. If the structure or union is
+     * typed to a specific schema, it cannot be turned back into an Any map using {@link #of(Map)} because the members
+     * of the returned map won't all use the same schema or members with a member name of "member".
      *
      * @return the map contents.
-     * @throws IllegalStateException if the Any is not a map.
+     * @throws IllegalStateException if the Any is not a map, structure, or union.
      */
     default Map<Any, Any> asMap() {
         throw new IllegalStateException("Expected a map value, but found " + type());
