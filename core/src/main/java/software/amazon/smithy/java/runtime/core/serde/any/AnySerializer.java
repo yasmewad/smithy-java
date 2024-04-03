@@ -34,7 +34,7 @@ final class AnySerializer {
             case STRING, ENUM -> encoder.writeString(schema, value.asString());
             case BLOB -> encoder.writeBlob(schema, value.asBlob());
             case TIMESTAMP -> encoder.writeTimestamp(schema, value.asTimestamp());
-            case DOCUMENT -> encoder.writeDocument(schema, value);
+            case DOCUMENT -> encoder.writeDocument(value);
             case MAP -> encoder.beginMap(schema, mapSerializer -> {
                 for (var entry : value.asMap().entrySet()) {
                     switch (entry.getKey().type()) {
@@ -64,7 +64,7 @@ final class AnySerializer {
                     }
                 }
             });
-            default -> throw new UnsupportedOperationException("Cannot serialize document of type " + value.type());
+            default -> encoder.writeShape(value);
         }
     }
 }

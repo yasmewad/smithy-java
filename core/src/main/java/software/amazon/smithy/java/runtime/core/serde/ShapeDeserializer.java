@@ -18,8 +18,6 @@ import software.amazon.smithy.java.runtime.core.serde.any.Any;
  */
 public interface ShapeDeserializer {
 
-    void readNull(SdkSchema schema);
-
     boolean readBoolean(SdkSchema schema);
 
     byte[] readBlob(SdkSchema schema);

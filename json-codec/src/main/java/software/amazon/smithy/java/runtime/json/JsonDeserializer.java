@@ -163,15 +163,6 @@ final class JsonDeserializer implements ShapeDeserializer {
     }
 
     @Override
-    public void readNull(SdkSchema schema) {
-        try {
-            iter.readNull();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    @Override
     public void readStruct(SdkSchema schema, BiConsumer<SdkSchema, ShapeDeserializer> eachEntry) {
         try {
             for (var field = iter.readObject(); field != null; field = iter.readObject()) {

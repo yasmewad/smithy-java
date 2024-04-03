@@ -25,11 +25,6 @@ final class AnyDeserializer implements ShapeDeserializer {
     }
 
     @Override
-    public void readNull(SdkSchema schema) {
-        // do nothing.
-    }
-
-    @Override
     public boolean readBoolean(SdkSchema schema) {
         return value.asBoolean();
     }

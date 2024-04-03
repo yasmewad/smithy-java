@@ -202,16 +202,16 @@ public final class ListSerializer implements ShapeSerializer {
     }
 
     @Override
-    public void writeShape(SdkSchema schema, SerializableShape value) {
+    public void writeShape(SerializableShape value) {
         beforeWrite();
-        delegate.writeShape(schema, value);
+        delegate.writeShape(value);
         afterWrite(null);
     }
 
     @Override
-    public void writeDocument(SdkSchema schema, Any value) {
+    public void writeDocument(Any value) {
         beforeWrite();
-        delegate.writeDocument(schema, value);
+        delegate.writeDocument(value);
         afterWrite(null);
     }
 }

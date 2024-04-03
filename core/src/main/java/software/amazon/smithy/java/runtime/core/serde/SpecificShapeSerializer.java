@@ -108,12 +108,12 @@ public abstract class SpecificShapeSerializer implements ShapeSerializer {
     }
 
     @Override
-    public void writeShape(SdkSchema schema, SerializableShape value) {
-        throw throwForInvalidState(schema);
+    public void writeShape(SerializableShape value) {
+        throw throwForInvalidState(null);
     }
 
     @Override
-    public void writeDocument(SdkSchema schema, Any value) {
-        throw throwForInvalidState(schema);
+    public void writeDocument(Any value) {
+        throw throwForInvalidState(value.schema());
     }
 }

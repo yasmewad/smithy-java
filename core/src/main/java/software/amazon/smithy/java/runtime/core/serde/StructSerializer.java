@@ -172,7 +172,7 @@ public interface StructSerializer {
     }
 
     default void documentMember(SdkSchema member, Any value) {
-        member(member, writer -> writer.writeDocument(member, value));
+        member(member, writer -> writer.writeDocument(value));
     }
 
     default void documentMemberIf(SdkSchema member, Any value) {

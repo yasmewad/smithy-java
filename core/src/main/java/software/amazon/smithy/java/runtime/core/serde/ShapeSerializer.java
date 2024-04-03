@@ -158,18 +158,18 @@ public interface ShapeSerializer extends Flushable {
     void writeTimestamp(SdkSchema schema, Instant value);
 
     /**
-     * Serialize a shape into this serializer.
+     * Serialize a shape, document, or any other kind of value that emits the Smithy data model into this serializer.
      *
-     * @param schema Schema of the shape to serialize.
-     * @param value  Shape to serialize.
+     * @param value Shape to serialize.
      */
-    void writeShape(SdkSchema schema, SerializableShape value);
+    void writeShape(SerializableShape value);
 
     /**
      * Serialize a document shape.
      *
-     * @param schema Document schema.
      * @param value  Value to serialize.
      */
-    void writeDocument(SdkSchema schema, Any value);
+    default void writeDocument(Any value) {
+        writeShape(value);
+    }
 }

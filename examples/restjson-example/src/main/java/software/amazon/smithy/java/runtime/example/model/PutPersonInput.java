@@ -119,13 +119,15 @@ public final class PutPersonInput implements SerializableShape {
             st.timestampMemberIf(SCHEMA_BIRTHDAY, birthday);
             st.stringMemberIf(SCHEMA_FAVORITE_COLOR, favoriteColor);
             st.blobMemberIf(SCHEMA_BINARY, binary);
-            st.mapMember(SCHEMA_QUERY_PARAMS, m -> {
-                queryParams.forEach((k, v) -> m.entry(k, mv -> {
-                    mv.beginList(SharedSchemas.MAP_LIST_STRING.member("value"), mvl -> {
-                        v.forEach(value -> mvl.writeString(SharedSchemas.LIST_OF_STRING.member("member"), value));
-                    });
-                }));
-            });
+            if (!queryParams.isEmpty()) {
+                st.mapMember(SCHEMA_QUERY_PARAMS, m -> {
+                    queryParams.forEach((k, v) -> m.entry(k, mv -> {
+                        mv.beginList(SharedSchemas.MAP_LIST_STRING.member("value"), mvl -> {
+                            v.forEach(value -> mvl.writeString(SharedSchemas.LIST_OF_STRING.member("member"), value));
+                        });
+                    }));
+                });
+            }
         });
     }
 

@@ -27,11 +27,6 @@ final class HttpHeaderDeserializer implements ShapeDeserializer {
     }
 
     @Override
-    public void readNull(SdkSchema schema) {
-        // do nothing.
-    }
-
-    @Override
     public boolean readBoolean(SdkSchema schema) {
         return switch (value) {
             case "true" -> true;

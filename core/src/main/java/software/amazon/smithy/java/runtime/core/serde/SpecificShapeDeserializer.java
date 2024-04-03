@@ -90,11 +90,6 @@ public abstract class SpecificShapeDeserializer implements ShapeDeserializer {
     }
 
     @Override
-    public void readNull(SdkSchema schema) {
-        throw throwForInvalidState(schema);
-    }
-
-    @Override
     public void readStruct(SdkSchema schema, BiConsumer<SdkSchema, ShapeDeserializer> eachEntry) {
         throw throwForInvalidState(schema);
     }

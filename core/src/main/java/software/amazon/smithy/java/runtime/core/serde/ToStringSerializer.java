@@ -35,7 +35,7 @@ public final class ToStringSerializer implements ShapeSerializer {
         if (value == null) {
             append("null");
         }
-        if (schema.getTrait(SensitiveTrait.class).isPresent()) {
+        if (schema != null && schema.getTrait(SensitiveTrait.class).isPresent()) {
             builder.append("(redacted)");
         } else {
             append(value);
@@ -211,17 +211,15 @@ public final class ToStringSerializer implements ShapeSerializer {
     }
 
     @Override
-    public void writeShape(SdkSchema schema, SerializableShape value) {
+    public void writeShape(SerializableShape value) {
         value.serialize(this);
     }
 
     @Override
-    public void writeDocument(SdkSchema schema, Any value) {
+    public void writeDocument(Any value) {
         append("Document (" + value.schema()).append(") :");
         append(System.lineSeparator());
         indent();
         value.serialize(this);
-        dedent();
-        append(System.lineSeparator());
     }
 }

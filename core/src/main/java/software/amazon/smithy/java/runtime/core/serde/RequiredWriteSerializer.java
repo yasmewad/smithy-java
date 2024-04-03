@@ -136,14 +136,14 @@ public final class RequiredWriteSerializer implements ShapeSerializer {
     }
 
     @Override
-    public void writeShape(SdkSchema schema, SerializableShape value) {
-        delegate.writeShape(schema, value);
+    public void writeShape(SerializableShape value) {
+        delegate.writeShape(value);
         wroteSomething = true;
     }
 
     @Override
-    public void writeDocument(SdkSchema schema, Any value) {
-        delegate.writeDocument(schema, value);
+    public void writeDocument(Any value) {
+        delegate.writeDocument(value);
         wroteSomething = true;
     }
 

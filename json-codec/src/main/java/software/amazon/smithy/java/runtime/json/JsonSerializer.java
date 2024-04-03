@@ -156,12 +156,12 @@ final class JsonSerializer implements ShapeSerializer {
     }
 
     @Override
-    public void writeShape(SdkSchema schema, SerializableShape value) {
+    public void writeShape(SerializableShape value) {
         value.serialize(this);
     }
 
     @Override
-    public void writeDocument(SdkSchema schema, Any value) {
+    public void writeDocument(Any value) {
         value.serialize(this);
     }
 

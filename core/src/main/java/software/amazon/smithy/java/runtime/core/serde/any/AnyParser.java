@@ -5,7 +5,6 @@
 
 package software.amazon.smithy.java.runtime.core.serde.any;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
@@ -162,17 +161,16 @@ final class AnyParser implements ShapeSerializer {
     }
 
     @Override
-    public void writeShape(SdkSchema schema, SerializableShape value) {
+    public void writeShape(SerializableShape value) {
         value.serialize(this);
     }
 
     @Override
-    public void writeDocument(SdkSchema schema, Any value) {
+    public void writeDocument(Any value) {
         result = value;
     }
 
     @Override
-    public void flush() throws IOException {
-        // Do nothing.
+    public void flush() {
     }
 }
