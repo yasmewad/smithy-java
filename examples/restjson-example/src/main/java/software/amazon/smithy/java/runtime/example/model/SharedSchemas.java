@@ -43,6 +43,5 @@ final class SharedSchemas {
         )
         .build();
 
-    private SharedSchemas() {
-    }
+    private SharedSchemas() {}
 }
