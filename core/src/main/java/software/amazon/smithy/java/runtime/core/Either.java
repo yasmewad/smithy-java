@@ -143,7 +143,7 @@ public final class Either<L, R> {
             return false;
         }
         Either<?, ?> either = (Either<?, ?>) o;
-        return Objects.equals(isLeft(), either.isLeft()) && Objects.equals(isRight(), either.isRight());
+        return Objects.equals(left, either.left) && Objects.equals(right, either.right);
     }
 
     @Override
