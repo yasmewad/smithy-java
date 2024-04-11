@@ -102,7 +102,7 @@ public class BuilderGenerator implements Runnable {
                     symbolProvider.toMemberName(member)
                 );
             } else {
-                // TODO: handle
+                // TODO: handle defaults
                 writer.pushState();
                 writer.putContext("isRequired", member.isRequired());
                 writer.write(
