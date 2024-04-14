@@ -11,7 +11,6 @@ import java.math.BigInteger;
 import java.time.Instant;
 import java.util.function.Consumer;
 import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
-import software.amazon.smithy.java.runtime.core.schema.SerializableShape;
 import software.amazon.smithy.java.runtime.core.serde.document.Document;
 
 /**
@@ -137,15 +136,6 @@ public interface ShapeSerializer extends Flushable {
      * @param value  Timestamp value.
      */
     void writeTimestamp(SdkSchema schema, Instant value);
-
-    /**
-     * Serialize a shape, document, or any other kind of value that emits the Smithy data model into this serializer.
-     *
-     * @param value Shape to serialize.
-     */
-    default void writeShape(SerializableShape value) {
-        value.serialize(this);
-    }
 
     /**
      * Serialize a document shape.
