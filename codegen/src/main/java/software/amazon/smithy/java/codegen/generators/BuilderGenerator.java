@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.codegen.generators;
 
-import java.util.Optional;
+import software.amazon.smithy.codegen.core.Symbol;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.java.codegen.SymbolProperties;
 import software.amazon.smithy.java.codegen.SymbolUtils;
@@ -84,15 +84,14 @@ public class BuilderGenerator implements Runnable {
     // Adds builder properties and initializers
     private void builderProperties() {
         for (var member : shape.members()) {
-            Optional<String> builderRefOptional = symbolProvider.toSymbol(member)
-                .getProperty(SymbolProperties.BUILDER_REF_INITIALIZER, String.class);
-            if (builderRefOptional.isPresent()) {
+            var memberSymbol = symbolProvider.toSymbol(member);
+            if (memberSymbol.getProperty(SymbolProperties.BUILDER_REF_INITIALIZER).isPresent()) {
                 writer.write(
                     "private final $1T<$2T> $3L = $1T.$4L;",
                     BuilderRef.class,
                     symbolProvider.toSymbol(member),
                     symbolProvider.toMemberName(member),
-                    builderRefOptional.orElseThrow(RuntimeException::new)
+                    memberSymbol.expectProperty(SymbolProperties.BUILDER_REF_INITIALIZER, String.class)
                 );
             } else if (SymbolUtils.isStreamingBlob(model.expectShape(member.getTarget()))) {
                 // Streaming blobs need a custom initializer
@@ -116,8 +115,11 @@ public class BuilderGenerator implements Runnable {
     }
 
     private void builderSetters() {
-        shape.members()
-            .forEach(memberShape -> memberShape.accept(new SetterVisitor(symbolProvider.toMemberName(memberShape))));
+        for (var memberShape : shape.members()) {
+            memberShape.accept(
+                new SetterVisitor(symbolProvider.toSymbol(memberShape), symbolProvider.toMemberName(memberShape))
+            );
+        }
     }
 
     /**
@@ -125,9 +127,11 @@ public class BuilderGenerator implements Runnable {
      */
     private final class SetterVisitor extends ShapeVisitor.Default<Void> {
         private final String memberName;
+        private final Symbol memberSymbol;
 
-        private SetterVisitor(String memberName) {
+        private SetterVisitor(Symbol memberSymbol, String memberName) {
             this.memberName = memberName;
+            this.memberSymbol = memberSymbol;
         }
 
         @Override
@@ -164,11 +168,17 @@ public class BuilderGenerator implements Runnable {
 
         @Override
         public Void listShape(ListShape shape) {
+            writer.pushState();
+            writer.putContext(
+                "builderRef",
+                memberSymbol.getProperty(SymbolProperties.BUILDER_REF_INITIALIZER).isPresent()
+            );
             writer.write(
                 """
                     public Builder $1L($2T $1L) {
-                        clear$3L();
-                        this.$1L.get().addAll($1L);
+                        clear$3L();${^builderRef}
+                        create$3LIfNotExists();
+                        ${/builderRef}this.$1L${?builderRef}.get()${/builderRef}.addAll($1L);
                         return this;
                     }
                     """,
@@ -177,13 +187,25 @@ public class BuilderGenerator implements Runnable {
                 StringUtils.capitalize(memberName)
             );
 
-            clearCollection();
+            writer.write(
+                """
+                    public Builder clear$1L() {
+                        if ($2L${?builderRef}.hasValue()${/builderRef}${^builderRef} != null${/builderRef}) {
+                            $2L${?builderRef}.get()${/builderRef}.clear();
+                        }
+                        return this;
+                    }
+                    """,
+                StringUtils.capitalize(memberName),
+                memberName
+            );
 
             // Set one
             writer.write(
                 """
-                    public Builder add$L($T value) {
-                        $L.get().add(value);
+                    public Builder add$1L($2T value) {${^builderRef}
+                        create$1LIfNotExists();
+                        ${/builderRef}$3L${?builderRef}.get()${/builderRef}.add(value);
                         return this;
                     }
                     """,
@@ -195,8 +217,10 @@ public class BuilderGenerator implements Runnable {
             // Remove one
             writer.write(
                 """
-                    public Builder remove$L($T value) {
-                        $L.get().remove(value);
+                    public Builder remove$1L($2T value) {
+                        if (this.$3L${?builderRef}.hasValue()${/builderRef}${^builderRef} != null${/builderRef}) {
+                            $3L${?builderRef}.get()${/builderRef}.remove(value);
+                        }
                         return this;
                     }
                     """,
@@ -204,6 +228,23 @@ public class BuilderGenerator implements Runnable {
                 symbolProvider.toSymbol(shape.getMember()),
                 memberName
             );
+
+            if (!memberSymbol.getProperty(SymbolProperties.BUILDER_REF_INITIALIZER).isPresent()) {
+                writer.write(
+                    """
+                        private void create$1LIfNotExists() {
+                            if ($2L == null) {
+                                $2L = new $3T<>();
+                            }
+                        }
+                        """,
+                    StringUtils.capitalize(memberName),
+                    memberName,
+                    memberSymbol.expectProperty(SymbolProperties.COLLECTION_IMPLEMENTATION_CLASS)
+                );
+            }
+            writer.popState();
+
             return null;
         }
 
@@ -223,7 +264,18 @@ public class BuilderGenerator implements Runnable {
                 StringUtils.capitalize(memberName)
             );
 
-            clearCollection();
+            writer.write(
+                """
+                    public Builder clear$1L() {
+                        if ($2L.hasValue()) {
+                            $2L.get().clear();
+                        }
+                        return this;
+                    }
+                    """,
+                StringUtils.capitalize(memberName),
+                memberName
+            );
 
             // Set one
             writer.write(
@@ -243,7 +295,9 @@ public class BuilderGenerator implements Runnable {
             writer.write(
                 """
                     public Builder remove$1L($2T $3L) {
-                        this.$3L.get().remove($3L);
+                        if (this.$3L.hasValue()) {
+                            this.$3L.get().remove($3L);
+                        }
                         return this;
                     }
                     """,
@@ -252,19 +306,6 @@ public class BuilderGenerator implements Runnable {
                 memberName
             );
             return null;
-        }
-
-        private void clearCollection() {
-            writer.write(
-                """
-                    public Builder clear$L() {
-                        $L.get().clear();
-                        return this;
-                    }
-                    """,
-                StringUtils.capitalize(memberName),
-                memberName
-            );
         }
 
         @Override
