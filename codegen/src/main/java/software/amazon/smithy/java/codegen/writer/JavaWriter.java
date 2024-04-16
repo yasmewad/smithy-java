@@ -10,8 +10,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import software.amazon.smithy.codegen.core.Symbol;
 import software.amazon.smithy.codegen.core.SymbolReference;
 import software.amazon.smithy.codegen.core.SymbolWriter;
@@ -31,8 +29,6 @@ import software.amazon.smithy.utils.StringUtils;
  */
 @SmithyUnstableApi
 public class JavaWriter extends DeferredSymbolWriter<JavaWriter, JavaImportContainer> {
-    private static final int MAX_LINE_LENGTH = 120;
-    private static final Pattern PATTERN = Pattern.compile("<([a-z]+)*>.*?</\\1>", Pattern.DOTALL);
     private final Map<String, Set<Symbol>> symbolTable = new HashMap<>();
     private final String packageNamespace;
     private final JavaCodegenSettings settings;
@@ -78,62 +74,8 @@ public class JavaWriter extends DeferredSymbolWriter<JavaWriter, JavaImportConta
         );
     }
 
-    // TODO: make this take a runnable
-    public void openDocstring() {
-        pushState().writeWithNoFormatting("/**");
-    }
-
     public void newLine() {
         writeInlineWithNoFormatting(getNewline());
-    }
-
-    public void writeDocStringContents(String contents) {
-        // Split out any HTML-tag wrapped sections as we do not want to wrap
-        // any customer documentation with tags
-        Matcher matcher = PATTERN.matcher(contents);
-        int lastMatchPos = 0;
-        writeInlineWithNoFormatting(" * ");
-        while (matcher.find()) {
-            // write all contents up to the match.
-            writeInlineWithNoFormatting(
-                StringUtils.wrap(
-                    contents.substring(lastMatchPos, matcher.start())
-                        .replace("\n", "\n * "),
-                    MAX_LINE_LENGTH - 8,
-                    getNewline() + " * ",
-                    false
-                )
-            );
-            // write match contents
-            writeInlineWithNoFormatting(contents.substring(matcher.start(), matcher.end()).replace("\n", "\n * "));
-            lastMatchPos = matcher.end();
-        }
-        // Write out all remaining contents
-        writeWithNoFormatting(
-            StringUtils.wrap(
-                contents.substring(lastMatchPos).replace("\n", "\n * "),
-                MAX_LINE_LENGTH - 8,
-                getNewline() + " * ",
-                false
-            )
-        );
-    }
-
-    public void writeDocStringContents(String contents, Object... args) {
-        writeInlineWithNoFormatting(" * ");
-        write(
-            StringUtils.wrap(
-                contents.replace("\n", "\n * "),
-                MAX_LINE_LENGTH - 8,
-                getNewline() + " * ",
-                false
-            ),
-            args
-        );
-    }
-
-    public void closeDocstring() {
-        writeWithNoFormatting(" */").popState();
     }
 
     /**
@@ -282,7 +224,7 @@ public class JavaWriter extends DeferredSymbolWriter<JavaWriter, JavaImportConta
     /**
      * Implements a formatter for {@code $U} that capitalizes the first letter of a string literal.
      */
-    private final class CapitalizingFormatter implements BiFunction<Object, String, String> {
+    private static final class CapitalizingFormatter implements BiFunction<Object, String, String> {
         @Override
         public String apply(Object type, String indent) {
             if (type instanceof String s) {
