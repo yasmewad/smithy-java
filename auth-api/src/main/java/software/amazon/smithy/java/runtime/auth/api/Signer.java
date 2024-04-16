@@ -19,10 +19,9 @@ public interface Signer<RequestT, IdentityT extends Identity> {
      * Sign the given request.
      *
      * @param request    Request to sign.
-     * @param identityT  Identity used to sign the request.
+     * @param identity  Identity used to sign the request.
      * @param properties Signing properties.
      * @return the signed request.
-     * @throws UnsupportedOperationException if the given identity is incompatible with the signer.
      */
-    RequestT sign(RequestT request, IdentityT identityT, AuthProperties properties);
+    RequestT sign(RequestT request, IdentityT identity, AuthProperties properties);
 }

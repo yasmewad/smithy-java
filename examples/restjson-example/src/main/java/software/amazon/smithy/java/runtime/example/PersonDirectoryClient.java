@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Objects;
 import software.amazon.smithy.java.runtime.api.Endpoint;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
-import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolver;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthScheme;
@@ -59,15 +58,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
 
         // TODO: Better defaults? Require these?
         this.authSchemeResolver = Objects.requireNonNullElseGet(builder.authSchemeResolver, () -> params -> List.of());
-        this.identityResolvers = Objects.requireNonNullElseGet(
-            builder.identityResolvers,
-            () -> new IdentityResolvers() {
-                @Override
-                public <T extends Identity> IdentityResolver<T> identityResolver(Class<T> identityType) {
-                    return null;
-                }
-            }
-        );
+        this.identityResolvers = IdentityResolvers.of(builder.identityResolvers);
 
         // Here is where you would register errors bound to the service on the registry.
         // ...
@@ -142,9 +133,9 @@ public final class PersonDirectoryClient implements PersonDirectory {
         private ClientTransport transport;
         private EndpointProvider endpointProvider;
         private final List<ClientInterceptor> interceptors = new ArrayList<>();
-        private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
         private AuthSchemeResolver authSchemeResolver;
-        private IdentityResolvers identityResolvers;
+        private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
+        private final List<IdentityResolver<?>> identityResolvers = new ArrayList<>();
 
         private Builder() {}
 
@@ -246,13 +237,25 @@ public final class PersonDirectoryClient implements PersonDirectory {
         }
 
         /**
-         * Set the identity resolvers supported by the client.
+         * Add identity resolvers to the client.
          *
-         * @param identityResolvers Client identity resolvers.
+         * @param identityResolvers Identity resolvers to add.
          * @return the builder.
          */
-        public Builder identityResolvers(IdentityResolvers identityResolvers) {
-            this.identityResolvers = identityResolvers;
+        public Builder addIdentityResolver(IdentityResolver<?>... identityResolvers) {
+            this.identityResolvers.addAll(Arrays.asList(identityResolvers));
+            return this;
+        }
+
+        /**
+         * Set the identity resolvers of the client.
+         *
+         * @param identityResolvers Identity resolvers to set.
+         * @return the builder.
+         */
+        public Builder identityResolvers(List<IdentityResolver<?>> identityResolvers) {
+            this.identityResolvers.clear();
+            this.identityResolvers.addAll(identityResolvers);
             return this;
         }
 
