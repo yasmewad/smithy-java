@@ -5,6 +5,8 @@
 
 package software.amazon.smithy.java.codegen.generators;
 
+import java.util.Collection;
+import java.util.Collections;
 import software.amazon.smithy.codegen.core.Symbol;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.java.codegen.SymbolProperties;
@@ -15,7 +17,6 @@ import software.amazon.smithy.java.runtime.core.serde.DataStream;
 import software.amazon.smithy.java.runtime.core.serde.ShapeDeserializer;
 import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.shapes.*;
-import software.amazon.smithy.utils.BuilderRef;
 
 /**
  * Generates a static nested {@code Builder} class for a Java class.
@@ -83,16 +84,7 @@ public class BuilderGenerator implements Runnable {
     // Adds builder properties and initializers
     private void builderProperties() {
         for (var member : shape.members()) {
-            var memberSymbol = symbolProvider.toSymbol(member);
-            if (memberSymbol.getProperty(SymbolProperties.BUILDER_REF_INITIALIZER).isPresent()) {
-                writer.write(
-                    "private final $1T<$2T> $3L = $1T.$4L;",
-                    BuilderRef.class,
-                    symbolProvider.toSymbol(member),
-                    symbolProvider.toMemberName(member),
-                    memberSymbol.expectProperty(SymbolProperties.BUILDER_REF_INITIALIZER, String.class)
-                );
-            } else if (SymbolUtils.isStreamingBlob(model.expectShape(member.getTarget()))) {
+            if (SymbolUtils.isStreamingBlob(model.expectShape(member.getTarget()))) {
                 // Streaming blobs need a custom initializer
                 writer.write(
                     "private $1T $2L = $1T.ofEmpty();",
@@ -169,65 +161,65 @@ public class BuilderGenerator implements Runnable {
         public Void listShape(ListShape shape) {
             writer.pushState();
             writer.putContext(
-                "builderRef",
-                memberSymbol.getProperty(SymbolProperties.BUILDER_REF_INITIALIZER).isPresent()
+                "collectionImpl",
+                memberSymbol.expectProperty(SymbolProperties.COLLECTION_IMPLEMENTATION_CLASS, Class.class)
             );
             writer.putContext("memberName", memberName);
-            writer.putContext("symbol", symbolProvider.toSymbol(shape));
             writer.putContext("targetSymbol", symbolProvider.toSymbol(shape.getMember()));
-            // Add all
-            writer.write("""
-                public Builder ${memberName:L}(${symbol:T} ${memberName:L}) {
-                    clear${memberName:U}();${^builderRef}
-                    create${memberName:U}IfNotExists();
-                    ${/builderRef}this.${memberName:L}${?builderRef}.get()${/builderRef}.addAll(${memberName:L});
-                    return this;
-                }
-                """);
-            // Clear all
-            writer.write("""
-                public Builder clear${memberName:U}() {
-                    if (${memberName:L}${?builderRef}.hasValue()${/builderRef}${^builderRef} != null${/builderRef}) {
-                        ${memberName:L}${?builderRef}.get()${/builderRef}.clear();
+
+            // Collection Replacement
+            writer.write(
+                """
+                    public Builder ${memberName:L}($T<${targetSymbol:T}> ${memberName:L}) {
+                        this.${memberName:L} = ${memberName:L} != null ? new ${collectionImpl:T}<>(${memberName:L}) : null;
+                        return this;
                     }
-                    return this;
-                }
-                """);
+                    """,
+                Collection.class
+            );
+
+            // Bulk Add
+            writer.write(
+                """
+                    public Builder addAll${memberName:U}($T<${targetSymbol:T}> ${memberName:L}) {
+                        if (this.${memberName:L} == null) {
+                            this.${memberName:L} = new ${collectionImpl:T}<>(${memberName:L});
+                        } else {
+                            this.${memberName:L}.addAll(${memberName:L});
+                        }
+                        return this;
+                    }
+                    """,
+                Collection.class
+            );
+
             // Set one
             writer.write(
                 """
-                    public Builder add${memberName:U}(${targetSymbol:T} value) {${^builderRef}
-                        create${memberName:U}IfNotExists();
-                        ${/builderRef}${memberName:L}${?builderRef}.get()${/builderRef}.add(value);
-                        return this;
-                    }
-                    """
-            );
-            // Remove one
-            writer.write(
-                """
-                    public Builder remove${memberName:U}(${targetSymbol:T} value) {
-                        if (this.${memberName:L}${?builderRef}.hasValue()${/builderRef}${^builderRef} != null${/builderRef}) {
-                            ${memberName:L}${?builderRef}.get()${/builderRef}.remove(value);
+                    public Builder ${memberName:L}(${targetSymbol:T} ${memberName:L}) {
+                        if (this.${memberName:L} == null) {
+                            this.${memberName:L} = new ${collectionImpl:T}<>();
                         }
+                        this.${memberName:L}.add(${memberName:L});
                         return this;
                     }
                     """
             );
 
-            // Handle collection creation if a builderRef is not used to do so.
-            if (memberSymbol.getProperty(SymbolProperties.BUILDER_REF_INITIALIZER).isEmpty()) {
-                writer.write(
-                    """
-                        private void create${memberName:U}IfNotExists() {
-                            if (${memberName:L} == null) {
-                                ${memberName:L} = new $T<>();
-                            }
+            // Set with varargs
+            writer.write(
+                """
+                    public Builder ${memberName:L}(${targetSymbol:T}... ${memberName:L}) {
+                        if (this.${memberName:L} == null) {
+                            this.${memberName:L} = new ${collectionImpl:T}<>();
                         }
-                        """,
-                    memberSymbol.expectProperty(SymbolProperties.COLLECTION_IMPLEMENTATION_CLASS)
-                );
-            }
+                        $T.addAll(this.${memberName:L}, ${memberName:L});
+                        return this;
+                    }
+                    """,
+                Collections.class
+            );
+
             writer.popState();
 
             return null;
@@ -238,47 +230,46 @@ public class BuilderGenerator implements Runnable {
             writer.pushState();
             writer.putContext("memberName", memberName);
             writer.putContext("symbol", symbolProvider.toSymbol(shape));
+            writer.putContext(
+                "collectionImpl",
+                memberSymbol.expectProperty(SymbolProperties.COLLECTION_IMPLEMENTATION_CLASS, Class.class)
+            );
             writer.putContext("keySymbol", symbolProvider.toSymbol(shape.getKey()));
             writer.putContext("valueSymbol", symbolProvider.toSymbol(shape.getValue()));
 
-            // Set all
+            // Replace Map
             writer.write(
                 """
                     public Builder ${memberName:L}(${symbol:T} ${memberName:L}) {
-                        clear${memberName:U}();
-                        this.${memberName:L}.get().putAll(${memberName:L});
+                        this.${memberName:L} = ${memberName:L} != null ? new ${collectionImpl:T}<>(${memberName:L}) : null;
                         return this;
                     }
                     """
             );
-            // Clear All
+
+            // Add all items
             writer.write(
                 """
-                    public Builder clear${memberName:U}() {
-                        if (${memberName:L}.hasValue()) {
-                            ${memberName:L}.get().clear();
+                    public Builder putAll${memberName:U}(${symbol:T} ${memberName:L}) {
+                        if (this.${memberName:L} == null) {
+                            this.${memberName:L} = new ${collectionImpl:T}<>(${memberName:L});
+                        } else {
+                            this.${memberName:L}.putAll(${memberName:L});
                         }
                         return this;
                     }
                     """
             );
+
             // Set one
             writer.write(
                 """
                     public Builder put${memberName:U}(${keySymbol:T} key, ${valueSymbol:T} value) {
-                       this.${memberName:L}.get().put(key, value);
+                       if (this.${memberName:L} == null) {
+                           this.${memberName:L} = new ${collectionImpl:T}<>();
+                       }
+                       this.${memberName:L}.put(key, value);
                        return this;
-                    }
-                    """
-            );
-            // Remove one
-            writer.write(
-                """
-                    public Builder remove${memberName:U}(${keySymbol:T} ${memberName:L}) {
-                        if (this.${memberName:L}.hasValue()) {
-                            this.${memberName:L}.get().remove(${memberName:L});
-                        }
-                        return this;
                     }
                     """
             );
