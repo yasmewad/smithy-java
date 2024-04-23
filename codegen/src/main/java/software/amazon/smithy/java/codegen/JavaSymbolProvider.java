@@ -116,6 +116,7 @@ public final class JavaSymbolProvider implements ShapeVisitor<Symbol>, SymbolPro
                 .toBuilder()
                 .putProperty(SymbolProperties.COLLECTION_COPY_METHOD, "unmodifiableSequencedSet")
                 .putProperty(SymbolProperties.COLLECTION_IMPLEMENTATION_CLASS, LinkedHashSet.class)
+                .putProperty(SymbolProperties.COLLECTION_EMPTY_METHOD, "emptySortedSet()")
                 .addReference(listShape.getMember().accept(this))
                 .build();
         }
@@ -123,6 +124,7 @@ public final class JavaSymbolProvider implements ShapeVisitor<Symbol>, SymbolPro
             .toBuilder()
             .putProperty(SymbolProperties.COLLECTION_COPY_METHOD, "unmodifiableList")
             .putProperty(SymbolProperties.COLLECTION_IMPLEMENTATION_CLASS, ArrayList.class)
+            .putProperty(SymbolProperties.COLLECTION_EMPTY_METHOD, "emptyList()")
             .addReference(listShape.getMember().accept(this))
             .build();
     }
@@ -133,6 +135,7 @@ public final class JavaSymbolProvider implements ShapeVisitor<Symbol>, SymbolPro
             .toBuilder()
             .putProperty(SymbolProperties.COLLECTION_COPY_METHOD, "unmodifiableMap")
             .putProperty(SymbolProperties.COLLECTION_IMPLEMENTATION_CLASS, LinkedHashMap.class)
+            .putProperty(SymbolProperties.COLLECTION_EMPTY_METHOD, "emptyMap()")
             .addReference(mapShape.getKey().accept(this))
             .addReference(mapShape.getValue().accept(this))
             .build();

@@ -85,21 +85,31 @@ final class GetterGenerator implements Runnable {
 
         @Override
         public Void listShape(ListShape shape) {
+            writeCollectionGetter(shape);
+            return null;
+        }
+
+        @Override
+        public Void mapShape(MapShape shape) {
+            writeCollectionGetter(shape);
+            return null;
+        }
+
+        private void writeCollectionGetter(Shape shape) {
             writer.pushState(new GetterSection(member));
             var shapeSymbol = symbolProvider.toSymbol(shape);
-            // If the list has a custom collection factory use that instead.
+            // If the collection is nullable use an empty collection if null
             if (SymbolUtils.isNullableMember(member)) {
                 writer.write(
                     """
                         public $1T $2L() {
-                            return $2L != null ? $2L : $3T.$4L(new $5T<>());
+                            return $2L != null ? $2L : $3T.$4L;
                         }
                         """,
                     shapeSymbol,
                     symbolProvider.toMemberName(member),
                     Collections.class,
-                    shapeSymbol.expectProperty(SymbolProperties.COLLECTION_COPY_METHOD, String.class),
-                    shapeSymbol.expectProperty(SymbolProperties.COLLECTION_IMPLEMENTATION_CLASS, Class.class)
+                    shapeSymbol.expectProperty(SymbolProperties.COLLECTION_EMPTY_METHOD, String.class)
                 );
             } else {
                 writer.write(
@@ -114,25 +124,6 @@ final class GetterGenerator implements Runnable {
             }
             writer.popState();
             writeHasCollection();
-            return null;
-        }
-
-        @Override
-        public Void mapShape(MapShape shape) {
-            writer.pushState(new GetterSection(member))
-                .write(
-                    """
-                        public $1T $2L() {
-                            return $2L != null ? $2L : $3T.emptyMap();
-                        }
-                        """,
-                    symbolProvider.toSymbol(shape),
-                    symbolProvider.toMemberName(member),
-                    Collections.class
-                )
-                .popState();
-            writeHasCollection();
-            return null;
         }
 
         @Override
