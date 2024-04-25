@@ -50,7 +50,7 @@ public class MemberContainersTest {
         assertThat(listMembers.values(), hasSize(1));
         assertThat(listMembers.entrySet(), hasSize(1));
         assertThat(listMembers.containsKey("member"), is(true));
-        assertThat(listMembers.get("member"), is(members.getFirst()));
+        assertThat(listMembers.get("member"), is(members.get(0)));
         assertThat(listMembers.get("foo"), nullValue());
     }
 
@@ -111,8 +111,8 @@ public class MemberContainersTest {
         assertThat(mapMembers.containsKey("key"), is(true));
         assertThat(mapMembers.containsKey("value"), is(true));
         assertThat(mapMembers.containsKey("foo"), is(false));
-        assertThat(mapMembers.get("key"), is(members.getFirst()));
-        assertThat(mapMembers.get("value"), is(members.getLast()));
+        assertThat(mapMembers.get("key"), is(members.get(0)));
+        assertThat(mapMembers.get("value"), is(members.get(members.size() - 1)));
         assertThat(mapMembers.get("foo"), nullValue());
         assertThat(mapMembers.entrySet(), hasSize(2));
     }
@@ -124,7 +124,7 @@ public class MemberContainersTest {
         var memberMap = MemberContainers.of(ShapeType.STRUCTURE, members, Map.of());
 
         assertThat(memberMap.containsKey("foo"), is(true));
-        assertThat(memberMap.get("foo"), is(members.getFirst()));
+        assertThat(memberMap.get("foo"), is(members.get(0)));
     }
 
     @Test
@@ -138,8 +138,8 @@ public class MemberContainersTest {
 
         assertThat(memberMap.values(), hasSize(2));
         assertThat(memberMap.containsKey("foo"), is(true));
-        assertThat(memberMap.get("foo"), is(members.getFirst()));
+        assertThat(memberMap.get("foo"), is(members.get(0)));
         assertThat(memberMap.containsKey("bar"), is(true));
-        assertThat(memberMap.get("bar"), is(members.getLast()));
+        assertThat(memberMap.get("bar"), is(members.get(members.size() - 1)));
     }
 }

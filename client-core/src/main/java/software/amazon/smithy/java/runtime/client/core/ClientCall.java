@@ -57,7 +57,8 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
         supportedAuthSchemes = builder.supportedAuthSchemes;
         requestInputStream = builder.requestInputStream;
         requestEventStream = builder.requestEventStream;
-        executor = builder.executor == null ? Executors.newVirtualThreadPerTaskExecutor() : builder.executor;
+        //TODO fix this to not use a cached thread pool.
+        executor = builder.executor == null ? Executors.newCachedThreadPool() : builder.executor;
 
         // Initialize the context.
         context.put(CallContext.INPUT, input());
