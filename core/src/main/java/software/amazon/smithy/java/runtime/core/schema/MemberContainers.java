@@ -29,7 +29,8 @@ final class MemberContainers {
             return MemberContainers.MapMembers.of(members);
         } else if (members.size() == 1) {
             // Special case for shapes with a single member.
-            return Map.of(members.getFirst().memberName(), members.getFirst());
+            var member = members.get(0);
+            return Map.of(member.memberName(), member);
         } else {
             Map<String, SdkSchema> result = new LinkedHashMap<>(members.size());
             for (SdkSchema member : members) {
@@ -52,7 +53,7 @@ final class MemberContainers {
                 throw new IllegalArgumentException("List shapes require exactly one member");
             }
 
-            this.member = members.getFirst();
+            this.member = members.get(0);
             if (!member.memberName().equals("member")) {
                 throw new IllegalArgumentException("List shapes require a member named 'member'. Found " + member);
             }
@@ -92,14 +93,15 @@ final class MemberContainers {
         }
 
         static MapMembers of(List<SdkSchema> members) {
-            if (members.size() != 2) {
+            int size = members.size();
+            if (size != 2) {
                 throw new IllegalArgumentException("Maps require exactly two members. Found: " + members);
-            } else if (!members.getFirst().memberName().equals("key")) {
+            } else if (!members.get(0).memberName().equals("key")) {
                 throw new IllegalArgumentException("Maps require a key as the first member. Found: " + members);
-            } else if (!members.getLast().memberName().equals("value")) {
+            } else if (!members.get(size - 1).memberName().equals("value")) {
                 throw new IllegalArgumentException("Maps require a value as the second member. Found: " + members);
             } else {
-                return new MapMembers(members.getFirst(), members.getLast());
+                return new MapMembers(members.get(0), members.get(size - 1));
             }
         }
 
