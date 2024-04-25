@@ -95,4 +95,13 @@ public interface AuthScheme<RequestT, IdentityT extends Identity> {
     ) {
         return new AuthSchemeRecord<>(schemeId, requestClass, identityClass, signer);
     }
+
+    /**
+     * Retrieve the {@code smithy.api#noAuth} auth scheme, which represent no authentication to be performed.
+     *
+     * @return the {@code smithy.api#noAuth} auth scheme
+     */
+    static AuthScheme<Object, Identity> noAuthAuthScheme() {
+        return NoAuthAuthScheme.INSTANCE;
+    }
 }

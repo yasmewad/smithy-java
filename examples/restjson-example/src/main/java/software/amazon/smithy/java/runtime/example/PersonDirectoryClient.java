@@ -12,9 +12,11 @@ import java.util.List;
 import java.util.Objects;
 import software.amazon.smithy.java.runtime.api.Endpoint;
 import software.amazon.smithy.java.runtime.api.EndpointProvider;
+import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolver;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthScheme;
+import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeOption;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeResolver;
 import software.amazon.smithy.java.runtime.client.core.ApiCallTimeoutTransport;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
@@ -54,10 +56,17 @@ public final class PersonDirectoryClient implements PersonDirectory {
         this.transport = new ApiCallTimeoutTransport(Objects.requireNonNull(builder.transport, "transport is null"));
         // TODO: Add an interceptor to throw service-specific exceptions (e.g., PersonDirectoryClientException).
         this.interceptor = ClientInterceptor.chain(builder.interceptors);
+
+        // By default, support NoAuthAuthScheme
+        AuthScheme<Object, Identity> noAuthAuthScheme = AuthScheme.noAuthAuthScheme();
+        this.supportedAuthSchemes.add(noAuthAuthScheme);
         this.supportedAuthSchemes.addAll(builder.supportedAuthSchemes);
 
         // TODO: Better defaults? Require these?
-        this.authSchemeResolver = Objects.requireNonNullElseGet(builder.authSchemeResolver, () -> params -> List.of());
+        AuthSchemeResolver defaultAuthSchemeResolver = params -> List.of(
+            new AuthSchemeOption(noAuthAuthScheme.schemeId(), null, null)
+        );
+        this.authSchemeResolver = Objects.requireNonNullElse(builder.authSchemeResolver, defaultAuthSchemeResolver);
         this.identityResolvers = IdentityResolvers.of(builder.identityResolvers);
 
         // Here is where you would register errors bound to the service on the registry.
@@ -216,23 +225,13 @@ public final class PersonDirectoryClient implements PersonDirectory {
         /**
          * Add supported auth schemes to the client that works in tandem with the {@link AuthSchemeResolver}.
          *
+         * <p> If the scheme ID is already supported, it will be replaced by the provided auth scheme.
+         *
          * @param authSchemes Auth schemes to add.
          * @return the builder.
          */
-        public Builder addSupportedAuthSchemes(AuthScheme<?, ?>... authSchemes) {
+        public Builder putSupportedAuthSchemes(AuthScheme<?, ?>... authSchemes) {
             supportedAuthSchemes.addAll(Arrays.asList(authSchemes));
-            return this;
-        }
-
-        /**
-         * Set the supported auth schemes of the client, used in tandem with the {@link AuthSchemeResolver}.
-         *
-         * @param supportedAuthSchemes Auth schemes to set.
-         * @return the builder.
-         */
-        public Builder supportedAuthSchemes(List<AuthScheme<?, ?>> supportedAuthSchemes) {
-            this.supportedAuthSchemes.clear();
-            this.supportedAuthSchemes.addAll(supportedAuthSchemes);
             return this;
         }
 
