@@ -50,17 +50,22 @@ record TraitInitializerGenerator(JavaWriter writer, Shape shape, Set<ShapeId> ru
             var iter = traitsToAdd.iterator();
             while (iter.hasNext()) {
                 var traitId = iter.next();
-                switch (shape.getAllTraits().get(traitId)) {
-                    case AnnotationTrait a -> writer.writeInline("new $T()", a.getClass());
-                    case StringTrait st -> writer.writeInline("new $T($S)", st.getClass(), st.getValue());
-                    case StringListTrait slt -> writer.writeInline(
+                Trait trait = shape.getAllTraits().get(traitId);
+                if (trait instanceof AnnotationTrait at) {
+                    writer.writeInline("new $T()", at.getClass());
+                } else if (trait instanceof StringTrait st) {
+                    writer.writeInline("new $T($S)", st.getClass(), st.getValue());
+                } else if (trait instanceof StringListTrait slt) {
+                    writer.writeInline(
                         "new $T($S, $T.NONE)",
-                        slt.getClass(),
+                        trait.getClass(),
                         slt.getValues(),
                         SourceLocation.class
                     );
-                    case Trait t -> traitFactoryInitializer(writer, t);
+                } else {
+                    traitFactoryInitializer(writer, trait);
                 }
+
                 if (iter.hasNext()) {
                     writer.writeInline(",").newLine();
                 }
