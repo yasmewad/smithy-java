@@ -20,10 +20,11 @@ import software.amazon.smithy.codegen.core.directed.GenerateUnionDirective;
 import software.amazon.smithy.java.codegen.CodeGenerationContext;
 import software.amazon.smithy.java.codegen.JavaCodegenIntegration;
 import software.amazon.smithy.java.codegen.JavaCodegenSettings;
-import software.amazon.smithy.java.codegen.JavaSymbolProvider;
 import software.amazon.smithy.java.codegen.generators.ExceptionGenerator;
 import software.amazon.smithy.java.codegen.generators.SharedSchemasGenerator;
 import software.amazon.smithy.java.codegen.generators.StructureGenerator;
+import software.amazon.smithy.java.codegen.server.generators.OperationInterfaceGenerator;
+import software.amazon.smithy.java.codegen.server.generators.ServiceGenerator;
 import software.amazon.smithy.utils.SmithyUnstableApi;
 
 @SmithyUnstableApi
@@ -33,7 +34,7 @@ public class DirectedJavaServerCodegen implements
     public SymbolProvider createSymbolProvider(
         CreateSymbolProviderDirective<JavaCodegenSettings> directive
     ) {
-        return new JavaSymbolProvider(
+        return new ServiceJavaSymbolProvider(
             directive.model(),
             directive.service(),
             directive.settings().packageNamespace()
@@ -62,12 +63,12 @@ public class DirectedJavaServerCodegen implements
 
     @Override
     public void generateService(GenerateServiceDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
-        // TODO
+        new ServiceGenerator().accept(directive);
     }
 
     @Override
     public void generateOperation(GenerateOperationDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
-        // TODO
+        new OperationInterfaceGenerator().accept(directive);
     }
 
     @Override
