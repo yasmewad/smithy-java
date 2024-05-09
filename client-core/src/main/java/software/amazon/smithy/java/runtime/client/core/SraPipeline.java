@@ -9,14 +9,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.function.Function;
-import software.amazon.smithy.java.runtime.api.Endpoint;
-import software.amazon.smithy.java.runtime.api.EndpointProviderRequest;
 import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthScheme;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeOption;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeResolver;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
+import software.amazon.smithy.java.runtime.client.endpoints.api.Endpoint;
+import software.amazon.smithy.java.runtime.client.endpoints.api.EndpointResolverParams;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.Either;
 import software.amazon.smithy.java.runtime.core.schema.SdkException;
@@ -260,7 +260,7 @@ public final class SraPipeline<I extends SerializableShape, O extends Serializab
     // TODO: Add more parameters here somehow from the caller.
     private <I extends SerializableShape, O extends SerializableShape> Endpoint resolveEndpoint(ClientCall<I, O> call) {
         var operation = call.operation().schema();
-        var request = EndpointProviderRequest.builder().operationName(operation.id().getName()).build();
-        return call.endpointProvider().resolveEndpoint(request);
+        var request = EndpointResolverParams.builder().operationName(operation.id().getName()).build();
+        return call.endpointResolver().resolveEndpoint(request);
     }
 }

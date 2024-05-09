@@ -6,9 +6,9 @@
 package software.amazon.smithy.java.runtime.client.core;
 
 import java.time.Duration;
-import software.amazon.smithy.java.runtime.api.EndpointProvider;
 import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
+import software.amazon.smithy.java.runtime.client.endpoints.api.EndpointResolver;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.SdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
@@ -59,9 +59,9 @@ public final class CallContext {
     public static final Context.Key<Duration> API_CALL_ATTEMPT_TIMEOUT = Context.key("API call attempt timeout");
 
     /**
-     * The endpoint provider used to resolve the destination endpoint for a request.
+     * The endpoint resolver used to resolve the destination endpoint for a request.
      */
-    public static final Context.Key<EndpointProvider> ENDPOINT_PROVIDER = Context.key("EndpointProvider");
+    public static final Context.Key<EndpointResolver> ENDPOINT_RESOLVER = Context.key("EndpointResolver");
 
     /**
      * The SRA client interceptor.

@@ -3,53 +3,53 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.api;
+package software.amazon.smithy.java.runtime.client.endpoints.api;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
- * Encapsulates endpoint provider request parameters.
+ * Encapsulates endpoint resolver parameters.
  */
-public final class EndpointProviderRequest {
+public final class EndpointResolverParams {
 
     private final String operationName;
-    private final Map<EndpointKey<?>, Object> immutableMap;
+    private final Map<EndpointProperty<?>, Object> immutableMap;
 
-    private EndpointProviderRequest(Map<EndpointKey<?>, Object> map, String operationName) {
+    private EndpointResolverParams(Map<EndpointProperty<?>, Object> map, String operationName) {
         this.immutableMap = new HashMap<>(map);
         this.operationName = Objects.requireNonNull(operationName, "operationName is null");
     }
 
     /**
-     * Create a new EndpointProviderRequest.
+     * Create a new builder to build {@link EndpointResolverParams}.
      *
-     * @return the created request.
+     * @return the builder.
      */
     public static Builder builder() {
         return new Builder();
     }
 
     /**
-     * Get an auth scheme-specific property using a strongly typed key, or {@code null}.
+     * Get the value of an EndpointProperty.
      *
-     * @param key Key of the property to get.
-     * @return Returns the value or null of not found.
+     * @param property Endpoint property to get.
+     * @return the value or null if not found.
      */
     @SuppressWarnings("unchecked")
-    public <T> T attribute(EndpointKey<T> key) {
-        return (T) immutableMap.get(key);
+    public <T> T property(EndpointProperty<T> property) {
+        return (T) immutableMap.get(property);
     }
 
     /**
-     * Get all the keys registered with the request.
+     * Get all the properties available when resolving the endpoint.
      *
-     * @return the keys of the request.
+     * @return the properties.
      */
-    public Iterator<EndpointKey<?>> attributeKeys() {
-        return immutableMap.keySet().iterator();
+    public Set<EndpointProperty<?>> properties() {
+        return immutableMap.keySet();
     }
 
     /**
@@ -69,9 +69,9 @@ public final class EndpointProviderRequest {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        EndpointProviderRequest request = (EndpointProviderRequest) o;
-        return Objects.equals(operationName, request.operationName)
-            && Objects.equals(immutableMap, request.immutableMap);
+        EndpointResolverParams params = (EndpointResolverParams) o;
+        return Objects.equals(operationName, params.operationName)
+            && Objects.equals(immutableMap, params.immutableMap);
     }
 
     @Override
@@ -80,7 +80,7 @@ public final class EndpointProviderRequest {
     }
 
     /**
-     * Create a builder from this request.
+     * Create a builder from this {@link EndpointResolverParams}.
      *
      * @return the builder.
      */
@@ -92,31 +92,31 @@ public final class EndpointProviderRequest {
     }
 
     /**
-     * Builder used to create and EndpointProviderRequest.
+     * Builder used to create and {@link EndpointResolverParams}.
      */
     public static final class Builder {
 
         private String operationName;
-        private final Map<EndpointKey<?>, Object> map = new HashMap<>();
+        private final Map<EndpointProperty<?>, Object> map = new HashMap<>();
 
         /**
-         * Build the request.
-         * @return the built request.
+         * Build the params.
+         * @return the built params.
          */
-        public EndpointProviderRequest build() {
-            return new EndpointProviderRequest(map, operationName);
+        public EndpointResolverParams build() {
+            return new EndpointResolverParams(map, operationName);
         }
 
         /**
-         * Put an attribute on the request.
+         * Put a typed property on the params.
          *
-         * @param key   Key to set.
-         * @param value Value to set.
+         * @param property Property to set.
+         * @param value    Value to associate with the property.
          * @return the builder.
-         * @param <T> value type stored in the key.
+         * @param <T> Value type.
          */
-        public <T> Builder putAttribute(EndpointKey<T> key, T value) {
-            map.put(key, value);
+        public <T> Builder putProperty(EndpointProperty<T> property, T value) {
+            map.put(property, value);
             return this;
         }
 

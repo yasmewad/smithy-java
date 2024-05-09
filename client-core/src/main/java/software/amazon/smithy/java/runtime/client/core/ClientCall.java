@@ -15,11 +15,11 @@ import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import software.amazon.smithy.java.runtime.api.EndpointProvider;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthScheme;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthSchemeResolver;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
+import software.amazon.smithy.java.runtime.client.endpoints.api.EndpointResolver;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkOperation;
@@ -36,7 +36,7 @@ import software.amazon.smithy.java.runtime.core.serde.DataStream;
 public final class ClientCall<I extends SerializableShape, O extends SerializableShape> {
 
     private final I input;
-    private final EndpointProvider endpointProvider;
+    private final EndpointResolver endpointResolver;
     private final SdkOperation<I, O> operation;
     private final Context context;
     private final BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
@@ -53,7 +53,7 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
         operation = Objects.requireNonNull(builder.operation, "operation is null");
         context = Objects.requireNonNull(builder.context, "context is null");
         errorCreator = Objects.requireNonNull(builder.errorCreator, "errorCreator is null");
-        endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
+        endpointResolver = Objects.requireNonNull(builder.endpointResolver, "endpointResolver is null");
         interceptor = Objects.requireNonNull(builder.interceptor, "interceptor is null");
         authSchemeResolver = Objects.requireNonNull(builder.authSchemeResolver, "authSchemeResolver is null");
         identityResolvers = Objects.requireNonNull(builder.identityResolvers, "identityResolvers is null");
@@ -102,12 +102,12 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
     }
 
     /**
-     * The endpoint provider to use with the call.
+     * The endpoint resolver to use with the call.
      *
-     * @return Returns the endpoint provider.
+     * @return Returns the endpoint resolver.
      */
-    public EndpointProvider endpointProvider() {
-        return endpointProvider;
+    public EndpointResolver endpointResolver() {
+        return endpointResolver;
     }
 
     /**
@@ -218,7 +218,7 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
     public static final class Builder<I extends SerializableShape, O extends SerializableShape> {
 
         private I input;
-        private EndpointProvider endpointProvider;
+        private EndpointResolver endpointResolver;
         private SdkOperation<I, O> operation;
         private Context context;
         private BiFunction<Context, String, Optional<SdkShapeBuilder<ModeledSdkException>>> errorCreator;
@@ -283,13 +283,13 @@ public final class ClientCall<I extends SerializableShape, O extends Serializabl
         }
 
         /**
-         * Set the endpoint provider used to resolve endpoints for the call.
+         * Set the endpoint resolver used to resolve endpoints for the call.
          *
-         * @param endpointProvider Endpoint provider to set.
+         * @param endpointResolver Endpoint resolver to set.
          * @return Returns the builder.
          */
-        public Builder<I, O> endpointProvider(EndpointProvider endpointProvider) {
-            this.endpointProvider = endpointProvider;
+        public Builder<I, O> endpointResolver(EndpointResolver endpointResolver) {
+            this.endpointResolver = endpointResolver;
             return this;
         }
 

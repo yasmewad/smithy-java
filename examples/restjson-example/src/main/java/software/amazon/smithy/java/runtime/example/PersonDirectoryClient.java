@@ -10,8 +10,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import software.amazon.smithy.java.runtime.api.Endpoint;
-import software.amazon.smithy.java.runtime.api.EndpointProvider;
 import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolver;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
@@ -22,6 +20,8 @@ import software.amazon.smithy.java.runtime.client.core.ApiCallTimeoutTransport;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientTransport;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
+import software.amazon.smithy.java.runtime.client.endpoints.api.Endpoint;
+import software.amazon.smithy.java.runtime.client.endpoints.api.EndpointResolver;
 import software.amazon.smithy.java.runtime.core.Context;
 import software.amazon.smithy.java.runtime.core.schema.ModeledSdkException;
 import software.amazon.smithy.java.runtime.core.schema.SdkOperation;
@@ -43,7 +43,7 @@ import software.amazon.smithy.model.shapes.ShapeId;
 // Example of a potentially generated client.
 public final class PersonDirectoryClient implements PersonDirectory {
 
-    private final EndpointProvider endpointProvider;
+    private final EndpointResolver endpointResolver;
     private final ClientTransport transport;
     private final TypeRegistry typeRegistry;
     private final ClientInterceptor interceptor;
@@ -52,7 +52,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
     private final IdentityResolvers identityResolvers;
 
     private PersonDirectoryClient(Builder builder) {
-        this.endpointProvider = Objects.requireNonNull(builder.endpointProvider, "endpointProvider is null");
+        this.endpointResolver = Objects.requireNonNull(builder.endpointResolver, "endpointResolver is null");
         this.transport = new ApiCallTimeoutTransport(Objects.requireNonNull(builder.transport, "transport is null"));
         // TODO: Add an interceptor to throw service-specific exceptions (e.g., PersonDirectoryClientException).
         this.interceptor = ClientInterceptor.chain(builder.interceptors);
@@ -121,7 +121,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
             ClientCall.<I, O>builder()
                 .input(input)
                 .operation(operation)
-                .endpointProvider(endpointProvider)
+                .endpointResolver(endpointResolver)
                 .context(context)
                 .requestInputStream(inputStream)
                 .requestEventStream(eventStream)
@@ -140,7 +140,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
     public static final class Builder {
 
         private ClientTransport transport;
-        private EndpointProvider endpointProvider;
+        private EndpointResolver endpointResolver;
         private final List<ClientInterceptor> interceptors = new ArrayList<>();
         private AuthSchemeResolver authSchemeResolver;
         private final List<AuthScheme<?, ?>> supportedAuthSchemes = new ArrayList<>();
@@ -160,13 +160,13 @@ public final class PersonDirectoryClient implements PersonDirectory {
         }
 
         /**
-         * Set the provider used to resolve endpoints.
+         * Set the resolver used to resolve endpoints.
          *
-         * @param endpointProvider Endpoint provider to use to resolve endpoints.
-         * @return Returns the endpoint provider.
+         * @param endpointResolver Endpoint resolver to use to resolve endpoints.
+         * @return Returns the endpoint resolver.
          */
-        public Builder endpointProvider(EndpointProvider endpointProvider) {
-            this.endpointProvider = endpointProvider;
+        public Builder endpointResolver(EndpointResolver endpointResolver) {
+            this.endpointResolver = endpointResolver;
             return this;
         }
 
@@ -177,7 +177,7 @@ public final class PersonDirectoryClient implements PersonDirectory {
          * @return the builder.
          */
         public Builder endpoint(Endpoint endpoint) {
-            return endpointProvider(EndpointProvider.staticEndpoint(endpoint));
+            return endpointResolver(EndpointResolver.staticEndpoint(endpoint));
         }
 
         /**
