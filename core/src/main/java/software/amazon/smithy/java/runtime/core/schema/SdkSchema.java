@@ -175,7 +175,7 @@ public final class SdkSchema {
         // We only need to use the slow version of required member validation if there are > 64 required members.
         this.requiredMemberCount = computeRequiredMemberCount(this.type, this.memberTarget, this.memberList);
 
-        if ((requiredMemberCount > 0) && (requiredMemberCount < 64) && type == ShapeType.STRUCTURE) {
+        if ((requiredMemberCount > 0) && (requiredMemberCount <= 64) && type == ShapeType.STRUCTURE) {
             this.requiredStructureMemberBitfield = computeRequiredBitField(members());
         } else {
             this.requiredStructureMemberBitfield = 0;
