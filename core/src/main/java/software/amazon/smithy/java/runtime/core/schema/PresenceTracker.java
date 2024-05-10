@@ -53,7 +53,7 @@ public abstract sealed class PresenceTracker {
     static PresenceTracker of(SdkSchema schema) {
         if (schema.requiredMemberCount == 0) {
             return NoOpPresenceTracker.INSTANCE;
-        } else if (schema.requiredMemberCount < 64) {
+        } else if (schema.requiredMemberCount <= 64) {
             return new PresenceTracker.RequiredMemberPresenceTracker(schema);
         } else {
             return new PresenceTracker.BigRequiredMemberPresenceTracker(schema);
@@ -65,7 +65,7 @@ public abstract sealed class PresenceTracker {
      *
      * <p>Should be used for shapes with no required fields.
      */
-    private static final class NoOpPresenceTracker extends PresenceTracker {
+    static final class NoOpPresenceTracker extends PresenceTracker {
         private static final NoOpPresenceTracker INSTANCE = new NoOpPresenceTracker();
 
         @Override
@@ -92,7 +92,7 @@ public abstract sealed class PresenceTracker {
     /**
      * Tracker for structures with less than 64 members
      */
-    private static final class RequiredMemberPresenceTracker extends PresenceTracker {
+    static final class RequiredMemberPresenceTracker extends PresenceTracker {
         private long setBitfields = 0L;
         private final SdkSchema schema;
 
@@ -107,7 +107,7 @@ public abstract sealed class PresenceTracker {
 
         @Override
         public boolean checkMember(SdkSchema schema) {
-            return (setBitfields << ~schema.memberIndex()) < 0;
+            return (setBitfields & schema.memberIndex()) != 0;
         }
 
         @Override
@@ -130,7 +130,7 @@ public abstract sealed class PresenceTracker {
     /**
      * Tracker for structures with greater than 64 required members.
      */
-    private static final class BigRequiredMemberPresenceTracker extends PresenceTracker {
+    static final class BigRequiredMemberPresenceTracker extends PresenceTracker {
         private final BitSet bitSet;
         private final SdkSchema schema;
 

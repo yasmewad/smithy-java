@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
 import software.amazon.smithy.java.runtime.core.serde.document.Document;
 import software.amazon.smithy.java.runtime.core.testmodels.Person;
@@ -1232,6 +1234,24 @@ public class ValidatorTest {
         for (var e : errors) {
             assertThat(e, instanceOf(ValidationError.RequiredValidationFailure.class));
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 63, 64, 65, 128})
+    public void presenceTrackerType(int requiredFields) {
+        Class<?> expected;
+        if (requiredFields == 0) {
+            expected = PresenceTracker.NoOpPresenceTracker.class;
+        } else if (requiredFields <= 64) {
+            expected = PresenceTracker.RequiredMemberPresenceTracker.class;
+        } else {
+            expected = PresenceTracker.BigRequiredMemberPresenceTracker.class;
+        }
+
+        assertEquals(
+            expected,
+            PresenceTracker.of(createBigRequiredSchema(requiredFields, requiredFields, 0)).getClass()
+        );
     }
 
     static List<Arguments> validatesRequiredMembersOfBigStructsProvider() {
