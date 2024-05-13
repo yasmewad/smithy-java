@@ -7,7 +7,4 @@ build
 # Ignore intellij files
 .idea
 
-#Ignore mac files
-.DS_Store
-
 smithy-java-core/out

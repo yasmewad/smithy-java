@@ -5,11 +5,6 @@
       "service": "smithy.example#PersonDirectory",
       "namespace": "software.amazon.smithy.java.runtime.example.codegen",
       "headerFile": "license.txt"
-    },
-    "java-server-codegen": {
-      "service": "smithy.example#PersonDirectory",
-      "namespace": "software.amazon.smithy.java.runtime.example.codegen",
-      "headerFile": "license.txt"
     }
   }
 }

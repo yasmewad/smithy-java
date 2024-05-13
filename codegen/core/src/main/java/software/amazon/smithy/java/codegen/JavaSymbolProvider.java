@@ -55,7 +55,7 @@ import software.amazon.smithy.utils.CaseUtils;
 /**
  * Maps Smithy types to Java Symbols
  */
-public class JavaSymbolProvider implements ShapeVisitor<Symbol>, SymbolProvider {
+public final class JavaSymbolProvider implements ShapeVisitor<Symbol>, SymbolProvider {
 
     private static final System.Logger LOGGER = System.getLogger(JavaSymbolProvider.class.getName());
 
@@ -246,18 +246,6 @@ public class JavaSymbolProvider implements ShapeVisitor<Symbol>, SymbolProvider 
     @Override
     public Symbol unionShape(UnionShape unionShape) {
         return getJavaClassSymbol(unionShape);
-    }
-
-    protected Model getModel() {
-        return model;
-    }
-
-    protected ServiceShape getService() {
-        return service;
-    }
-
-    protected String getPackageNamespace() {
-        return packageNamespace;
     }
 
 
