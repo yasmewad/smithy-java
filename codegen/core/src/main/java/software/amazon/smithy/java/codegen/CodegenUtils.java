@@ -206,7 +206,40 @@ public final class CodegenUtils {
             .collect(Collectors.toList());
     }
 
-    private static boolean isRequiredWithNoDefault(MemberShape memberShape) {
+    /**
+     * Checks if a member is required and has no default.
+     *
+     * <p>Required members with no default require presence tracking.
+     *
+     * @param memberShape member shape to check
+     * @return true if the member has the required trait and does not have a default.
+     */
+    public static boolean isRequiredWithNoDefault(MemberShape memberShape) {
         return memberShape.isRequired() && !memberShape.hasNonNullDefault();
+    }
+
+    /**
+     * Checks if a member shape requires a null check in the builder setter.
+     *
+     * <p>Non-primitive, required members need a null check.
+     */
+    public static boolean requiresSetterNullCheck(SymbolProvider provider, MemberShape memberShape) {
+        return memberShape.isRequired() && !provider.toSymbol(memberShape)
+            .expectProperty(SymbolProperties.IS_PRIMITIVE);
+    }
+
+    /**
+     * Primitives (excluding blobs) use the Java default for error correction and so do not need to be set.
+     *
+     * <p>Documents are also not set because they use a null default for error correction.
+     *
+     * @see <a href="https://smithy.io/2.0/spec/aggregate-types.html#client-error-correction">client error correction</a>
+     * @return true if the member shape has a builtin default
+     */
+    public static boolean hasBuiltinDefault(SymbolProvider provider, Model model, MemberShape memberShape) {
+        var target = model.expectShape(memberShape.getTarget());
+        return (provider.toSymbol(memberShape).expectProperty(SymbolProperties.IS_PRIMITIVE)
+            || target.isDocumentShape())
+            && !target.isBlobShape();
     }
 }
