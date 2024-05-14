@@ -36,13 +36,13 @@ public class OperationInterfaceGenerator implements
                     writer.write("@$T", FunctionalInterface.class);
                     writer.putContext("interface", symbol);
                     writer.putContext("requestContext", RequestContext.class);
-                    writer.putContext(
-                        "output",
-                        CodegenUtils.fromClass(CompletableFuture.class)
+                    var outputSymbol = symbol == stubSymbol
+                        ? output
+                        : CodegenUtils.fromClass(CompletableFuture.class)
                             .toBuilder()
                             .addReference(output)
-                            .build()
-                    );
+                            .build();
+                    writer.putContext("output", outputSymbol);
                     writer.putContext("methodName", operationMethodName);
                     writer.putContext("input", input);
                     writer.write("""
