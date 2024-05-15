@@ -112,6 +112,7 @@ final class BuilderGenerator implements Runnable {
 
                     private static final class InnerDeserializer implements ${shapeDeserializer:T}.StructMemberConsumer<Builder> {
                         private static final InnerDeserializer INSTANCE = new InnerDeserializer();
+
                         @Override
                         public void accept(Builder builder, ${sdkSchema:T} member, ${shapeDeserializer:T} de) {
                             ${?hasMembers}switch (member.memberIndex()) {
@@ -131,25 +132,47 @@ final class BuilderGenerator implements Runnable {
 
     // Adds builder properties and initializers
     private void builderProperties() {
+        // Add any static default properties
         var defaultVisitor = new DefaultInitializerGenerator(writer, model, symbolProvider);
         for (var member : shape.members()) {
+            if (member.hasNonNullDefault()
+                && symbolProvider.toSymbol(member).expectProperty(SymbolProperties.REQUIRES_STATIC_DEFAULT)
+            ) {
+                defaultVisitor.member = member;
+                writer.write(
+                    "private static final $T $L = $C;",
+                    symbolProvider.toSymbol(member),
+                    CodegenUtils.toDefaultValueName(symbolProvider.toMemberName(member)),
+                    defaultVisitor
+                );
+            }
+        }
+
+        // Add non-static builder properties
+        for (var member : shape.members()) {
+            var memberName = symbolProvider.toMemberName(member);
             if (CodegenUtils.isStreamingBlob(model.expectShape(member.getTarget()))) {
                 // Streaming blobs need a custom initializer
                 writer.write(
                     "private $1T $2L = $1T.ofEmpty();",
                     DataStream.class,
-                    symbolProvider.toMemberName(member)
+                    memberName
                 );
                 continue;
             }
             writer.pushState();
-            writer.putContext("isNullable", CodegenUtils.isNullableMember(member));
+            writer.putContext("nullable", CodegenUtils.isNullableMember(member));
             writer.putContext("default", member.hasNonNullDefault());
+            writer.putContext(
+                "static",
+                symbolProvider.toSymbol(member).expectProperty(SymbolProperties.REQUIRES_STATIC_DEFAULT)
+            );
             defaultVisitor.member = member;
             writer.write(
-                "private ${^isNullable}$1T${/isNullable}${?isNullable}$1B${/isNullable} $2L${?default} = ${3C|}${/default};",
+                "private ${^nullable}$1T${/nullable}${?nullable}$1B${/nullable} $2L${?default} = ${?static}$3L${/static}${^static}$4C${/static}${/default};",
                 symbolProvider.toSymbol(member),
-                symbolProvider.toMemberName(member),
+                memberName,
+                CodegenUtils.toDefaultValueName(memberName),
                 defaultVisitor
             );
             writer.popState();
@@ -558,30 +581,31 @@ final class BuilderGenerator implements Runnable {
 
         @Override
         public Void timestampShape(TimestampShape timestampShape) {
+            Instant value;
             if (member.hasTrait(TimestampFormatTrait.class)) {
-                switch (member.expectTrait(TimestampFormatTrait.class).getFormat()) {
-                    case EPOCH_SECONDS:
-                        writer.writeInline(
-                            "$T.ofEpochSecond($LL)",
-                            Instant.class,
-                            defaultValue.expectNumberNode().getValue().longValue()
-                        );
-                        return null;
-                    case HTTP_DATE:
-                        writer.writeInline(
-                            "$T.from($T.RFC_1123_DATE_TIME.parse($S))",
-                            Instant.class,
-                            DateTimeFormatter.class,
-                            defaultValue.expectStringNode().getValue()
-                        );
-                        return null;
-                    default:
-                        // Fall through on default
-                        break;
-                }
+                value = switch (member.expectTrait(TimestampFormatTrait.class).getFormat()) {
+                    case EPOCH_SECONDS -> Instant.ofEpochMilli(defaultValue.expectNumberNode().getValue().longValue());
+                    case HTTP_DATE -> Instant.from(
+                        DateTimeFormatter.RFC_1123_DATE_TIME.parse(defaultValue.expectStringNode().getValue())
+                    );
+                    default -> instantFromDefaultTimestamp(defaultValue);
+                };
+            } else {
+                value = instantFromDefaultTimestamp(defaultValue);
             }
-            writer.write("$T.parse($S)", Instant.class, defaultValue.expectStringNode().getValue());
+            writer.write("$T.ofEpochMilli($LL)", Instant.class, value.toEpochMilli());
             return null;
+        }
+
+        private static Instant instantFromDefaultTimestamp(Node defaultValue) {
+            if (defaultValue.isNumberNode()) {
+                return Instant.ofEpochSecond(defaultValue.expectNumberNode().getValue().longValue());
+            } else if (defaultValue.isStringNode()) {
+                return Instant.parse(defaultValue.expectStringNode().getValue());
+            }
+            throw new IllegalArgumentException(
+                "Invalid timestamp value node: " + defaultValue + "Expected string or number"
+            );
         }
     }
 

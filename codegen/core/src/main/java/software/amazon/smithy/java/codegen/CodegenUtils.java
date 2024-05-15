@@ -58,6 +58,7 @@ public final class CodegenUtils {
             .name(clazz.getSimpleName())
             .namespace(clazz.getCanonicalName().replace("." + clazz.getSimpleName(), ""), ".")
             .putProperty(SymbolProperties.IS_PRIMITIVE, clazz.isPrimitive())
+            .putProperty(SymbolProperties.REQUIRES_STATIC_DEFAULT, true)
             .build();
     }
 
@@ -72,6 +73,7 @@ public final class CodegenUtils {
         return fromClass(unboxed).toBuilder()
             .putProperty(SymbolProperties.IS_PRIMITIVE, true)
             .putProperty(SymbolProperties.BOXED_TYPE, fromClass(boxed))
+            .putProperty(SymbolProperties.REQUIRES_STATIC_DEFAULT, false)
             .build();
     }
 
@@ -241,5 +243,15 @@ public final class CodegenUtils {
         return (provider.toSymbol(memberShape).expectProperty(SymbolProperties.IS_PRIMITIVE)
             || target.isDocumentShape())
             && !target.isBlobShape();
+    }
+
+    /**
+     * Gets the name to use when defining the default value of a member.
+     *
+     * @param memberName name of member to get default name for.
+     * @return Upper snake case name of default
+     */
+    public static String toDefaultValueName(String memberName) {
+        return CaseUtils.toSnakeCase(memberName).toUpperCase(Locale.ENGLISH) + "_DEFAULT";
     }
 }
