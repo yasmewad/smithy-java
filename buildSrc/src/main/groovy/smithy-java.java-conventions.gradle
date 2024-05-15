@@ -24,6 +24,7 @@ dependencies {
     testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.junit.jupiter.params)
     testImplementation(libs.hamcrest)
+    testImplementation(libs.assertj.core)
 }
 
 tasks.named('test') {

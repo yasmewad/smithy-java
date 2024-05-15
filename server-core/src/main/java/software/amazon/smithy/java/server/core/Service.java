@@ -12,7 +12,7 @@ public interface Service {
      * @param operationName Unqualified operation name.
      * @return {@link Operation}
      */
-    Operation<?, ?> getOperation(String operationName);
+    <I, O> Operation<I, O> getOperation(String operationName);
 
 
 }

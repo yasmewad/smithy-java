@@ -8,6 +8,7 @@ test-logger-plugin = "4.0.0"
 spotbugs = "6.0.9"
 spotless = "6.25.0"
 smithy-gradle = "1.0.0"
+assertj = "3.25.1"
 
 [libraries]
 smithy-model = { module = "software.amazon.smithy:smithy-model", version.ref = "smithy" }
@@ -22,6 +23,7 @@ junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.re
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit5" }
 junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit5" }
 hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj"}
 
 # plugin artifacts for buildsrc plugins
 test-logger-plugin = { module = "com.adarshr:gradle-test-logger-plugin", version.ref = "test-logger-plugin" }

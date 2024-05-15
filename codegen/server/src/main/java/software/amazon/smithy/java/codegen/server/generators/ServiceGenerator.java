@@ -53,7 +53,7 @@ public class ServiceGenerator implements
                         ${C|}
 
                         @Override
-                        public ${operationHolder:T}<?, ?> getOperation(String operationName) {
+                        public <I, O> ${operationHolder:T}<I, O> getOperation(String operationName) {
                             ${C|}
                         }
                     }
