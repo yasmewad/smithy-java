@@ -95,8 +95,8 @@ record GetterGenerator(JavaWriter writer, Shape shape, SymbolProvider symbolProv
             writer.putContext("isNullable", CodegenUtils.isNullableMember(member));
             writer.write(
                 """
-                    public ${symbol:T} ${memberName:L}() {
-                        ${?isNullable}if (${memberName:L} == null) {
+                    public ${symbol:T} ${memberName:L}() {${?isNullable}
+                        if (${memberName:L} == null) {
                             return ${collections:T}.${empty:L};
                         }${/isNullable}
                         return ${collections:T}.${wrapper:L}(${memberName:L});
