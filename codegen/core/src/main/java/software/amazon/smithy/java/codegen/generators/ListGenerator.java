@@ -13,8 +13,10 @@ import software.amazon.smithy.java.codegen.CodegenUtils;
 import software.amazon.smithy.java.codegen.JavaCodegenSettings;
 import software.amazon.smithy.java.codegen.SymbolProperties;
 import software.amazon.smithy.java.runtime.core.schema.SdkSchema;
+import software.amazon.smithy.java.runtime.core.serde.SdkSerdeException;
 import software.amazon.smithy.java.runtime.core.serde.ShapeDeserializer;
 import software.amazon.smithy.java.runtime.core.serde.ShapeSerializer;
+import software.amazon.smithy.model.traits.UniqueItemsTrait;
 import software.amazon.smithy.utils.SmithyInternalApi;
 
 /**
@@ -46,7 +48,8 @@ public final class ListGenerator
                     writer.putContext("biConsumer", BiConsumer.class);
                     writer.putContext("shapeSerializer", ShapeSerializer.class);
                     writer.putContext("shapeDeserializer", ShapeDeserializer.class);
-
+                    writer.putContext("unique", directive.shape().hasTrait(UniqueItemsTrait.class));
+                    writer.putContext("serdeException", SdkSerdeException.class);
                     writer.write(
                         """
                             static final class ${name:U}Serializer implements ${biConsumer:T}<${shape:T}, ${shapeSerializer:T}> {
@@ -71,7 +74,9 @@ public final class ListGenerator
 
                                 @Override
                                 public void accept(${shape:T} state, ${shapeDeserializer:T} deserializer) {
-                                    state.add($C);
+                                    ${?unique}if (${/unique}state.add($C)${^unique};${/unique}${?unique}) {
+                                        throw new ${serdeException:T}("Member must have unique values");
+                                    }${/unique}
                                 }
                             }
                             """,
