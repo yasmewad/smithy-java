@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import smithy.java.codegen.server.test.model.Beer;
 import smithy.java.codegen.server.test.model.EchoInput;
 import smithy.java.codegen.server.test.model.EchoOutput;
+import smithy.java.codegen.server.test.model.EchoPayload;
 import smithy.java.codegen.server.test.model.GetBeerInput;
 import smithy.java.codegen.server.test.model.GetBeerOutput;
 import smithy.java.codegen.server.test.service.EchoOperation;
@@ -30,7 +31,8 @@ public class ServiceBuilderTest {
     private static final class EchoImpl implements EchoOperation {
         @Override
         public EchoOutput echo(EchoInput input, RequestContext context) {
-            return EchoOutput.builder().string(input.string()).build();
+            var output = input.value().toBuilder().echoCount(input.value().echoCount() + 1).build();
+            return EchoOutput.builder().value(output).build();
         }
     }
 
@@ -60,8 +62,10 @@ public class ServiceBuilderTest {
 
         Operation<EchoInput, EchoOutput> echo = service.getOperation("Echo");
         assertThat("Echo").isEqualTo(echo.name());
-        var echoOutput = echo.function().apply(EchoInput.builder().string("A").build(), null);
-        assertThat(echoOutput).isEqualTo(EchoOutput.builder().string("A").build());
+        var echoOutput = echo.function()
+            .apply(EchoInput.builder().value(EchoPayload.builder().string("A").build()).build(), null);
+        assertThat(echoOutput.value().echoCount()).isEqualTo(1);
+        assertThat(echoOutput.value().string()).isEqualTo("A");
     }
 
     @Test
