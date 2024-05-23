@@ -8,6 +8,7 @@ package software.amazon.smithy.java.runtime.client.core;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
 import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
@@ -52,12 +53,12 @@ public final class SraPipeline<I extends SerializableStruct, O extends Serializa
     private final ClientProtocol<RequestT, ResponseT> protocol;
     private final Context.Key<RequestT> requestKey;
     private final Context.Key<ResponseT> responseKey;
-    private final Function<RequestT, ResponseT> wireTransport;
+    private final Function<RequestT, CompletableFuture<ResponseT>> wireTransport;
 
     private SraPipeline(
         ClientCall<I, O> call,
         ClientProtocol<RequestT, ResponseT> protocol,
-        Function<RequestT, ResponseT> wireTransport
+        Function<RequestT, CompletableFuture<ResponseT>> wireTransport
     ) {
         this.call = call;
         this.protocol = protocol;
@@ -66,15 +67,15 @@ public final class SraPipeline<I extends SerializableStruct, O extends Serializa
         this.responseKey = protocol.responseKey();
     }
 
-    public static <I extends SerializableStruct, O extends SerializableStruct, RequestT, ResponseT> O send(
+    public static <I extends SerializableStruct, O extends SerializableStruct, RequestT, ResponseT> CompletableFuture<O> send(
         ClientCall<I, O> call,
         ClientProtocol<RequestT, ResponseT> protocol,
-        Function<RequestT, ResponseT> wireTransport
+        Function<RequestT, CompletableFuture<ResponseT>> wireTransport
     ) {
         return new SraPipeline<>(call, protocol, wireTransport).send();
     }
 
-    private O send() {
+    private CompletableFuture<O> send() {
         var context = call.context();
         var input = call.input();
         var interceptor = call.interceptor();
@@ -98,21 +99,28 @@ public final class SraPipeline<I extends SerializableStruct, O extends Serializa
 
         var resolvedAuthScheme = resolveAuthScheme(call, request);
 
-        var identity = resolvedAuthScheme.identity();
-        context.put(CallContext.IDENTITY, identity);
+        resolvedAuthScheme.identity().whenComplete((identity, e) -> {
+            // TODO: Handle if e is not null
+            context.put(CallContext.IDENTITY, identity);
+        });
 
         // TODO: what to do with supportedAuthSchemes of an endpoint?
-        Endpoint endpoint = resolveEndpoint(call);
-        request = protocol.setServiceEndpoint(request, endpoint);
+        RequestT reqBeforeEndpointResolution = request;
+        return resolveEndpoint(call)
+            .thenApply(endpoint -> protocol.setServiceEndpoint(reqBeforeEndpointResolution, endpoint))
+            .thenCompose(resolvedAuthScheme::sign)
+            .thenApply(req -> {
+                interceptor.readAfterSigning(context, input, Context.value(requestKey, req));
 
-        request = resolvedAuthScheme.sign(request);
+                req = interceptor.modifyBeforeTransmit(context, input, Context.value(requestKey, req)).value();
+                interceptor.readBeforeTransmit(context, input, Context.value(requestKey, req));
 
-        interceptor.readAfterSigning(context, input, Context.value(requestKey, request));
-
-        request = interceptor.modifyBeforeTransmit(context, input, Context.value(requestKey, request)).value();
-        interceptor.readBeforeTransmit(context, input, Context.value(requestKey, request));
-        var response = wireTransport.apply(request);
-        return deserialize(call, request, response, interceptor);
+                return req;
+            })
+            .thenCompose(
+                finalRequest -> wireTransport.apply(finalRequest)
+                    .thenApply(response -> deserialize(call, finalRequest, response, interceptor))
+            );
     }
 
     @SuppressWarnings("unchecked")
@@ -150,7 +158,7 @@ public final class SraPipeline<I extends SerializableStruct, O extends Serializa
         AuthSchemeOption option
     ) {
         return authScheme.identityResolver(identityResolvers).map(identityResolver -> {
-            IdentityT identity = identityResolver.resolveIdentity(option.identityProperties());
+            CompletableFuture<IdentityT> identity = identityResolver.resolveIdentity(option.identityProperties());
             return new ResolvedScheme<>(option, authScheme, identity);
         });
     }
@@ -158,10 +166,12 @@ public final class SraPipeline<I extends SerializableStruct, O extends Serializa
     private record ResolvedScheme<IdentityT extends Identity, RequestT>(
         AuthSchemeOption option,
         AuthScheme<RequestT, IdentityT> authScheme,
-        IdentityT identity
+        CompletableFuture<IdentityT> identity
     ) {
-        public RequestT sign(RequestT request) {
-            return authScheme.signer().sign(request, identity, option.signerProperties());
+        public CompletableFuture<RequestT> sign(RequestT request) {
+            return identity.thenApply(
+                identity -> authScheme.signer().sign(request, identity, option.signerProperties())
+            );
         }
     }
 
@@ -255,7 +265,7 @@ public final class SraPipeline<I extends SerializableStruct, O extends Serializa
     }
 
     // TODO: Add more parameters here somehow from the caller.
-    private <I extends SerializableStruct, O extends SerializableStruct> Endpoint resolveEndpoint(
+    private <I extends SerializableStruct, O extends SerializableStruct> CompletableFuture<Endpoint> resolveEndpoint(
         ClientCall<I, O> call
     ) {
         var operation = call.operation().schema();

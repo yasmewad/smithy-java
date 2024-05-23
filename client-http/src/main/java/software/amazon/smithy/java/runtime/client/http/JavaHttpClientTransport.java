@@ -5,12 +5,12 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
 import software.amazon.smithy.java.runtime.client.core.ClientTransport;
@@ -42,14 +42,16 @@ public class JavaHttpClientTransport implements ClientTransport, ClientTransport
     }
 
     @Override
-    public <I extends SerializableStruct, O extends SerializableStruct> O send(ClientCall<I, O> call) {
+    public <I extends SerializableStruct, O extends SerializableStruct> CompletableFuture<O> send(
+        ClientCall<I, O> call
+    ) {
         return SraPipeline.send(call, protocol, request -> {
             LOGGER.log(System.Logger.Level.TRACE, () -> "Sending HTTP request: " + request.startLine());
             var javaRequest = createJavaRequest(call.context(), request);
-            var response = sendRequest(javaRequest);
-            LOGGER.log(System.Logger.Level.TRACE, () -> "Got HTTP response: " + response.startLine());
-            call.context().put(HttpContext.HTTP_RESPONSE, response);
-            return response;
+            return sendRequest(javaRequest).thenApply(response -> {
+                LOGGER.log(System.Logger.Level.TRACE, () -> "Got HTTP response: " + response.startLine());
+                return response;
+            });
         });
     }
 
@@ -76,18 +78,9 @@ public class JavaHttpClientTransport implements ClientTransport, ClientTransport
         return httpRequestBuilder.build();
     }
 
-    private SmithyHttpResponse sendRequest(HttpRequest request) {
-        try {
-            var response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
-            LOGGER.log(
-                System.Logger.Level.TRACE,
-                () -> "Got response: " + response + "; headers: " + response.headers().map()
-            );
-            return createSmithyResponse(response);
-        } catch (IOException | InterruptedException e) {
-            LOGGER.log(System.Logger.Level.ERROR, () -> "Error sending request: " + request + ": " + e.getMessage());
-            throw new RuntimeException(e); // TODO: Networking related error handling.
-        }
+    private CompletableFuture<SmithyHttpResponse> sendRequest(HttpRequest request) {
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
+            .thenApply(this::createSmithyResponse);
     }
 
     private SmithyHttpResponse createSmithyResponse(HttpResponse<InputStream> response) {
