@@ -462,6 +462,11 @@ public final class StructureGenerator<T extends ShapeDirective<StructureShape, C
         private void writeErrorCorrectionMembers(JavaWriter writer) {
             var visitor = new ErrorCorrectionVisitor(writer, symbolProvider, model);
             for (var member : shape.members()) {
+                var target = model.expectShape(member.getTarget());
+                if (target.isStructureShape() || target.isUnionShape()) {
+                    // Skip unions and structs
+                    continue;
+                }
                 if (CodegenUtils.isRequiredWithNoDefault(member)) {
                     var memberName = symbolProvider.toMemberName(member);
                     var schemaName = CodegenUtils.toMemberSchemaName(memberName);
@@ -531,6 +536,12 @@ public final class StructureGenerator<T extends ShapeDirective<StructureShape, C
             }
 
             @Override
+            public Void intEnumShape(IntEnumShape shape) {
+                writer.writeInline("$T.unknown(0)", symbolProvider.toSymbol(shape));
+                return null;
+            }
+
+            @Override
             public Void documentShape(DocumentShape documentShape) {
                 writer.writeInline("null");
                 return null;
@@ -555,30 +566,8 @@ public final class StructureGenerator<T extends ShapeDirective<StructureShape, C
             }
 
             @Override
-            public Void structureShape(StructureShape structureShape) {
-                // Attempts to make an empty structure member. This could fail if the nested struct
-                // has required members.
-                writer.writeInline("$T.builder().build()", symbolProvider.toSymbol(structureShape));
-                return null;
-            }
-
-            @Override
-            public Void unionShape(UnionShape unionShape) {
-                // TODO: implement for unions
-                writer.writeInline("null");
-                return null;
-            }
-
-
-            @Override
             public Void enumShape(EnumShape shape) {
-                // TODO: Implement
-                return null;
-            }
-
-            @Override
-            public Void intEnumShape(IntEnumShape shape) {
-                // TODO: Implement
+                writer.writeInline("$T.unknown(\"\")", symbolProvider.toSymbol(shape));
                 return null;
             }
 

@@ -52,10 +52,13 @@ operation ClientErrorCorrection {
         map: CorrectedMap
 
         @required
-        structure: CouldBeEmptyStruct
+        timestamp: Timestamp
 
         @required
-        timestamp: Timestamp
+        enum: YesOrNo
+
+        @required
+        intEnum: IntYesOrNo
     }
 }
 
@@ -75,6 +78,13 @@ map CorrectedMap {
 }
 
 @private
-structure CouldBeEmptyStruct {
-    fieldA: String
+enum YesOrNo {
+    YES
+    NO
+}
+
+@private
+intEnum IntYesOrNo {
+    YES = 0
+    NO = 1
 }
