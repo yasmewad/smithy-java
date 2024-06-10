@@ -5,12 +5,12 @@
 
 package software.amazon.smithy.java.runtime.http.api;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpHeaders;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Flow;
 
-public interface SmithyHttpRequest extends SmithyHttpMessage, AutoCloseable {
+public interface SmithyHttpRequest extends SmithyHttpMessage {
 
     String method();
 
@@ -19,10 +19,6 @@ public interface SmithyHttpRequest extends SmithyHttpMessage, AutoCloseable {
     URI uri();
 
     SmithyHttpRequest withUri(URI uri);
-
-    ContentStream body();
-
-    SmithyHttpRequest withBody(ContentStream stream);
 
     @Override
     SmithyHttpRequest withHttpVersion(SmithyHttpVersion version);
@@ -40,19 +36,8 @@ public interface SmithyHttpRequest extends SmithyHttpMessage, AutoCloseable {
         return (SmithyHttpRequest) SmithyHttpMessage.super.withAddedHeaders(fieldAndValues);
     }
 
-    /**
-     * Close underlying resources, if necessary.
-     *
-     * <p>If the resource is already closed, this method does nothing.
-     */
     @Override
-    default void close() {
-        try {
-            body().inputStream().close();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
+    SmithyHttpRequest withBody(Flow.Publisher<ByteBuffer> stream);
 
     @Override
     default String startLine() {
@@ -67,7 +52,7 @@ public interface SmithyHttpRequest extends SmithyHttpMessage, AutoCloseable {
 
         String method;
         URI uri;
-        ContentStream body;
+        Flow.Publisher<ByteBuffer> body;
         HttpHeaders headers;
         SmithyHttpVersion httpVersion = SmithyHttpVersion.HTTP_1_1;
 
@@ -89,7 +74,7 @@ public interface SmithyHttpRequest extends SmithyHttpMessage, AutoCloseable {
             return this;
         }
 
-        public Builder body(ContentStream body) {
+        public Builder body(Flow.Publisher<ByteBuffer> body) {
             this.body = body;
             return this;
         }

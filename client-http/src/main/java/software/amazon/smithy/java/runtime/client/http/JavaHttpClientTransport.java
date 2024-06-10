@@ -5,12 +5,14 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
-import java.io.InputStream;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Flow;
 import software.amazon.smithy.java.runtime.client.core.ClientCall;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
 import software.amazon.smithy.java.runtime.client.core.ClientTransport;
@@ -56,7 +58,7 @@ public class JavaHttpClientTransport implements ClientTransport, ClientTransport
     }
 
     private HttpRequest createJavaRequest(Context context, SmithyHttpRequest request) {
-        var bodyPublisher = HttpRequest.BodyPublishers.ofInputStream(request.body()::inputStream);
+        var bodyPublisher = HttpRequest.BodyPublishers.fromPublisher(request.body());
 
         HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder()
             .version(smithyToHttpVersion(request.httpVersion()))
@@ -79,11 +81,11 @@ public class JavaHttpClientTransport implements ClientTransport, ClientTransport
     }
 
     private CompletableFuture<SmithyHttpResponse> sendRequest(HttpRequest request) {
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofPublisher())
             .thenApply(this::createSmithyResponse);
     }
 
-    private SmithyHttpResponse createSmithyResponse(HttpResponse<InputStream> response) {
+    private SmithyHttpResponse createSmithyResponse(HttpResponse<Flow.Publisher<List<ByteBuffer>>> response) {
         LOGGER.log(
             System.Logger.Level.TRACE,
             () -> "Got response: " + response + "; headers: " + response.headers().map()
@@ -92,7 +94,7 @@ public class JavaHttpClientTransport implements ClientTransport, ClientTransport
             .httpVersion(javaToSmithyVersion(response.version()))
             .statusCode(response.statusCode())
             .headers(response.headers())
-            .body(response.body())
+            .body(new ListByteBufferToByteBuffer(response.body())) // Flatten the List<ByteBuffer> to ByteBuffer.
             .build();
     }
 
@@ -110,5 +112,34 @@ public class JavaHttpClientTransport implements ClientTransport, ClientTransport
             case HTTP_2 -> SmithyHttpVersion.HTTP_2;
             default -> throw new UnsupportedOperationException("Unsupported HTTP version: " + version);
         };
+    }
+
+    private record ListByteBufferToByteBuffer(Flow.Publisher<List<ByteBuffer>> originalPublisher)
+        implements Flow.Publisher<ByteBuffer> {
+        @Override
+        public void subscribe(Flow.Subscriber<? super ByteBuffer> subscriber) {
+            originalPublisher.subscribe(new Flow.Subscriber<>() {
+                @Override
+                public void onSubscribe(Flow.Subscription subscription) {
+                    subscriber.onSubscribe(subscription);
+                }
+
+                @Override
+                public void onNext(List<ByteBuffer> item) {
+                    // TODO: subscriber.onNext should only be called as many times as requested by the subscription
+                    item.forEach(subscriber::onNext);
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                    subscriber.onError(throwable);
+                }
+
+                @Override
+                public void onComplete() {
+                    subscriber.onComplete();
+                }
+            });
+        }
     }
 }

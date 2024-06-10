@@ -5,10 +5,14 @@
 
 package software.amazon.smithy.java.runtime.client.http;
 
-import java.io.IOException;
+import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Flow;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocol;
 import software.amazon.smithy.java.runtime.client.endpoint.api.Endpoint;
 import software.amazon.smithy.java.runtime.core.Context;
@@ -84,7 +88,10 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
      * @param response    HTTP response that was received.
      * @return the created exception.
      */
-    public static SdkException createErrorFromHints(String operationId, SmithyHttpResponse response) {
+    public static CompletableFuture<SdkException> createErrorFromHints(
+        String operationId,
+        SmithyHttpResponse response
+    ) {
         SdkException.Fault fault = SdkException.Fault.ofHttpStatusCode(response.statusCode());
         StringBuilder message = new StringBuilder();
         message.append(switch (fault) {
@@ -111,16 +118,47 @@ public abstract class HttpClientProtocol implements ClientProtocol<SmithyHttpReq
             .toLowerCase(Locale.ENGLISH);
 
         if (!isText(contentType)) {
+            return CompletableFuture.completedFuture(new SdkException(message.toString(), fault));
+        }
+
+        return asString(response).thenApply(string -> {
+            message.append(string);
             return new SdkException(message.toString(), fault);
-        }
+        });
+    }
 
-        try {
-            message.append(new String(response.body().readNBytes(16384), StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            LOGGER.log(System.Logger.Level.TRACE, () -> "Unable to append exception response body for " + operationId);
-        }
+    // TODO: There is some duplication with DataStream.asString/StreamSubscriber.transform
+    private static CompletableFuture<String> asString(SmithyHttpResponse response) {
+        return transform(response.body(), HttpResponse.BodySubscribers.ofString(StandardCharsets.UTF_8));
+    }
 
-        return new SdkException(message.toString(), fault);
+    private static <T> CompletableFuture<T> transform(
+        Flow.Publisher<ByteBuffer> publisher,
+        HttpResponse.BodySubscriber<T> subscriber
+    ) {
+        Flow.Subscriber<ByteBuffer> byteBufferSubscriber = new Flow.Subscriber<>() {
+            @Override
+            public void onSubscribe(Flow.Subscription subscription) {
+                subscriber.onSubscribe(subscription);
+            }
+
+            @Override
+            public void onNext(ByteBuffer item) {
+                subscriber.onNext(List.of(item));
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                subscriber.onError(throwable);
+            }
+
+            @Override
+            public void onComplete() {
+                subscriber.onComplete();
+            }
+        };
+        publisher.subscribe(byteBufferSubscriber);
+        return subscriber.getBody().toCompletableFuture();
     }
 
     private static boolean isText(String contentType) {

@@ -5,12 +5,11 @@
 
 package software.amazon.smithy.java.runtime.http.api;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.net.http.HttpHeaders;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Flow;
 
-public interface SmithyHttpResponse extends SmithyHttpMessage, AutoCloseable {
+public interface SmithyHttpResponse extends SmithyHttpMessage {
 
     @Override
     default String startLine() {
@@ -37,34 +36,8 @@ public interface SmithyHttpResponse extends SmithyHttpMessage, AutoCloseable {
         return (SmithyHttpResponse) SmithyHttpMessage.super.withAddedHeaders(fieldAndValues);
     }
 
-    /**
-     * Get the body of the response.
-     *
-     * @return Returns the response body.
-     */
-    InputStream body();
-
-    /**
-     * Create a new response from this response with the given body.
-     *
-     * @param body Body to set.
-     * @return Returns the new response.
-     */
-    SmithyHttpMessage withBody(InputStream body);
-
-    /**
-     * Close underlying resources, if necessary.
-     *
-     * <p>If the resource is already closed, this method does nothing.
-     */
     @Override
-    default void close() {
-        try {
-            body().close();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
+    SmithyHttpResponse withBody(Flow.Publisher<ByteBuffer> body);
 
     static Builder builder() {
         return new Builder();
@@ -73,7 +46,7 @@ public interface SmithyHttpResponse extends SmithyHttpMessage, AutoCloseable {
     final class Builder {
 
         int statusCode;
-        InputStream body;
+        Flow.Publisher<ByteBuffer> body;
         HttpHeaders headers;
         SmithyHttpVersion httpVersion = SmithyHttpVersion.HTTP_1_1;
 
@@ -90,7 +63,7 @@ public interface SmithyHttpResponse extends SmithyHttpMessage, AutoCloseable {
             return this;
         }
 
-        public Builder body(InputStream body) {
+        public Builder body(Flow.Publisher<ByteBuffer> body) {
             this.body = body;
             return this;
         }
