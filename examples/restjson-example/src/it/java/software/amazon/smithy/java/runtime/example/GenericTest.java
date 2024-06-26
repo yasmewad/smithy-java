@@ -5,6 +5,8 @@
 
 package software.amazon.smithy.java.runtime.example;
 
+import static java.nio.ByteBuffer.wrap;
+
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -91,7 +93,7 @@ public class GenericTest {
             .age(999)
             .favoriteColor("Green")
             .birthday(Instant.now())
-            .binary("Hello".getBytes(StandardCharsets.UTF_8))
+            .binary(wrap("Hello".getBytes(StandardCharsets.UTF_8)))
             .build();
 
         // Serialize directly to JSON.
