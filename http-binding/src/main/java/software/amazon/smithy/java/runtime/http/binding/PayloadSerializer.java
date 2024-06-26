@@ -12,6 +12,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.concurrent.Flow;
 import java.util.function.BiConsumer;
 import software.amazon.smithy.java.runtime.core.schema.Schema;
 import software.amazon.smithy.java.runtime.core.schema.SerializableStruct;
@@ -44,6 +45,16 @@ final class PayloadSerializer implements ShapeSerializer {
         payloadWritten = true;
         serializer.setHttpPayload(schema, value);
     }
+
+    @Override
+    public void writeEventStream(
+        Schema schema,
+        Flow.Publisher<? extends SerializableStruct> value
+    ) {
+        payloadWritten = true;
+        serializer.setEventStream(value);
+    }
+
 
     private void write(byte[] bytes) {
         try {
