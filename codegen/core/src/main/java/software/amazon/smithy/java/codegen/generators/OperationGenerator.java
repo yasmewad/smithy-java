@@ -55,7 +55,7 @@ public class OperationGenerator
                         ${typeRegistrySection:C|}
 
                         @Override
-                        public ${sdkShapeBuilder:T}<${inputType:T}> inputBuilder() {
+                        public ${sdkShapeBuilder:N}<${inputType:T}> inputBuilder() {
                             return ${inputType:T}.builder();
                         }
 
@@ -67,17 +67,17 @@ public class OperationGenerator
                         ${/hasInputEventStream}
 
                         @Override
-                        public ${sdkShapeBuilder:T}<${outputType:T}> outputBuilder() {
+                        public ${sdkShapeBuilder:N}<${outputType:T}> outputBuilder() {
                             return ${outputType:T}.builder();
                         }
 
                         @Override
-                        public ${sdkSchema:T} schema() {
+                        public ${sdkSchema:N} schema() {
                             return SCHEMA;
                         }
 
                         @Override
-                        public ${sdkSchema:T} inputSchema() {
+                        public ${sdkSchema:N} inputSchema() {
                             return ${inputType:T}.SCHEMA;
                         }
 
@@ -96,12 +96,12 @@ public class OperationGenerator
                         ${/hasOutputEventStream}
 
                         @Override
-                        public ${sdkSchema:T} outputSchema() {
+                        public ${sdkSchema:N} outputSchema() {
                             return ${outputType:T}.SCHEMA;
                         }
 
                         @Override
-                        public ${typeRegistry:T} typeRegistry() {
+                        public ${typeRegistry:N} typeRegistry() {
                             return typeRegistry;
                         }
                     }
