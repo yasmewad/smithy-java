@@ -20,7 +20,6 @@ import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterc
 import software.amazon.smithy.java.runtime.client.endpoint.api.Endpoint;
 import software.amazon.smithy.java.runtime.client.endpoint.api.EndpointResolver;
 
-// TODO: This is currently not truly immutable, since Context is mutable.
 /**
  * An immutable representation of configurations of a {@link Client}.
  *
@@ -62,8 +61,7 @@ public final class ClientConfig {
         this.authSchemeResolver = Objects.requireNonNullElse(builder.authSchemeResolver, DEFAULT_AUTH_SCHEME_RESOLVER);
         this.identityResolvers = List.copyOf(builder.identityResolvers);
 
-        // TODO: make a copy to prevent builder.context getting updated later and affecting this ClientConfig's context.
-        this.context = builder.context;
+        this.context = Context.unmodifiableCopy(builder.context);
     }
 
     // Note: Making all the accessors package-private for now as they are only needed by Client, but could be public.
@@ -96,7 +94,7 @@ public final class ClientConfig {
     }
 
     Context context() {
-        return context; // TODO: return an unmodifiable view
+        return context;
     }
 
     /**
@@ -117,7 +115,7 @@ public final class ClientConfig {
             .identityResolvers(identityResolvers);
         interceptors.forEach(builder::addInterceptor);
         supportedAuthSchemes.forEach(builder::putSupportedAuthSchemes);
-        context.keys().forEachRemaining(key -> copyContext(key, context, builder));
+        builder.putAllConfig(context);
         return builder;
     }
 
@@ -162,13 +160,7 @@ public final class ClientConfig {
 
         // TODO: Currently there is no concept of mutable v/s immutable parts of Context.
         //       We just merge the client's Context with the Context of the operation's call.
-        overrideConfig.context()
-            .keys()
-            .forEachRemaining(key -> copyContext(key, overrideConfig.context(), builder));
-    }
-
-    private <T> void copyContext(Context.Key<T> key, Context src, Builder dst) {
-        dst.putConfig(key, src.get(key));
+        builder.putAllConfig(overrideConfig.context());
     }
 
     /**
@@ -308,7 +300,7 @@ public final class ClientConfig {
         }
 
         /**
-         * Put a strongly typed configuration on the builder.
+         * Put a strongly typed configuration on the builder. If a key was already present, it is overridden.
          *
          * @param key Configuration key.
          * @param value Value to associate with the key.
@@ -330,6 +322,18 @@ public final class ClientConfig {
          */
         public <T> Builder putConfigIfAbsent(Context.Key<T> key, T value) {
             context.putIfAbsent(key, value);
+            return this;
+        }
+
+        /**
+         * Put all the strongly typed configuration from the given Context. If a key was already present, it is
+         * overridden.
+         *
+         * @param context Context containing all the configuration to put.
+         * @return the builder.
+         */
+        private Builder putAllConfig(Context context) {
+            this.context.putAll(context);
             return this;
         }
 
