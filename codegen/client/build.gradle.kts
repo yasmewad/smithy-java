@@ -12,6 +12,8 @@ dependencies {
 
     testImplementation(project(":client-aws-rest-json1"))
     testImplementation(libs.smithy.aws.traits)
+
+    itImplementation(project(":client-aws-rest-json1"))
 }
 
 tasks {
