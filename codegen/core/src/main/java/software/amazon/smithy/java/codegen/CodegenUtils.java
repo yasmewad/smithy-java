@@ -5,12 +5,14 @@
 
 package software.amazon.smithy.java.codegen;
 
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import software.amazon.smithy.codegen.core.CodegenException;
 import software.amazon.smithy.codegen.core.ReservedWords;
 import software.amazon.smithy.codegen.core.ReservedWordsBuilder;
 import software.amazon.smithy.codegen.core.Symbol;
@@ -350,5 +352,35 @@ public final class CodegenUtils {
             .flatMap(List::stream)
             .filter(shape::equals)
             .count() > 1;
+    }
+
+    /**
+     * Gets an implementation of a class from the classpath by name.
+     *
+     * <p><strong>NOTE</strong>: The provided class must have a public, no-arg constructor.
+     *
+     * @param clazz interface to get implementation of
+     * @param name fully-qualified class name
+     * @return Class instance.
+     * @param <T> Type to get implementation for.
+     * @throws CodegenException if no valid implementation with a public no-arg constructor could be found on the
+     * classpath for the given class name.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> Class<? extends T> getImplementationByName(Class<T> clazz, String name) {
+        try {
+            var instance = Class.forName(name).getDeclaredConstructor().newInstance();
+            if (clazz.isAssignableFrom(instance.getClass())) {
+                return (Class<? extends T>) instance.getClass();
+            } else {
+                throw new CodegenException("Class " + name + " is not a `" + clazz.getName() + "`");
+            }
+        } catch (ClassNotFoundException exc) {
+            throw new CodegenException("Could not find class " + name + ". Check your dependencies.", exc);
+        } catch (NoSuchMethodException exc) {
+            throw new CodegenException("Could not find public no-arg constructor for " + name, exc);
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            throw new CodegenException("Could not invoke constructor for " + name, e);
+        }
     }
 }

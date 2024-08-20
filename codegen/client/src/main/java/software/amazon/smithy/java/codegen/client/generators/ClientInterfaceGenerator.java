@@ -5,8 +5,12 @@
 
 package software.amazon.smithy.java.codegen.client.generators;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
@@ -23,10 +27,12 @@ import software.amazon.smithy.java.codegen.sections.ClassSection;
 import software.amazon.smithy.java.codegen.writer.JavaWriter;
 import software.amazon.smithy.java.runtime.auth.api.scheme.AuthScheme;
 import software.amazon.smithy.java.runtime.client.core.Client;
+import software.amazon.smithy.java.runtime.client.core.ClientPlugin;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocolFactory;
 import software.amazon.smithy.java.runtime.client.core.ClientTransport;
 import software.amazon.smithy.java.runtime.client.core.ProtocolSettings;
 import software.amazon.smithy.java.runtime.client.core.RequestOverrideConfig;
+import software.amazon.smithy.java.runtime.client.core.annotations.Configuration;
 import software.amazon.smithy.java.runtime.client.http.JavaHttpClientTransport;
 import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.knowledge.OperationIndex;
@@ -71,6 +77,7 @@ public final class ClientInterfaceGenerator
                         }
 
                         final class Builder extends ${client:T}.Builder<${interface:T}, Builder> {
+                            ${defaultPlugins:C|}
                             ${?hasDefaultProtocol}${defaultProtocol:C|}
                             ${/hasDefaultProtocol}private Builder() {
                                 ${?hasDefaultProtocol}configBuilder().protocol(factory.createProtocol(settings, protocolTrait));${/hasDefaultProtocol}
@@ -78,9 +85,14 @@ public final class ClientInterfaceGenerator
                                 ${?transport}configBuilder().transport(new ${transport:T}());${/transport}
                             }
 
+                            ${pluginSetters:C|}
+
                             @Override
                             public ${interface:T} build() {
-                                return new ${impl:T}(this);
+                                ${?hasDefaults}for (var plugin : defaultPlugins) {
+                                    plugin.configureClient(configBuilder());
+                                }
+                                ${/hasDefaults}return new ${impl:T}(this);
                             }
                         }
                     }
@@ -96,6 +108,7 @@ public final class ClientInterfaceGenerator
                         directive.context()
                     )
                 );
+                writer.putContext("clientPlugin", ClientPlugin.class);
                 writer.putContext("client", Client.class);
                 writer.putContext("interface", symbol);
                 writer.putContext("impl", symbol.expectProperty(ClientSymbolProperties.CLIENT_IMPL));
@@ -111,6 +124,10 @@ public final class ClientInterfaceGenerator
                     )
                 );
                 writer.putContext("authSchemes", getAuthSchemes(directive.model(), directive.service()));
+                var defaultPlugins = resolveDefaultPlugins(directive.settings());
+                writer.putContext("hasDefaults", !defaultPlugins.isEmpty());
+                writer.putContext("defaultPlugins", new PluginPropertyWriter(writer, defaultPlugins));
+                writer.putContext("pluginSetters", new DefaultPluginSetterGenerator(writer, defaultPlugins));
                 writer.write(template);
                 writer.popState();
             });
@@ -246,5 +263,99 @@ public final class ClientInterfaceGenerator
             }
         }
         return result.values();
+    }
+
+    private record PluginPropertyWriter(JavaWriter writer, Map<String, Class<? extends ClientPlugin>> pluginMap)
+        implements Runnable {
+        @Override
+        public void run() {
+            if (pluginMap.isEmpty()) {
+                return;
+            }
+            writer.pushState();
+            writer.putContext("list", List.class);
+            writer.putContext("plugins", pluginMap);
+            writer.write(
+                """
+                    ${#plugins}private final ${value:T} ${key:L} = new ${value:T}();
+                    ${/plugins}
+                    private final ${list:T}<${clientPlugin:T}> defaultPlugins = List.of(${#plugins}${key:L}${^key.last}, ${/key.last}${/plugins});
+                    """
+            );
+            writer.popState();
+        }
+
+    }
+
+    private record DefaultPluginSetterGenerator(JavaWriter writer, Map<String, Class<? extends ClientPlugin>> pluginMap)
+        implements Runnable {
+
+        @Override
+        public void run() {
+            for (var pluginEntry : pluginMap.entrySet()) {
+                for (var method : pluginEntry.getValue().getDeclaredMethods()) {
+                    if (method.isAnnotationPresent(Configuration.class)) {
+                        writer.pushState();
+                        if (!method.getReturnType().equals(Void.TYPE)) {
+                            throw new CodegenException("Default plugin setters cannot return a value");
+                        }
+                        var configurationAnnotation = method.getAnnotation(Configuration.class);
+                        var methodName = configurationAnnotation.value().isEmpty()
+                            ? method.getName()
+                            : configurationAnnotation.value();
+                        writer.putContext("pluginName", pluginEntry.getKey());
+                        writer.putContext("name", methodName);
+                        writer.putContext("args", getParamMap(method, methodName));
+                        writer.write("""
+                            public Builder ${name:L}(${#args}${value:P} ${key:L}${^key.last}, ${/key.last}${/args}) {
+                                ${pluginName:L}.${name:L}(${#args}${key:L}${^key.last}, ${/key.last}${/args});
+                                return this;
+                            }
+                            """);
+                        writer.popState();
+                    }
+                }
+            }
+        }
+
+        private static Map<String, Parameter> getParamMap(Method method, String methodName) {
+            Map<String, java.lang.reflect.Parameter> parameterMap = new LinkedHashMap<>();
+            var parameters = method.getParameters();
+            for (int idx = 0; idx < parameters.length; idx++) {
+                var param = parameters[idx];
+                var paramName = methodName;
+                if (param.isAnnotationPresent(
+                    software.amazon.smithy.java.runtime.client.core.annotations.Parameter.class
+                )) {
+                    paramName = param.getAnnotation(
+                        software.amazon.smithy.java.runtime.client.core.annotations.Parameter.class
+                    )
+                        .value();
+                } else if (idx != 0) {
+                    paramName += idx;
+                }
+                parameterMap.put(paramName, param);
+            }
+            return parameterMap;
+        }
+    }
+
+    private static Map<String, Class<? extends ClientPlugin>> resolveDefaultPlugins(JavaCodegenSettings settings) {
+        Map<String, Class<? extends ClientPlugin>> pluginMap = new LinkedHashMap<>();
+        Map<String, Integer> frequencyMap = new HashMap<>();
+
+        for (var pluginFqn : settings.defaultPlugins()) {
+            var pluginClass = CodegenUtils.getImplementationByName(ClientPlugin.class, pluginFqn);
+            // Ensure plugin names used as properties never clash
+            var pluginName = StringUtils.uncapitalize(pluginClass.getSimpleName());
+            int val = frequencyMap.getOrDefault(pluginName, 0);
+            if (val != 0) {
+                pluginName += val;
+            }
+            frequencyMap.put(pluginName, val + 1);
+            pluginMap.put(pluginName, pluginClass);
+        }
+
+        return pluginMap;
     }
 }
