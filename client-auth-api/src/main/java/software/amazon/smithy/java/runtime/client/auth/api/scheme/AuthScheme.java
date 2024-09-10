@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.runtime.auth.api.scheme;
+package software.amazon.smithy.java.runtime.client.auth.api.scheme;
 
 import java.util.Optional;
 import software.amazon.smithy.java.context.Context;
 import software.amazon.smithy.java.runtime.auth.api.AuthProperties;
 import software.amazon.smithy.java.runtime.auth.api.Signer;
 import software.amazon.smithy.java.runtime.auth.api.identity.Identity;
-import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolver;
-import software.amazon.smithy.java.runtime.auth.api.identity.IdentityResolvers;
 import software.amazon.smithy.java.runtime.auth.api.identity.TokenIdentity;
+import software.amazon.smithy.java.runtime.client.auth.api.identity.IdentityResolver;
+import software.amazon.smithy.java.runtime.client.auth.api.identity.IdentityResolvers;
 import software.amazon.smithy.model.shapes.ShapeId;
 
 /**
