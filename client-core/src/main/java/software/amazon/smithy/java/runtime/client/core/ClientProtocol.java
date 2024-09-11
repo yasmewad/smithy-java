@@ -12,6 +12,7 @@ import software.amazon.smithy.java.runtime.client.endpoint.api.Endpoint;
 import software.amazon.smithy.java.runtime.core.schema.ApiException;
 import software.amazon.smithy.java.runtime.core.schema.ApiOperation;
 import software.amazon.smithy.java.runtime.core.schema.SerializableStruct;
+import software.amazon.smithy.java.runtime.core.serde.TypeRegistry;
 
 /**
  * Handles request and response serialization.
@@ -74,14 +75,22 @@ public interface ClientProtocol<RequestT, ResponseT> {
     /**
      * Deserializes the output from the transport response or throws a modeled or unmodeled exception.
      *
-     * @param call     Call being sent.
-     * @param request  Request that was sent for this response.
-     * @param response Response to deserialize.
+     * <p>For modeled exceptions, the {@code typeRegistry} can be used to build the error. If the typeRegistry is null
+     * or is unaware of a desired shape, the protocol can create an error based on protocol hints (e.g., HTTP status
+     * codes).
+     *
+     * @param operation    Operation to create request for.
+     * @param context      Context for the request.
+     * @param typeRegistry TypeRegistry that can be used to create shapes.
+     * @param request      Request that was sent for this response.
+     * @param response     Response to deserialize.
      * @return the deserialized output shape.
      * @throws ApiException if an error occurs, including deserialized modeled errors and protocol errors.
      */
     <I extends SerializableStruct, O extends SerializableStruct> CompletableFuture<O> deserializeResponse(
-        ClientCall<I, O> call,
+        ApiOperation<I, O> operation,
+        Context context,
+        TypeRegistry typeRegistry,
         RequestT request,
         ResponseT response
     );
