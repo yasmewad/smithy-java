@@ -53,7 +53,9 @@ record StructureSerializerGenerator(
         for (var member : shape.members()) {
             var memberName = symbolProvider.toMemberName(member);
             // if the shape is an error we need to use the `getMessage()` method for message field.
-            var state = isError && memberName.equals("message") ? "getMessage()" : memberName;
+            if (isError && memberName.equalsIgnoreCase("message")) {
+                memberName = "getMessage()";
+            }
 
             writer.pushState();
             writer.putContext("nullable", CodegenUtils.isNullableMember(model, member));
@@ -62,7 +64,7 @@ record StructureSerializerGenerator(
                 ${?nullable}if (${memberName:L} != null) {
                     ${/nullable}${C|};${?nullable}
                 }${/nullable}
-                """, new SerializerMemberGenerator(writer, symbolProvider, model, service, member, state));
+                """, new SerializerMemberGenerator(writer, symbolProvider, model, service, member, memberName));
             writer.popState();
         }
     }
