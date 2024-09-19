@@ -18,11 +18,13 @@ public class URLEncoding {
      * <code>
      *     unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
      * </code>
+     * Can optionally handle strings which are meant to encode a path (ie include '/' which should NOT be escaped for paths).
      *
      * @param source The raw string to encode. Note that any existing percent-encoding will be encoded again.
      * @param sink   Where to write the percent-encoded string.
+     * @param ignoreSlashes  true if the value is intended to represent a path.
      */
-    public static void encodeUnreserved(String source, StringBuilder sink) {
+    public static void encodeUnreserved(String source, StringBuilder sink, boolean ignoreSlashes) {
         // Encode the path segment and undo some of the assumption of URLEncoder to make it with unreserved.
         String result = java.net.URLEncoder.encode(source, StandardCharsets.UTF_8);
         for (int i = 0; i < result.length(); i++) {
@@ -31,14 +33,25 @@ public class URLEncoding {
                 case '+' -> sink.append("%20");
                 case '*' -> sink.append("%2A");
                 case '%' -> {
-                    if (result.charAt(i + 1) == '7') {
-                        if (i < result.length() - 1 && result.charAt(i + 2) == 'E') {
-                            sink.append('~');
-                            i += 2;
-                            break;
+                    switch (result.charAt(i + 1)) {
+                        case '7' -> {
+                            if (i < result.length() - 1 && result.charAt(i + 2) == 'E') {
+                                sink.append('~');
+                                i += 2;
+                                break;
+                            }
+                            sink.append(c);
                         }
+                        case '2' -> {
+                            if (i < result.length() - 1 && result.charAt(i + 2) == 'F' && ignoreSlashes) {
+                                sink.append('/');
+                                i += 2;
+                                break;
+                            }
+                            sink.append(c);
+                        }
+                        default -> sink.append(c);
                     }
-                    sink.append(c);
                 }
                 default -> sink.append(c);
             }
@@ -49,11 +62,12 @@ public class URLEncoding {
      * Encodes characters that are not unreserved into a string result.
      *
      * @param source Value to encode.
+     * @param ignoreSlashes true if the value is intended to represent a path.
      * @return Returns the encoded string.
      */
-    public static String encodeUnreserved(String source) {
+    public static String encodeUnreserved(String source, boolean ignoreSlashes) {
         StringBuilder result = new StringBuilder();
-        encodeUnreserved(source, result);
+        encodeUnreserved(source, result, ignoreSlashes);
         return result.toString();
     }
 
