@@ -5,8 +5,7 @@
 
 package software.amazon.smithy.java.codegen.client.generators;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -31,10 +30,10 @@ import software.amazon.smithy.java.runtime.client.auth.api.scheme.AuthSchemeFact
 import software.amazon.smithy.java.runtime.client.core.Client;
 import software.amazon.smithy.java.runtime.client.core.ClientPlugin;
 import software.amazon.smithy.java.runtime.client.core.ClientProtocolFactory;
+import software.amazon.smithy.java.runtime.client.core.ClientSetting;
 import software.amazon.smithy.java.runtime.client.core.ClientTransport;
 import software.amazon.smithy.java.runtime.client.core.ProtocolSettings;
 import software.amazon.smithy.java.runtime.client.core.RequestOverrideConfig;
-import software.amazon.smithy.java.runtime.client.core.annotations.Configuration;
 import software.amazon.smithy.java.runtime.client.http.JavaHttpClientTransport;
 import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.knowledge.OperationIndex;
@@ -78,7 +77,7 @@ public final class ClientInterfaceGenerator
                             return new Builder();
                         }
 
-                        final class Builder extends ${client:T}.Builder<${interface:T}, Builder> {
+                        final class Builder extends ${client:T}.Builder<${interface:T}, Builder>${?settings} implements ${#settings}${value:T}<Builder>${^key.last}, ${/key.last}${/settings}${/settings} {
                             ${defaultPlugins:C|}
                             ${?hasDefaultProtocol}${defaultProtocol:C|}
                             ${/hasDefaultProtocol}${?defaultSchemes}${defaultAuth:C|}
@@ -87,8 +86,6 @@ public final class ClientInterfaceGenerator
                                 ${?defaultSchemes}configBuilder().putSupportedAuthSchemes(${#defaultSchemes}${value:L}.createAuthScheme(${key:L})${^key.last}, ${/key.last}${/defaultSchemes});${/defaultSchemes}
                                 ${?transport}configBuilder().transport(new ${transport:T}());${/transport}
                             }
-
-                            ${pluginSetters:C|}
 
                             @Override
                             public ${interface:T} build() {
@@ -136,7 +133,7 @@ public final class ClientInterfaceGenerator
                 var defaultPlugins = resolveDefaultPlugins(directive.settings());
                 writer.putContext("hasDefaults", !defaultPlugins.isEmpty());
                 writer.putContext("defaultPlugins", new PluginPropertyWriter(writer, defaultPlugins));
-                writer.putContext("pluginSetters", new DefaultPluginSetterGenerator(writer, defaultPlugins));
+                writer.putContext("settings", getBuilderSettings(directive.settings()));
                 writer.write(template);
                 writer.popState();
             });
@@ -349,59 +346,6 @@ public final class ClientInterfaceGenerator
 
     }
 
-    private record DefaultPluginSetterGenerator(JavaWriter writer, Map<String, Class<? extends ClientPlugin>> pluginMap)
-        implements Runnable {
-
-        @Override
-        public void run() {
-            for (var pluginEntry : pluginMap.entrySet()) {
-                for (var method : pluginEntry.getValue().getDeclaredMethods()) {
-                    if (method.isAnnotationPresent(Configuration.class)) {
-                        writer.pushState();
-                        if (!method.getReturnType().equals(Void.TYPE)) {
-                            throw new CodegenException("Default plugin setters cannot return a value");
-                        }
-                        var configurationAnnotation = method.getAnnotation(Configuration.class);
-                        var methodName = configurationAnnotation.value().isEmpty()
-                            ? method.getName()
-                            : configurationAnnotation.value();
-                        writer.putContext("pluginName", pluginEntry.getKey());
-                        writer.putContext("name", methodName);
-                        writer.putContext("args", getParamMap(method, methodName));
-                        writer.write("""
-                            public Builder ${name:L}(${#args}${value:P} ${key:L}${^key.last}, ${/key.last}${/args}) {
-                                ${pluginName:L}.${name:L}(${#args}${key:L}${^key.last}, ${/key.last}${/args});
-                                return this;
-                            }
-                            """);
-                        writer.popState();
-                    }
-                }
-            }
-        }
-
-        private static Map<String, Parameter> getParamMap(Method method, String methodName) {
-            Map<String, java.lang.reflect.Parameter> parameterMap = new LinkedHashMap<>();
-            var parameters = method.getParameters();
-            for (int idx = 0; idx < parameters.length; idx++) {
-                var param = parameters[idx];
-                var paramName = methodName;
-                if (param.isAnnotationPresent(
-                    software.amazon.smithy.java.runtime.client.core.annotations.Parameter.class
-                )) {
-                    paramName = param.getAnnotation(
-                        software.amazon.smithy.java.runtime.client.core.annotations.Parameter.class
-                    )
-                        .value();
-                } else if (idx != 0) {
-                    paramName += idx;
-                }
-                parameterMap.put(paramName, param);
-            }
-            return parameterMap;
-        }
-    }
-
     private static Map<String, Class<? extends ClientPlugin>> resolveDefaultPlugins(JavaCodegenSettings settings) {
         Map<String, Class<? extends ClientPlugin>> pluginMap = new LinkedHashMap<>();
         Map<String, Integer> frequencyMap = new HashMap<>();
@@ -419,5 +363,20 @@ public final class ClientInterfaceGenerator
         }
 
         return pluginMap;
+    }
+
+    private static List<Class<?>> getBuilderSettings(JavaCodegenSettings settings) {
+        var result = new ArrayList<Class<?>>();
+        for (var settingName : settings.defaultSettings()) {
+            var clazz = CodegenUtils.getClassForName(settingName);
+            if (clazz.isAssignableFrom(ClientSetting.class)) {
+                throw new CodegenException(
+                    "Settings must extend from `ClientSetting` interface. Could not"
+                        + " cast class `" + settingName + "` to `ClientSetting"
+                );
+            }
+            result.add(clazz);
+        }
+        return result;
     }
 }
