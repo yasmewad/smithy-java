@@ -5,6 +5,7 @@
 
 package software.amazon.smithy.java.runtime.client.endpoint.api;
 
+import java.net.URI;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
@@ -22,13 +23,79 @@ public interface EndpointResolver {
     CompletableFuture<Endpoint> resolveEndpoint(EndpointResolverParams params);
 
     /**
-     * Create an endpoint resolver that always returns the same endpoint.
+     * Create a default endpoint resolver that always returns the same endpoint with prefixes added if relevant.
+     *
+     * <p>This endpoint resolvers will handle the {@link software.amazon.smithy.model.traits.HostLabelTrait} and
+     * {@link software.amazon.smithy.model.traits.EndpointTrait} traits automatically, adding a prefix to the endpoint
+     * host based on the resolved host prefix.
      *
      * @param endpoint Endpoint to always resolve.
      * @return the endpoint resolver.
      */
     static EndpointResolver staticEndpoint(Endpoint endpoint) {
+        return new HostLabelEndpointResolver(staticHost(endpoint));
+    }
+
+    /**
+     * Create a default endpoint resolver that always returns the same endpoint with prefixes added if relevant.
+     *
+     * <p>This endpoint resolvers will handle the {@link software.amazon.smithy.model.traits.HostLabelTrait} and
+     * {@link software.amazon.smithy.model.traits.EndpointTrait} traits automatically, adding a prefix to the endpoint
+     * host based on the resolved host prefix.
+     *
+     * @param endpoint Endpoint to always resolve.
+     * @return the endpoint resolver.
+     */
+    static EndpointResolver staticEndpoint(String endpoint) {
+        return staticEndpoint(Endpoint.builder().uri(endpoint).build());
+    }
+
+    /**
+     * Create a default endpoint resolver that always returns the same endpoint with prefixes added if relevant.
+     *
+     * <p>This endpoint resolvers will handle the {@link software.amazon.smithy.model.traits.HostLabelTrait} and
+     * {@link software.amazon.smithy.model.traits.EndpointTrait} traits automatically, adding a prefix to the endpoint
+     * host based on the resolved host prefix.
+     *
+     * @param endpoint Endpoint to always resolve.
+     * @return the endpoint resolver.
+     */
+    static EndpointResolver staticEndpoint(URI endpoint) {
+        return staticEndpoint(Endpoint.builder().uri(endpoint).build());
+    }
+
+    /*
+     * Create an endpoint resolver that always returns the same host.
+     *
+     * @param endpoint to always resolve.
+     * @return the endpoint resolver.
+     */
+    static EndpointResolver staticHost(Endpoint endpoint) {
         Objects.requireNonNull(endpoint);
         return params -> CompletableFuture.completedFuture(endpoint);
+    }
+
+    /**
+     * Create an endpoint resolver that always returns the same host.
+     *
+     * @param endpoint Endpoint to always resolve.
+     * @return the endpoint resolver.
+     */
+    static EndpointResolver staticHost(String endpoint) {
+        Objects.requireNonNull(endpoint);
+        var ep = Endpoint.builder().uri(endpoint).build();
+        return params -> CompletableFuture.completedFuture(ep);
+    }
+
+    /**
+     * Create an endpoint resolver that always returns the same host.
+     *
+     * @param endpoint Endpoint to always resolve.
+     * @return the endpoint resolver.
+     */
+    static EndpointResolver staticHost(URI endpoint) {
+        Objects.requireNonNull(endpoint);
+        var ep = Endpoint.builder().uri(endpoint).build();
+        return params -> CompletableFuture.completedFuture(ep);
     }
 }

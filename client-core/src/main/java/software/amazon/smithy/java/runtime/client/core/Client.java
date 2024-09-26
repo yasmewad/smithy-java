@@ -5,7 +5,6 @@
 
 package software.amazon.smithy.java.runtime.client.core;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -16,7 +15,6 @@ import software.amazon.smithy.java.runtime.client.auth.api.identity.IdentityReso
 import software.amazon.smithy.java.runtime.client.auth.api.scheme.AuthScheme;
 import software.amazon.smithy.java.runtime.client.auth.api.scheme.AuthSchemeResolver;
 import software.amazon.smithy.java.runtime.client.core.interceptors.ClientInterceptor;
-import software.amazon.smithy.java.runtime.client.endpoint.api.Endpoint;
 import software.amazon.smithy.java.runtime.client.endpoint.api.EndpointResolver;
 import software.amazon.smithy.java.runtime.core.schema.ApiOperation;
 import software.amazon.smithy.java.runtime.core.schema.SerializableStruct;
@@ -150,36 +148,6 @@ public abstract class Client {
         public B endpointResolver(EndpointResolver endpointResolver) {
             this.configBuilder.endpointResolver(endpointResolver);
             return (B) this;
-        }
-
-        /**
-         * Configure the client to use a static endpoint.
-         *
-         * @param endpoint Endpoint to connect to.
-         * @return the builder.
-         */
-        public B endpoint(Endpoint endpoint) {
-            return endpointResolver(EndpointResolver.staticEndpoint(endpoint));
-        }
-
-        /**
-         * Configure the client to use a static endpoint.
-         *
-         * @param endpoint Endpoint to connect to.
-         * @return the builder.
-         */
-        public B endpoint(URI endpoint) {
-            return endpoint(Endpoint.builder().uri(endpoint).build());
-        }
-
-        /**
-         * Configure the client to use a static endpoint.
-         *
-         * @param endpoint Endpoint to connect to.
-         * @return the builder.
-         */
-        public B endpoint(String endpoint) {
-            return endpoint(Endpoint.builder().uri(endpoint).build());
         }
 
         /**

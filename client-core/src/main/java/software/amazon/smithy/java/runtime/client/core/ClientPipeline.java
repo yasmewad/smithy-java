@@ -273,9 +273,9 @@ final class ClientPipeline<RequestT, ResponseT> {
     private <I extends SerializableStruct, O extends SerializableStruct> CompletableFuture<Endpoint> resolveEndpoint(
         ClientCall<I, O> call
     ) {
-        var operation = call.operation().schema();
         var request = EndpointResolverParams.builder()
-            .operationName(operation.id().getName())
+            .operation(call.operation())
+            .inputValue(call.input())
             .context(Context.unmodifiableView(call.context()))
             .build();
         return call.endpointResolver().resolveEndpoint(request);

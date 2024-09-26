@@ -7,17 +7,21 @@ package software.amazon.smithy.java.runtime.client.endpoint.api;
 
 import java.util.Objects;
 import software.amazon.smithy.java.context.Context;
+import software.amazon.smithy.java.runtime.core.schema.ApiOperation;
+import software.amazon.smithy.java.runtime.core.schema.SerializableStruct;
 
 /**
  * Encapsulates endpoint resolver parameters.
  */
 public final class EndpointResolverParams {
 
-    private final String operationName;
     private final Context context;
+    private final ApiOperation<?, ?> operation;
+    private final SerializableStruct inputValue;
 
     private EndpointResolverParams(Builder builder) {
-        this.operationName = Objects.requireNonNull(builder.operationName, "operationName is null");
+        this.operation = Objects.requireNonNull(builder.operation, "operation is null");
+        this.inputValue = Objects.requireNonNull(builder.inputValue, "inputValue is null");
         this.context = Objects.requireNonNullElseGet(builder.context, Context::create);
     }
 
@@ -31,12 +35,12 @@ public final class EndpointResolverParams {
     }
 
     /**
-     * Get the name of the operation to resolve the endpoint for.
+     * Get the model for the operation to resolve the endpoint for.
      *
-     * @return the operation name.
+     * @return the operation.
      */
-    public String operationName() {
-        return operationName;
+    public ApiOperation<?, ?> operation() {
+        return operation;
     }
 
     /**
@@ -48,6 +52,15 @@ public final class EndpointResolverParams {
         return context;
     }
 
+    /**
+     * Input value for the client call the endpoint is being resolved for.
+     *
+     * @return input.
+     */
+    public SerializableStruct inputValue() {
+        return inputValue;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -57,13 +70,14 @@ public final class EndpointResolverParams {
             return false;
         }
         EndpointResolverParams params = (EndpointResolverParams) o;
-        return Objects.equals(operationName, params.operationName)
+        return Objects.equals(operation, params.operation)
+            && Objects.equals(inputValue, params.inputValue)
             && Objects.equals(context, params.context);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(operationName, context);
+        return Objects.hash(operation, inputValue, context);
     }
 
     /**
@@ -71,8 +85,9 @@ public final class EndpointResolverParams {
      */
     public static final class Builder {
 
-        private String operationName;
         private Context context;
+        private ApiOperation<?, ?> operation;
+        private SerializableStruct inputValue;
 
         private Builder() {
         }
@@ -86,13 +101,13 @@ public final class EndpointResolverParams {
         }
 
         /**
-         * Set the name of the operation.
+         * Set the operation to resolve endpoint for.
          *
-         * @param operationName Name of the operation.
+         * @param operation the operation.
          * @return the builder.
          */
-        public Builder operationName(String operationName) {
-            this.operationName = operationName;
+        public Builder operation(ApiOperation<?, ?> operation) {
+            this.operation = operation;
             return this;
         }
 
@@ -104,6 +119,17 @@ public final class EndpointResolverParams {
          */
         public Builder context(Context context) {
             this.context = context;
+            return this;
+        }
+
+        /**
+         * Set the input shape used by the operation that the endpoint is being resolved for.
+         *
+         * @param inputValue input value to set.
+         * @return the builder.
+         */
+        public Builder inputValue(SerializableStruct inputValue) {
+            this.inputValue = inputValue;
             return this;
         }
     }
