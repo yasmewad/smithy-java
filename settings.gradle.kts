@@ -20,6 +20,7 @@ include(":http-api")
 include(":http-binding")
 
 include(":json-codec")
+include(":xml-codec")
 
 include(":client-core")
 include(":client-http")
@@ -47,3 +48,4 @@ include(":aws:aws-client-core")
 include(":aws:sigv4")
 include(":aws:client-awsjson")
 include(":aws:client-restjson")
+include("aws:client-rest-xml")
