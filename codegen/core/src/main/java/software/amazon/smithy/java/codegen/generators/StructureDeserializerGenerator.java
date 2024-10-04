@@ -5,8 +5,6 @@
 
 package software.amazon.smithy.java.codegen.generators;
 
-import static java.util.function.Predicate.not;
-
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.java.codegen.CodegenUtils;
 import software.amazon.smithy.java.codegen.writer.JavaWriter;
@@ -48,13 +46,7 @@ record StructureDeserializerGenerator(
         writer.putContext("shapeDeserializer", ShapeDeserializer.class);
         writer.putContext("sdkSchema", Schema.class);
         writer.putContext("string", String.class);
-        writer.putContext(
-            "hasMembers",
-            shape.members()
-                .stream()
-                .map(s -> model.expectShape(s.getTarget()))
-                .anyMatch(not(t -> CodegenUtils.isStreamingBlob(t) || CodegenUtils.isEventStream(t)))
-        );
+        writer.putContext("hasMembers", !shape.members().isEmpty());
         writer.putContext("cases", writer.consumer(this::generateMemberSwitchCases));
         writer.putContext("union", shape.isUnionShape());
         writer.write(template);
@@ -66,8 +58,8 @@ record StructureDeserializerGenerator(
         for (var iter = CodegenUtils.getSortedMembers(shape).iterator(); iter.hasNext(); idx++) {
             var member = iter.next();
             var target = model.expectShape(member.getTarget());
-            // skip data streams and event streams
-            if (CodegenUtils.isStreamingBlob(target) || CodegenUtils.isEventStream(target)) {
+            // skip data streams
+            if (CodegenUtils.isStreamingBlob(target)) {
                 continue;
             }
             writer.pushState();
