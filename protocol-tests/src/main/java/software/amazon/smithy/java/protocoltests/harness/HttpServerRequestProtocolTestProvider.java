@@ -5,7 +5,7 @@
 
 package software.amazon.smithy.java.protocoltests.harness;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
@@ -13,6 +13,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpHeaders;
 import java.util.*;
 import java.util.stream.Stream;
+import org.assertj.core.api.recursive.comparison.RecursiveComparisonConfiguration;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
@@ -210,11 +211,34 @@ public class HttpServerRequestProtocolTestProvider extends
                         var inputBuilder = operationModel.inputBuilder();
                         new ProtocolTestDocument(testCase.getParams(), testCase.getBodyMediaType().orElse(null))
                             .deserializeInto(inputBuilder);
-                        assertEquals(inputBuilder.build(), mockOperation.getRequest());
+                        // Compare as documents so any datastream members are correctly compared.
+                        assertThat(inputBuilder.build())
+                            // Compare objects by field
+                            .usingRecursiveComparison(
+                                RecursiveComparisonConfiguration.builder()
+                                    // Compare data streams by contained data
+                                    .withComparatorForType(
+                                        Comparator.comparing(d -> new StringBuildingSubscriber(d).getResult()),
+                                        DataStream.class
+                                    )
+                                    // Compare doubles and floats as longs so NaN's will be equatable
+                                    .withComparatorForType(nanPermittingDoubleComparator(), Double.class)
+                                    .withComparatorForType(nanPermittingFloatComparator(), Float.class)
+                                    .build()
+                            )
+                            .isEqualTo(mockOperation.getRequest());
                     }
                 }
             );
         }
+    }
+
+    private static Comparator<Double> nanPermittingDoubleComparator() {
+        return (d1, d2) -> (Double.isNaN(d1) && Double.isNaN(d2)) ? 0 : Double.compare(d1, d2);
+    }
+
+    private static Comparator<Float> nanPermittingFloatComparator() {
+        return (f1, f2) -> (Float.isNaN(f1) && Float.isNaN(f2)) ? 0 : Float.compare(f1, f2);
     }
 
     private static final Set<Character> HEADER_DELIMS = Set.of(

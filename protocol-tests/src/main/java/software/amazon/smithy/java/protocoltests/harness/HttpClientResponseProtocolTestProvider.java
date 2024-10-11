@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
 import software.amazon.smithy.java.context.Context;
-import software.amazon.smithy.java.logging.InternalLogger;
 import software.amazon.smithy.java.runtime.client.core.ClientTransport;
 import software.amazon.smithy.java.runtime.client.core.RequestOverrideConfig;
 import software.amazon.smithy.java.runtime.client.core.auth.scheme.AuthSchemeOption;
@@ -34,7 +33,6 @@ import software.amazon.smithy.protocoltests.traits.HttpResponseTestCase;
  */
 final class HttpClientResponseProtocolTestProvider extends
     ProtocolTestProvider<HttpClientResponseTests, ProtocolTestExtension.SharedClientTestData> {
-    private static final InternalLogger LOGGER = InternalLogger.getLogger(HttpClientRequestProtocolTestProvider.class);
 
     @Override
     protected Class<HttpClientResponseTests> getAnnotationType() {
