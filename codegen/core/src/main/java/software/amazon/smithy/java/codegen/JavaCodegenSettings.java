@@ -9,6 +9,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import software.amazon.smithy.codegen.core.CodegenException;
 import software.amazon.smithy.codegen.core.Symbol;
@@ -38,6 +39,7 @@ public final class JavaCodegenSettings {
     private static final String DEFAULT_SETTINGS = "defaultSettings";
     private static final String RELATIVE_DATE = "relativeDate";
     private static final String RELATIVE_VERSION = "relativeVersion";
+    private static final String EDITION = "edition";
 
     private static final List<String> PROPERTIES = List.of(
         SERVICE,
@@ -50,7 +52,8 @@ public final class JavaCodegenSettings {
         DEFAULT_PLUGINS,
         DEFAULT_SETTINGS,
         RELATIVE_DATE,
-        RELATIVE_VERSION
+        RELATIVE_VERSION,
+        EDITION
     );
 
     private final ShapeId service;
@@ -65,6 +68,7 @@ public final class JavaCodegenSettings {
     private final List<String> defaultSettings;
     private final String relativeDate;
     private final String relativeVersion;
+    private final SmithyJavaCodegenEdition edition;
 
     private JavaCodegenSettings(Builder builder) {
         this.service = Objects.requireNonNull(builder.service);
@@ -79,6 +83,7 @@ public final class JavaCodegenSettings {
         this.defaultSettings = Collections.unmodifiableList(builder.defaultSettings);
         this.relativeDate = builder.relativeDate;
         this.relativeVersion = builder.relativeVersion;
+        this.edition = Objects.requireNonNullElse(builder.edition, SmithyJavaCodegenEdition.LATEST);
     }
 
     /**
@@ -100,7 +105,8 @@ public final class JavaCodegenSettings {
             .getArrayMember(DEFAULT_PLUGINS, n -> n.expectStringNode().getValue(), builder::defaultPlugins)
             .getArrayMember(DEFAULT_SETTINGS, n -> n.expectStringNode().getValue(), builder::defaultSettings)
             .getStringMember(RELATIVE_DATE, builder::relativeDate)
-            .getStringMember(RELATIVE_VERSION, builder::relativeVersion);
+            .getStringMember(RELATIVE_VERSION, builder::relativeVersion)
+            .getStringMember(EDITION, builder::edition);
 
         builder.sourceLocation(settingsNode.getSourceLocation().getFilename());
 
@@ -155,6 +161,10 @@ public final class JavaCodegenSettings {
         return relativeVersion;
     }
 
+    public SmithyJavaCodegenEdition edition() {
+        return edition;
+    }
+
     private static Symbol buildSymbolFromFullyQualifiedName(String fullyQualifiedName) {
         if (fullyQualifiedName == null || StringUtils.isEmpty(fullyQualifiedName)) {
             return null;
@@ -199,6 +209,7 @@ public final class JavaCodegenSettings {
         private List<String> defaultSettings = new ArrayList<>();
         private String relativeDate;
         private String relativeVersion;
+        private SmithyJavaCodegenEdition edition;
 
         public Builder service(String string) {
             this.service = ShapeId.from(string);
@@ -283,6 +294,11 @@ public final class JavaCodegenSettings {
                 );
             }
             this.relativeVersion = relativeVersion;
+            return this;
+        }
+
+        public Builder edition(String string) {
+            this.edition = SmithyJavaCodegenEdition.valueOf(string.toUpperCase(Locale.ENGLISH));
             return this;
         }
 
