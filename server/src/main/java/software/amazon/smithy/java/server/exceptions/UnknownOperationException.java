@@ -14,7 +14,7 @@ import software.amazon.smithy.model.traits.ErrorTrait;
 
 public final class UnknownOperationException extends ModeledApiException {
 
-    public static final ShapeId ID = ShapeId.from(
+    static final ShapeId ID = ShapeId.from(
         "software.amazon.smithy.exceptions#UnknownOperationException"
     );
 
