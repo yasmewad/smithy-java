@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package software.amazon.smithy.java.codegen.server;
+package software.amazon.smithy.java.codegen.types;
 
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.codegen.core.directed.CreateContextDirective;
@@ -22,6 +22,7 @@ import software.amazon.smithy.codegen.core.directed.GenerateUnionDirective;
 import software.amazon.smithy.java.codegen.CodeGenerationContext;
 import software.amazon.smithy.java.codegen.JavaCodegenIntegration;
 import software.amazon.smithy.java.codegen.JavaCodegenSettings;
+import software.amazon.smithy.java.codegen.JavaSymbolProvider;
 import software.amazon.smithy.java.codegen.generators.EnumGenerator;
 import software.amazon.smithy.java.codegen.generators.ListGenerator;
 import software.amazon.smithy.java.codegen.generators.MapGenerator;
@@ -30,23 +31,14 @@ import software.amazon.smithy.java.codegen.generators.SharedSchemasGenerator;
 import software.amazon.smithy.java.codegen.generators.SharedSerdeGenerator;
 import software.amazon.smithy.java.codegen.generators.StructureGenerator;
 import software.amazon.smithy.java.codegen.generators.UnionGenerator;
-import software.amazon.smithy.java.codegen.server.generators.OperationInterfaceGenerator;
-import software.amazon.smithy.java.codegen.server.generators.ServiceGenerator;
+import software.amazon.smithy.java.logging.InternalLogger;
+import software.amazon.smithy.model.shapes.Shape;
+import software.amazon.smithy.utils.SmithyUnstableApi;
 
-final class DirectedJavaServerCodegen
+@SmithyUnstableApi
+record DirectedJavaTypeCodegen(boolean generateOperations)
     implements DirectedCodegen<CodeGenerationContext, JavaCodegenSettings, JavaCodegenIntegration> {
-
-    @Override
-    public SymbolProvider createSymbolProvider(
-        CreateSymbolProviderDirective<JavaCodegenSettings> directive
-    ) {
-        return new ServiceJavaSymbolProvider(
-            directive.model(),
-            directive.service(),
-            directive.settings().packageNamespace(),
-            directive.settings().name()
-        );
-    }
+    private static final InternalLogger LOGGER = InternalLogger.getLogger(DirectedJavaTypeCodegen.class);
 
     @Override
     public CodeGenerationContext createContext(
@@ -62,8 +54,25 @@ final class DirectedJavaServerCodegen
     }
 
     @Override
+    public SymbolProvider createSymbolProvider(CreateSymbolProviderDirective<JavaCodegenSettings> directive) {
+        return new JavaSymbolProvider(
+            directive.model(),
+            directive.service(),
+            directive.settings().packageNamespace()
+        );
+    }
+
+    @Override
+    public void generateService(GenerateServiceDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
+        // Type codegen does not generate a service.
+    }
+
+    @Override
     public void generateStructure(GenerateStructureDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
-        new StructureGenerator<>().accept(directive);
+        if (!isSynthetic(directive.shape())) {
+            LOGGER.debug("Generating Java Class for structure: {}", directive.shape());
+            new StructureGenerator<>().accept(directive);
+        }
     }
 
     @Override
@@ -97,19 +106,20 @@ final class DirectedJavaServerCodegen
     }
 
     @Override
-    public void generateService(GenerateServiceDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
-        new ServiceGenerator().accept(directive);
-    }
-
-    @Override
     public void generateOperation(GenerateOperationDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
-        new OperationInterfaceGenerator().accept(directive);
-        new OperationGenerator().accept(directive);
+        if (generateOperations && !isSynthetic(directive.shape())) {
+            LOGGER.debug("Generating Java Class for operation: {}", directive.shape());
+            new OperationGenerator().accept(directive);
+        }
     }
 
     @Override
     public void customizeBeforeIntegrations(CustomizeDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
         new SharedSchemasGenerator().accept(directive);
         new SharedSerdeGenerator().accept(directive);
+    }
+
+    private static boolean isSynthetic(Shape shape) {
+        return shape.getId().getNamespace().equals(SyntheticServiceTransform.SYNTHETIC_NAMESPACE);
     }
 }

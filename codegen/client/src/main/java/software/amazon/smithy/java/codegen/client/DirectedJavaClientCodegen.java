@@ -23,8 +23,8 @@ import software.amazon.smithy.java.codegen.generators.UnionGenerator;
 import software.amazon.smithy.utils.SmithyUnstableApi;
 
 @SmithyUnstableApi
-final class DirectedJavaClientCodegen implements
-    DirectedCodegen<CodeGenerationContext, JavaCodegenSettings, JavaCodegenIntegration> {
+final class DirectedJavaClientCodegen
+    implements DirectedCodegen<CodeGenerationContext, JavaCodegenSettings, JavaCodegenIntegration> {
 
     @Override
     public SymbolProvider createSymbolProvider(
@@ -52,20 +52,8 @@ final class DirectedJavaClientCodegen implements
     }
 
     @Override
-    public void generateService(GenerateServiceDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
-        new ClientInterfaceGenerator().accept(directive);
-        new ClientImplementationGenerator().accept(directive);
-    }
-
-    @Override
-    public void generateOperation(GenerateOperationDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
-        new OperationGenerator().accept(directive);
-    }
-
-    @Override
     public void generateStructure(GenerateStructureDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
         new StructureGenerator<>().accept(directive);
-
     }
 
     @Override
@@ -96,6 +84,17 @@ final class DirectedJavaClientCodegen implements
     @Override
     public void generateIntEnumShape(GenerateIntEnumDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
         new EnumGenerator<>().accept(directive);
+    }
+
+    @Override
+    public void generateOperation(GenerateOperationDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
+        new OperationGenerator().accept(directive);
+    }
+
+    @Override
+    public void generateService(GenerateServiceDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
+        new ClientInterfaceGenerator().accept(directive);
+        new ClientImplementationGenerator().accept(directive);
     }
 
     @Override
