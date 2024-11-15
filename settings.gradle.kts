@@ -49,6 +49,7 @@ include(":examples:dynamodb")
 include(":examples:server-example")
 include(":examples:event-streaming")
 include(":examples:end-to-end-example")
+include(":examples:lambda-endpoint")
 
 // AWS specific
 include(":aws:event-streams")
@@ -59,3 +60,6 @@ include(":aws:client-restjson")
 include(":aws:client-restxml")
 include(":aws:client-rpcv2-cbor-protocol")
 include(":server-rpcv2-cbor")
+
+// AWS integrations
+include(":aws:integrations:lambda")
