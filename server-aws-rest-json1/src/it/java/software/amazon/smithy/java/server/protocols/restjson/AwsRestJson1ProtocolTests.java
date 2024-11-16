@@ -79,7 +79,9 @@ public class AwsRestJson1ProtocolTests {
             "RestJsonStreamingTraitsWithBlob",
             "RestJsonStreamingTraitsWithMediaTypeWithBlob",
             "RestJsonDeserializesDenseSetMapAndSkipsNull",
-            "RestJsonServerPopulatesDefaultsInResponseWhenMissingInParams"
+            "RestJsonServerPopulatesDefaultsInResponseWhenMissingInParams",
+            "RestJsonInvalidGreetingError"
+
         }
     )
     public void responseTest(DataStream expected, DataStream actual) {
