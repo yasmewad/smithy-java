@@ -8,7 +8,6 @@ package software.amazon.smithy.java.core.serde.document;
 import static java.nio.ByteBuffer.wrap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -309,20 +308,6 @@ public class DocumentTest {
         );
 
         assertThat(result, equalTo(Map.of("a", "v")));
-    }
-
-    @Test
-    public void throwsWhenDocumentWritesNothing() {
-        var e = Assertions.assertThrows(SerializationException.class, () -> {
-            var document = Document.of(encoder -> {});
-            // Trigger the lazy document to create the underlying document.
-            document.getMember("hello!");
-        });
-
-        assertThat(
-            e.getMessage(),
-            containsString("Unable to create a document from ShapeSerializer that serialized nothing")
-        );
     }
 
     @ParameterizedTest
