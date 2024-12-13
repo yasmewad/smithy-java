@@ -7,7 +7,6 @@ package software.amazon.smithy.java.client.core.endpoint;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -152,17 +151,12 @@ public class EndpointResolverTest {
         }
 
         @Override
-        public TypeRegistry typeRegistry() {
+        public TypeRegistry errorRegistry() {
             throw new UnsupportedOperationException();
         }
 
         @Override
         public List<ShapeId> effectiveAuthSchemes() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Set<Schema> errorSchemas() {
             throw new UnsupportedOperationException();
         }
     }
@@ -203,17 +197,12 @@ public class EndpointResolverTest {
         }
 
         @Override
-        public TypeRegistry typeRegistry() {
+        public TypeRegistry errorRegistry() {
             throw new UnsupportedOperationException();
         }
 
         @Override
         public List<ShapeId> effectiveAuthSchemes() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Set<Schema> errorSchemas() {
             throw new UnsupportedOperationException();
         }
     }

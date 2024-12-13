@@ -136,12 +136,7 @@ public class UserAgentPluginTest {
             }
 
             @Override
-            public Set<Schema> errorSchemas() {
-                return Set.of();
-            }
-
-            @Override
-            public TypeRegistry typeRegistry() {
+            public TypeRegistry errorRegistry() {
                 return null;
             }
 

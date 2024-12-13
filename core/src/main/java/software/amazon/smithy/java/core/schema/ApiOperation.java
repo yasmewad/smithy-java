@@ -6,7 +6,6 @@
 package software.amazon.smithy.java.core.schema;
 
 import java.util.List;
-import java.util.Set;
 import software.amazon.smithy.java.core.serde.TypeRegistry;
 import software.amazon.smithy.model.shapes.ShapeId;
 
@@ -53,18 +52,11 @@ public interface ApiOperation<I extends SerializableStruct, O extends Serializab
     Schema outputSchema();
 
     /**
-     * Return a Set of {@link Schema} representing errors that are allowed to be returned from this Operation.
+     * Get a type registry for the operation used to create errors.
      *
-     * @return Set of {@link Schema} for the errors throwable by this operation.
+     * @return Returns the type registry of errors.
      */
-    Set<Schema> errorSchemas();
-
-    /**
-     * Get a type registry for the operation used to create errors and output types.
-     *
-     * @return Returns the type registry.
-     */
-    TypeRegistry typeRegistry();
+    TypeRegistry errorRegistry();
 
     /**
      * Get a list of effective authScheme for the operation.

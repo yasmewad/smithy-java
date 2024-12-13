@@ -78,17 +78,12 @@ final class DynamicOperation implements ApiOperation<WrappedDocument, WrappedDoc
     }
 
     @Override
-    public TypeRegistry typeRegistry() {
+    public TypeRegistry errorRegistry() {
         return typeRegistry;
     }
 
     @Override
     public List<ShapeId> effectiveAuthSchemes() {
         return effectiveAuthSchemes;
-    }
-
-    @Override
-    public Set<Schema> errorSchemas() {
-        return errorSchemas;
     }
 }

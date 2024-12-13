@@ -6,7 +6,6 @@
 package software.amazon.smithy.java.client.core.pagination.models;
 
 import java.util.List;
-import java.util.Set;
 import software.amazon.smithy.java.core.schema.ApiOperation;
 import software.amazon.smithy.java.core.schema.Schema;
 import software.amazon.smithy.java.core.schema.ShapeBuilder;
@@ -51,12 +50,7 @@ public final class TestOperationPaginated implements ApiOperation<GetFoosInput, 
     }
 
     @Override
-    public Set<Schema> errorSchemas() {
-        throw new UnsupportedOperationException("Unsupported");
-    }
-
-    @Override
-    public TypeRegistry typeRegistry() {
+    public TypeRegistry errorRegistry() {
         throw new UnsupportedOperationException();
     }
 

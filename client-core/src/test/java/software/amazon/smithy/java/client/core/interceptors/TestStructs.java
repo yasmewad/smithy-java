@@ -6,7 +6,6 @@
 package software.amazon.smithy.java.client.core.interceptors;
 
 import java.util.List;
-import java.util.Set;
 import software.amazon.smithy.java.core.schema.ApiOperation;
 import software.amazon.smithy.java.core.schema.PreludeSchemas;
 import software.amazon.smithy.java.core.schema.Schema;
@@ -47,12 +46,7 @@ public final class TestStructs {
         }
 
         @Override
-        public Set<Schema> errorSchemas() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public TypeRegistry typeRegistry() {
+        public TypeRegistry errorRegistry() {
             throw new UnsupportedOperationException();
         }
 
