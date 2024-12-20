@@ -13,18 +13,22 @@ import java.util.stream.Collectors;
 import software.amazon.smithy.codegen.core.Symbol;
 import software.amazon.smithy.codegen.core.SymbolProvider;
 import software.amazon.smithy.codegen.core.directed.GenerateServiceDirective;
+import software.amazon.smithy.framework.knowledge.ImplicitErrorIndex;
 import software.amazon.smithy.java.codegen.CodeGenerationContext;
 import software.amazon.smithy.java.codegen.JavaCodegenSettings;
 import software.amazon.smithy.java.codegen.generators.IdStringGenerator;
 import software.amazon.smithy.java.codegen.generators.SchemaGenerator;
+import software.amazon.smithy.java.codegen.generators.TypeRegistryGenerator;
 import software.amazon.smithy.java.codegen.sections.ClassSection;
 import software.amazon.smithy.java.codegen.server.ServerSymbolProperties;
 import software.amazon.smithy.java.codegen.writer.JavaWriter;
 import software.amazon.smithy.java.core.schema.Schema;
 import software.amazon.smithy.java.core.schema.SerializableStruct;
+import software.amazon.smithy.java.core.serde.TypeRegistry;
+import software.amazon.smithy.java.framework.model.UnknownOperationException;
 import software.amazon.smithy.java.server.Operation;
 import software.amazon.smithy.java.server.Service;
-import software.amazon.smithy.java.server.exceptions.UnknownOperationException;
+import software.amazon.smithy.model.Model;
 import software.amazon.smithy.model.knowledge.TopDownIndex;
 import software.amazon.smithy.model.shapes.OperationShape;
 import software.amazon.smithy.model.shapes.ServiceShape;
@@ -58,6 +62,8 @@ public final class ServiceGenerator implements
 
                     ${schema:C}
 
+                    ${typeRegistry:C|}
+
                     ${properties:C|}
 
                     ${constructor:C|}
@@ -79,6 +85,11 @@ public final class ServiceGenerator implements
                     public ${schemaClass:T} schema() {
                          return $$SCHEMA;
                     }
+
+                    @Override
+                    public ${typeRegistryClass:T} typeRegistry() {
+                        return TYPE_REGISTRY;
+                    }
                 }
                 """;
             writer.putContext("operationHolder", Operation.class);
@@ -87,6 +98,16 @@ public final class ServiceGenerator implements
             writer.putContext("schemaClass", Schema.class);
             writer.putContext("service", directive.symbol());
             writer.putContext("id", new IdStringGenerator(writer, shape));
+            writer.putContext("typeRegistryClass", TypeRegistry.class);
+            var errorSymbols = getImplicitErrorSymbols(
+                directive.symbolProvider(),
+                directive.model(),
+                directive.service()
+            );
+            writer.putContext(
+                "typeRegistry",
+                new TypeRegistryGenerator(writer, errorSymbols)
+            );
             writer.putContext(
                 "properties",
                 new PropertyGenerator(writer, shape, directive.symbolProvider(), operationsInfo, false)
@@ -296,7 +317,7 @@ public final class ServiceGenerator implements
                     );
                 }
                 writer.write(
-                    "default -> throw new $T(\"Unknown operation name: \" + operationName);",
+                    "default -> throw $T.builder().message(\"Unknown operation name: \" + operationName).build();",
                     UnknownOperationException.class
                 );
             });
@@ -308,4 +329,18 @@ public final class ServiceGenerator implements
         Symbol symbol, OperationShape operationShape, Symbol inputSymbol, Symbol outputSymbol
     ) {}
 
+    // TODO: Move into common CodegenUtils once ImplicitError index is available from smithy-model
+    private static List<Symbol> getImplicitErrorSymbols(
+        SymbolProvider symbolProvider,
+        Model model,
+        ServiceShape service
+    ) {
+        var implicitIndex = ImplicitErrorIndex.of(model);
+        List<Symbol> symbols = new ArrayList<>();
+        for (var errorId : implicitIndex.getImplicitErrorsForService(service)) {
+            var shape = model.expectShape(errorId);
+            symbols.add(symbolProvider.toSymbol(shape));
+        }
+        return symbols;
+    }
 }

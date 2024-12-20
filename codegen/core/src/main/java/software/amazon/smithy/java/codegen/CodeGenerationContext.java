@@ -114,10 +114,14 @@ public class CodeGenerationContext
     ) {
         this.model = model;
         this.settings = settings;
-        this.symbolProvider = symbolProvider;
         this.fileManifest = fileManifest;
         this.integrations = integrations;
-        this.writerDelegator = new WriterDelegator<>(fileManifest, symbolProvider, new JavaWriter.Factory(settings));
+        this.symbolProvider = symbolProvider;
+        this.writerDelegator = new WriterDelegator<>(
+            fileManifest,
+            this.symbolProvider,
+            new JavaWriter.Factory(settings)
+        );
         this.runtimeTraits = collectRuntimeTraits();
         this.traitInitializers = collectTraitInitializers();
     }

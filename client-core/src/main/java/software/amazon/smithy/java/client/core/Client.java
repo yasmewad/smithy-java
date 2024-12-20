@@ -55,7 +55,7 @@ public abstract class Client {
 
         this.identityResolvers = IdentityResolvers.of(config.identityResolvers());
 
-        this.typeRegistry = TypeRegistry.builder().build();
+        this.typeRegistry = typeRegistry();
 
         if (config.retryStrategy() != null) {
             this.retryStrategy = config.retryStrategy();
@@ -114,6 +114,17 @@ public abstract class Client {
 
         return callPipeline.send(callBuilder.build());
     }
+
+    /**
+     * Type registry of error types to append to operation error registry.
+     *
+     * <p>Client implementations with implicit errors should override this implementation.
+     *
+     * @return Error type registry.
+     */
+    protected TypeRegistry typeRegistry() {
+        return TypeRegistry.empty();
+    };
 
     /**
      * @return the configuration in use by this client.

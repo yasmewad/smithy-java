@@ -8,12 +8,16 @@ include(":core")
 // Codegen Base
 include(":codegen:core")
 include(":codegen:plugins")
+
 // Codegen Plugins
 include(":codegen:plugins:client")
 include(":codegen:plugins:server")
 include(":codegen:plugins:types")
 
-// Testing
+// Framework errors
+include(":framework-errors")
+
+// Protocol tests
 include(":protocol-tests")
 include(":mock-client-plugin")
 
@@ -51,6 +55,9 @@ include(":examples:end-to-end-example")
 include(":examples:lambda-endpoint")
 include(":examples:standalone-types-example")
 include("examples:shared-types-example")
+include(":examples:middleware-example:middleware-model")
+include(":examples:middleware-example:client-integration")
+include(":examples:middleware-example:server-integration")
 
 // AWS specific
 include(":aws:event-streams")

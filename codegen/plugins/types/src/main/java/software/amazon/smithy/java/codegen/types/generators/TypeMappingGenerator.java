@@ -33,12 +33,14 @@ public final class TypeMappingGenerator
     @Override
     public void accept(CustomizeDirective<CodeGenerationContext, JavaCodegenSettings> directive) {
         Map<ShapeId, Symbol> symbolMap = new HashMap<>();
+
+        // Add all types within the synthetic service closure
         for (var shape : directive.connectedShapes().values()) {
             var shapeId = shape.getId();
             // only add mappings for shapes that generate a class
             if (GENERATED_TYPES.contains(shape.getType()) && !SYNTHETIC_NAMESPACE.equals(shapeId.getNamespace())) {
                 var symbol = directive.symbolProvider().toSymbol(shape);
-                // Skip any external types used in this
+                // Skip any external types used in this package
                 if (symbol.getProperty(SymbolProperties.EXTERNAL_TYPE).isPresent()) {
                     continue;
                 }

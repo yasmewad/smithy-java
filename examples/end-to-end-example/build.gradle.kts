@@ -12,6 +12,7 @@ dependencies {
 
     // Client dependencies
     api(project(":aws:client-restjson"))
+    api(project(":client-core"))
 
     // Common dependencies
     api(project(":core"))
@@ -19,6 +20,11 @@ dependencies {
 
     // Use some common shape definitions
     implementation(project(":examples:shared-types-example"))
+
+    // Example middleware for client
+    implementation(project(":examples:middleware-example:client-integration"))
+
+    // TODO: Add example server middleware once applicable
 }
 
 jmh {

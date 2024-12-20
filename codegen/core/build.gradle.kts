@@ -9,6 +9,7 @@ extra["displayName"] = "Smithy :: Java :: Codegen :: Core"
 extra["moduleName"] = "software.amazon.smithy.java.codegen.core"
 
 dependencies {
+    api(libs.smithy.codegen)
     itImplementation(project(":json-codec"))
 }
 

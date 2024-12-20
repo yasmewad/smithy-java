@@ -323,6 +323,16 @@ public final class CodegenUtils {
     }
 
     /**
+     * Gets the file name to use for the SharedTypeRegistry utility class
+     *
+     * @param settings Settings to use for package namespace
+     * @return shared registry file name
+     */
+    public static String getSharedRegistryFileName(JavaCodegenSettings settings) {
+        return String.format("./%s/model/SharedTypeRegistry.java", settings.packageNamespace().replace(".", "/"));
+    }
+
+    /**
      * Gets the namespace to use for generated pojo files
      *
      * @param settings Settings to use for package namespace
