@@ -61,12 +61,14 @@ public final class CodegenUtils {
 
     private static final String SCHEMA_STATIC_NAME = "$SCHEMA";
     private static final EnumSet<ShapeType> SHAPES_WITH_INNER_SCHEMA = EnumSet.of(
+            ShapeType.RESOURCE,
             ShapeType.OPERATION,
             ShapeType.SERVICE,
             ShapeType.ENUM,
             ShapeType.INT_ENUM,
             ShapeType.UNION,
             ShapeType.STRUCTURE);
+
     // Semver regex from spec.
     // See: https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
     private static final Pattern SEMVER_REGEX = Pattern.compile(

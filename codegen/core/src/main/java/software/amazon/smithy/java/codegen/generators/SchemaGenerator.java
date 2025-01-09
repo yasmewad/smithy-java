@@ -288,7 +288,8 @@ public final class SchemaGenerator implements ShapeVisitor<Void>, Runnable {
 
     @Override
     public Void resourceShape(ResourceShape resourceShape) {
-        throw new UnsupportedOperationException("Schema generation not supported for resource Shapes");
+        writer.write("static final ${schemaClass:T} ${name:L} = ${schemaClass:T}.createResource($$ID${traits:C});");
+        return null;
     }
 
     @Override

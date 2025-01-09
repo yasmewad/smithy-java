@@ -253,6 +253,10 @@ public abstract sealed class Schema implements MemberLookup
         return new RootSchema(ShapeType.OPERATION, id, TraitMap.create(traits));
     }
 
+    public static Schema createResource(ShapeId id, Trait... traits) {
+        return new RootSchema(ShapeType.RESOURCE, id, TraitMap.create(traits));
+    }
+
     public static Schema createService(ShapeId id, Trait... traits) {
         return new RootSchema(ShapeType.SERVICE, id, TraitMap.create(traits));
     }

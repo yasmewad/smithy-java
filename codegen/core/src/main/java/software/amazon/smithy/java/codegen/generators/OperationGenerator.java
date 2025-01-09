@@ -18,6 +18,7 @@ import software.amazon.smithy.java.codegen.JavaCodegenSettings;
 import software.amazon.smithy.java.codegen.sections.ClassSection;
 import software.amazon.smithy.java.codegen.writer.JavaWriter;
 import software.amazon.smithy.java.core.schema.ApiOperation;
+import software.amazon.smithy.java.core.schema.ApiResource;
 import software.amazon.smithy.java.core.schema.InputEventStreamingApiOperation;
 import software.amazon.smithy.java.core.schema.ModeledApiException;
 import software.amazon.smithy.java.core.schema.OutputEventStreamingApiOperation;
@@ -25,6 +26,7 @@ import software.amazon.smithy.java.core.schema.Schema;
 import software.amazon.smithy.java.core.schema.ShapeBuilder;
 import software.amazon.smithy.java.core.serde.TypeRegistry;
 import software.amazon.smithy.model.Model;
+import software.amazon.smithy.model.knowledge.BottomUpIndex;
 import software.amazon.smithy.model.knowledge.EventStreamIndex;
 import software.amazon.smithy.model.knowledge.ServiceIndex;
 import software.amazon.smithy.model.shapes.OperationShape;
@@ -58,7 +60,7 @@ public final class OperationGenerator
 
                                         private static final ${shape:T} $$INSTANCE = new ${shape:T}();
 
-                                        private ${schema:C|}
+                                        ${schema:C|}
 
                                         ${typeRegistrySection:C|}
 
@@ -68,6 +70,11 @@ public final class OperationGenerator
                                         ${?inputStreamMember}private static final ${sdkSchema:T} INPUT_STREAM_MEMBER = ${inputType:T}.$$SCHEMA.member(${inputStreamMember:S});${/inputStreamMember}
                                         ${?outputStreamMember}private static final ${sdkSchema:T} OUTPUT_STREAM_MEMBER = ${outputType:T}.$$SCHEMA.member(${outputStreamMember:S});${/outputStreamMember}
 
+                                        /**
+                                         * Get an instance of this {@code ApiOperation}.
+                                         *
+                                         * @return An instance of this class.
+                                         */
                                         public static ${shape:T} instance() {
                                             return $$INSTANCE;
                                         }
@@ -137,6 +144,13 @@ public final class OperationGenerator
                                         public ${sdkSchema:T} idempotencyTokenMember() {
                                             return ${?idempotencyTokenMember}IDEMPOTENCY_TOKEN_MEMBER${/idempotencyTokenMember}${^idempotencyTokenMember}null${/idempotencyTokenMember};
                                         }
+                                        ${?hasResource}
+
+                                        @Override
+                                        public ${resourceType:T} boundResource() {
+                                            return ${resource:T}.instance();
+                                        }
+                                        ${/hasResource}
                                     }""";
                     writer.putContext("inputType", input);
                     writer.putContext("outputType", output);
@@ -218,6 +232,15 @@ public final class OperationGenerator
                             break;
                         }
                     }
+
+                    var bottomUpIndex = BottomUpIndex.of(directive.model());
+                    var resourceOptional = bottomUpIndex.getResourceBinding(directive.service(), shape);
+                    writer.putContext("hasResource", resourceOptional.isPresent());
+                    writer.putContext("resourceType", ApiResource.class);
+                    resourceOptional.ifPresent(
+                            resourceShape -> writer.putContext("resource",
+                                    directive.symbolProvider().toSymbol(resourceShape)));
+
                     writer.write(template);
                     writer.popState();
                 });
