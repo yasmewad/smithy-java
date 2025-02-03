@@ -9,6 +9,7 @@ dependencies {
     api(project(":server:server-core"))
     implementation(project(":server:server-netty"))
     api(project(":aws:server:aws-server-restjson"))
+    implementation(libs.smithy.waiters)
 
     // Client dependencies
     api(project(":aws:client:aws-client-restjson"))
@@ -25,6 +26,8 @@ dependencies {
     implementation(project(":examples:middleware-example:client-integration"))
 
     // TODO: Add example server middleware once applicable
+    smithyBuild(project(":codegen:integrations:waiters-codegen"))
+    implementation(project(":client:waiters"))
 }
 
 jmh {
