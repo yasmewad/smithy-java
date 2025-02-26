@@ -40,6 +40,7 @@ dependencies {
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.junit.jupiter.params)
+    testImplementation(libs.junit.platform.launcher)
     testImplementation(libs.hamcrest)
     testImplementation(libs.assertj.core)
     compileOnly("com.github.spotbugs:spotbugs-annotations:${spotbugs.toolVersion.get()}")
