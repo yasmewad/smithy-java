@@ -25,13 +25,15 @@ public class ListBundles extends SmithyMcpCommand {
         registry
                 .listMcpBundles()
                 .forEach(bundle -> {
-                    StringBuilder builder = new StringBuilder(bundle.getName());
-                    if (bundle.getDescription() != null) {
-                        builder.append("\n").append("Description: ").append(bundle.getDescription());
-                    } else {
-                        builder.append("\n").append("MCP for ").append(bundle.getName());
+                    System.out.println(commandSpec().commandLine()
+                            .getColorScheme()
+                            .string("@|bold " + bundle.getName() + "|@"));
+                    var description = bundle.getDescription();
+                    if (description == null) {
+                        description = "MCP server for " + bundle.getName();
                     }
-                    System.out.println(builder);
+                    System.out.print("\tDescription: ");
+                    System.out.println(description);
                 });
 
     }
