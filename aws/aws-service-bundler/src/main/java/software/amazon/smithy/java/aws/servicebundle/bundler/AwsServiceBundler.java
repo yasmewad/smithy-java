@@ -109,8 +109,8 @@ public final class AwsServiceBundler extends ModelBundler {
         }
 
         public Builder readOnlyOperations() {
-            this.allowedPrefixes(ApiStandardTerminology.READ_ONLY_API_PREFIXES);
-            this.blockedPrefixes(ApiStandardTerminology.WRITE_API_PREFIXES);
+            this.allowedPrefixes(ApiStandardTerminology.getReadOnlyApiPrefixes());
+            this.blockedPrefixes(ApiStandardTerminology.getWriteApiPrefixes());
             return this;
         }
 
@@ -239,8 +239,10 @@ public final class AwsServiceBundler extends ModelBundler {
                 continue;
             }
 
-            if (endpoint.startsWith("https://") && endpoint.endsWith(region + ".amazonaws.com")) {
-                if (endpoint.endsWith(region + ".amazonaws.com") || endpoint.contains(region + ".amazonaws.com.")) {
+            if (endpoint.startsWith("https://")) {
+                if (endpoint.endsWith(region + ".amazonaws.com")
+                        || endpoint.contains(region + ".amazonaws.com.")
+                        || endpoint.endsWith(region + ".api.aws")) {
                     var prev = endpoints.put(region, endpoint);
                     if (prev != null && !endpoint.equals(prev)) {
                         throw new RuntimeException(
