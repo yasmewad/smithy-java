@@ -26,8 +26,8 @@ public class InstallBundle extends SmithyMcpCommand {
             description = "Name of the registry to list the bundles from. If not provided it will use the default registry.")
     String registryName;
 
-    @Parameters(description = "Name of the MCP bundle to install.")
-    String name;
+    @Parameters(description = "Names of the MCP bundles to install.")
+    Set<String> names;
 
     @Option(names = {"--clients"},
             description = "Names of client configs to update. If not specified all client configs registered would be updated")
@@ -41,28 +41,30 @@ public class InstallBundle extends SmithyMcpCommand {
     protected void execute(ExecutionContext context) throws IOException {
         var registry = context.registry();
         var config = context.config();
-        var bundle = registry.getMcpBundle(name);
-        ConfigUtils.addMcpBundle(config, name, bundle);
-        var command = "mcp-registry";
-        var args = List.of("start-server", name);
-        if (bundle.getValue() instanceof GenericBundle genericBundle && genericBundle.isExecuteDirectly()) {
-            command = genericBundle.getRun().getExecutable();
-            args = genericBundle.getRun().getArgs();
-        }
-        var newClientConfig = McpServerConfig.builder()
-                .command(command)
-                .args(args)
-                .build();
-        if (print == null) {
-            //By default, print the output if there are no configured client configs.
-            print = !config.hasClientConfigs();
-        }
-        ConfigUtils.addToClientConfigs(config, name, clients, newClientConfig);
+        for (var name : names) {
+            var bundle = registry.getMcpBundle(name);
+            ConfigUtils.addMcpBundle(config, name, bundle);
+            var command = "mcp-registry";
+            var args = List.of("start-server", name);
+            if (bundle.getValue() instanceof GenericBundle genericBundle && genericBundle.isExecuteDirectly()) {
+                command = genericBundle.getRun().getExecutable();
+                args = genericBundle.getRun().getArgs();
+            }
+            var newClientConfig = McpServerConfig.builder()
+                    .command(command)
+                    .args(args)
+                    .build();
+            if (print == null) {
+                //By default, print the output if there are no configured client configs.
+                print = !config.hasClientConfigs();
+            }
+            ConfigUtils.addToClientConfigs(config, name, clients, newClientConfig);
 
-        System.out.println("Successfully installed " + name);
-        if (print) {
-            System.out.println("You can add the following to your MCP Servers config to use " + name);
-            System.out.println(newClientConfig);
+            System.out.println("Successfully installed " + name);
+            if (print) {
+                System.out.println("You can add the following to your MCP Servers config to use " + name);
+                System.out.println(newClientConfig);
+            }
         }
     }
 
