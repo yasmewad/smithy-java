@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import software.amazon.smithy.java.core.schema.Schema;
 import software.amazon.smithy.java.core.schema.SerializableShape;
 import software.amazon.smithy.java.core.schema.SerializableStruct;
@@ -41,6 +43,14 @@ import software.amazon.smithy.java.mcp.model.JsonRpcErrorResponse;
 import software.amazon.smithy.java.mcp.model.JsonRpcRequest;
 import software.amazon.smithy.java.mcp.model.JsonRpcResponse;
 import software.amazon.smithy.java.mcp.model.ListToolsResult;
+import software.amazon.smithy.java.mcp.model.McpResource;
+import software.amazon.smithy.java.mcp.model.Message;
+import software.amazon.smithy.java.mcp.model.MessageContent;
+import software.amazon.smithy.java.mcp.model.PromptArgument;
+import software.amazon.smithy.java.mcp.model.PromptGetResult;
+import software.amazon.smithy.java.mcp.model.PromptInfo;
+import software.amazon.smithy.java.mcp.model.Prompts;
+import software.amazon.smithy.java.mcp.model.PromptsResult;
 import software.amazon.smithy.java.mcp.model.ServerInfo;
 import software.amazon.smithy.java.mcp.model.TextContent;
 import software.amazon.smithy.java.mcp.model.ToolInfo;
@@ -65,6 +75,7 @@ public final class McpServer implements Server {
             .build();
 
     private final Map<String, Tool> tools;
+    private final Map<String, PromptInfo> prompts;
     private final Thread listener;
     private final InputStream is;
     private final OutputStream os;
@@ -74,6 +85,7 @@ public final class McpServer implements Server {
 
     McpServer(McpServerBuilder builder) {
         this.tools = createTools(builder.serviceList);
+        this.prompts = createPrompts();
         this.is = builder.is;
         this.os = builder.os;
         this.name = builder.name;
@@ -111,12 +123,35 @@ public final class McpServer implements Server {
                         InitializeResult.builder()
                                 .capabilities(Capabilities.builder()
                                         .tools(Tools.builder().listChanged(true).build())
+                                        .prompts(Prompts.builder().listChanged(true).build())
                                         .build())
                                 .serverInfo(ServerInfo.builder()
                                         .name(name)
                                         .version("1.0.0")
                                         .build())
                                 .build());
+                case "prompts/list" -> writeResponse(req.getId(),
+                        PromptsResult.builder().prompts(prompts.values().stream().toList()).build());
+                case "prompts/get" -> {
+                    var promptName = req.getParams().getMember("name").asString();
+                    var promptArguments = req.getParams().getMember("arguments");
+
+                    if (prompts == null) {
+                        LOG.error("PROMPTS IS NULL");
+                        internalError(req, new RuntimeException("Prompts not found: " + promptName));
+                    }
+
+                    var prompt = prompts.get(promptName);
+
+                    if (prompt == null) {
+                        LOG.error("PROMPT IS NULL");
+                        internalError(req, new RuntimeException("Prompt not found: " + promptName));
+                        return;
+                    }
+
+                    var result = generatePromptResult(prompt, promptArguments);
+                    writeResponse(req.getId(), result);
+                }
                 case "tools/list" -> writeResponse(req.getId(),
                         ListToolsResult.builder().tools(tools.values().stream().map(Tool::toolInfo).toList()).build());
                 case "tools/call" -> {
@@ -242,6 +277,116 @@ public final class McpServer implements Server {
                 LOG.error("Error encoding response", e);
             }
         }
+    }
+
+    private static Map<String, PromptInfo> createPrompts() {
+        List<PromptInfo> prompts = new ArrayList<>();
+        // Add git-commit prompt
+        var gitCommit = PromptInfo.builder()
+                .name("git-commit")
+                .description("Generate a Git commit message")
+                .arguments(List.of(
+                        PromptArgument.builder()
+                                .name("changes")
+                                .description("Git diff or description of changes")
+                                .required(true)
+                                .build()))
+                .build();
+        prompts.add(gitCommit);
+
+        // Add explain-code prompt
+        var explainCode = PromptInfo.builder()
+                .name("explain-code")
+                .description("Explain how code works")
+                .arguments(List.of(
+                        PromptArgument.builder()
+                                .name("code")
+                                .description("Code to explain")
+                                .required(false)
+                                .build(),
+                        PromptArgument.builder()
+                                .name("language")
+                                .description("Programming language")
+                                .required(false)
+                                .build()))
+                .build();
+        prompts.add(explainCode);
+
+        // Fun prompts for testing
+
+        // Pirate translator
+        var pirateTalk = PromptInfo.builder()
+                .name("pirate-talk")
+                .description("Translate text into pirate speak")
+                .arguments(List.of(
+                        PromptArgument.builder()
+                                .name("text")
+                                .description("Text to translate")
+                                .required(true)
+                                .build()))
+                .build();
+        prompts.add(pirateTalk);
+
+        // Zombie apocalypse survival plan
+        var zombiePlan = PromptInfo.builder()
+                .name("zombie-plan")
+                .description("Generate a zombie apocalypse survival plan")
+                .arguments(List.of(
+                        PromptArgument.builder()
+                                .name("location")
+                                .description("Your current location")
+                                .required(true)
+                                .build(),
+                        PromptArgument.builder()
+                                .name("resources")
+                                .description("Resources you have available")
+                                .required(false)
+                                .build()))
+                .build();
+        prompts.add(zombiePlan);
+
+        // Haiku generator
+        var haikuGen = PromptInfo.builder()
+                .name("haiku")
+                .description("Generate a haiku about a topic")
+                .arguments(List.of(
+                        PromptArgument.builder()
+                                .name("topic")
+                                .description("Topic for the haiku")
+                                .required(true)
+                                .build()))
+                .build();
+        prompts.add(haikuGen);
+
+        // Example prompts for different prompt types
+
+        // Static prompt example
+        var staticExample = PromptInfo.builder()
+                .name("static-example")
+                .description("Example of a static prompt with predefined messages")
+                .build();
+        prompts.add(staticExample);
+
+        // Multi-step workflow example
+        var multiStepExample = PromptInfo.builder()
+                .name("multi-step-example")
+                .description("Example of a multi-step workflow with conversation history")
+                .build();
+        prompts.add(multiStepExample);
+
+        // Dynamic prompt example
+        var dynamicExample = PromptInfo.builder()
+                .name("dynamic-example")
+                .description("Example of a dynamic prompt with resource content")
+                .arguments(List.of(
+                        PromptArgument.builder()
+                                .name("logs")
+                                .description("Log content to analyze")
+                                .required(false)
+                                .build()))
+                .build();
+        prompts.add(dynamicExample);
+        return prompts.stream().collect(Collectors.toMap(PromptInfo::getName, Function.identity()));
     }
 
     private static Map<String, Tool> createTools(List<Service> serviceList) {
@@ -419,6 +564,238 @@ public final class McpServer implements Server {
         done.await();
     }
 
+    private PromptGetResult generatePromptResult(PromptInfo prompt, Document arguments) {
+        // Create a basic prompt result with the prompt description
+        var messages = new ArrayList<Message>();
+
+        switch (prompt.getName()) {
+            case "git-commit":
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("Generate a Git commit message for the following changes:\n\n" +
+                                        (arguments != null && arguments.getMember("changes") != null
+                                                ? arguments.getMember("changes").asString()
+                                                : ""))
+                                .build())
+                        .build());
+                break;
+
+            case "explain-code":
+                String codeLanguage = arguments != null && arguments.getMember("language") != null
+                        ? " written in " + arguments.getMember("language").asString()
+                        : "";
+                String codeContent = arguments != null && arguments.getMember("code") != null
+                        ? "```\n" + arguments.getMember("code").asString() + "\n```"
+                        : "";
+
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("Please explain the following code" + codeLanguage + ":\n\n" + codeContent)
+                                .build())
+                        .build());
+                break;
+
+            case "pirate-talk":
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("Translate the following text into pirate speak:\n\n" +
+                                        (arguments != null && arguments.getMember("text") != null
+                                                ? arguments.getMember("text").asString()
+                                                : ""))
+                                .build())
+                        .build());
+                break;
+
+            case "zombie-plan":
+                String location = arguments != null && arguments.getMember("location") != null
+                        ? arguments.getMember("location").asString()
+                        : "an unknown location";
+                String resources = arguments != null && arguments.getMember("resources") != null
+                        ? " with these resources: " + arguments.getMember("resources").asString()
+                        : " with limited resources";
+
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("Create a detailed zombie apocalypse survival plan for someone in " +
+                                        location + resources)
+                                .build())
+                        .build());
+                break;
+
+            case "haiku":
+                String topic = arguments != null && arguments.getMember("topic") != null
+                        ? arguments.getMember("topic").asString()
+                        : "nature";
+
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("Generate a haiku about " + topic)
+                                .build())
+                        .build());
+                break;
+
+            case "static-example":
+                // Static prompt with predefined messages
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("What are the best practices for AWS Lambda functions?")
+                                .build())
+                        .build());
+                break;
+
+            case "multi-step-example":
+                // Multi-step workflow with conversation history
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("I'm getting a timeout error in my Lambda function")
+                                .build())
+                        .build());
+
+                messages.add(Message.builder()
+                        .role("assistant")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("I'll help you troubleshoot this. What's the timeout setting for your Lambda?")
+                                .build())
+                        .build());
+
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("It's set to the default 3 seconds")
+                                .build())
+                        .build());
+                break;
+
+            case "dynamic-example":
+                // Dynamic prompt that incorporates arguments and resources
+                String resourceText = "No logs available";
+                if (arguments != null && arguments.getMember("logs") != null) {
+                    resourceText = arguments.getMember("logs").asString();
+                }
+
+                // User message with text
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("Analyze these logs for errors:")
+                                .build())
+                        .build());
+
+                // Resource content message
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("resource")
+                                .resource(McpResource.builder()
+                                        .uri("logs://recent")
+                                        .text(resourceText)
+                                        .mimeType("text/plain")
+                                        .build())
+                                .build())
+                        .build());
+                break;
+
+            default:
+                messages.add(Message.builder()
+                        .role("user")
+                        .content(MessageContent.builder()
+                                .typeMember("text")
+                                .text("Please provide information about: " + prompt.getName())
+                                .build())
+                        .build());
+        }
+
+        return PromptGetResult.builder()
+                .description(prompt.getDescription())
+                .messages(messages)
+                .build();
+    }
+
+    private String createPromptText(PromptInfo prompt, Document arguments) {
+        // Simple implementation - just create a text prompt based on the prompt name and arguments
+        StringBuilder sb = new StringBuilder();
+
+        switch (prompt.getName()) {
+            case "git-commit":
+                sb.append("Generate a Git commit message for the following changes:\\n\\n");
+                if (arguments != null && arguments.getMember("changes") != null) {
+                    sb.append(arguments.getMember("changes").asString());
+                }
+                break;
+
+            case "explain-code":
+                sb.append("Please explain the following code");
+
+                if (arguments != null && arguments.getMember("language") != null) {
+                    sb.append(" written in ").append(arguments.getMember("language").asString());
+                }
+
+                sb.append(":\\n\\n");
+
+                if (arguments != null && arguments.getMember("code") != null) {
+                    sb.append("```\\n");
+                    sb.append(arguments.getMember("code").asString());
+                    sb.append("\\n```");
+                }
+                break;
+
+            case "pirate-talk":
+                sb.append("Translate the following text into pirate speak:\\n\\n");
+                if (arguments != null && arguments.getMember("text") != null) {
+                    sb.append(arguments.getMember("text").asString());
+                }
+                break;
+
+            case "zombie-plan":
+                sb.append("Create a detailed zombie apocalypse survival plan for someone in ");
+                if (arguments != null && arguments.getMember("location") != null) {
+                    sb.append(arguments.getMember("location").asString());
+                } else {
+                    sb.append("an unknown location");
+                }
+
+                if (arguments != null && arguments.getMember("resources") != null) {
+                    sb.append(" with these resources: ").append(arguments.getMember("resources").asString());
+                } else {
+                    sb.append(" with limited resources");
+                }
+                break;
+
+            case "haiku":
+                sb.append("Generate a haiku about ");
+                if (arguments != null && arguments.getMember("topic") != null) {
+                    sb.append(arguments.getMember("topic").asString());
+                } else {
+                    sb.append("nature");
+                }
+                break;
+
+            default:
+                sb.append("Please provide information about: ").append(prompt.getName());
+        }
+
+        return sb.toString();
+    }
+
+    private record Prompt(String promptName, PromptInfo promptInfo, Message message) {}
+
     private record Tool(ToolInfo toolInfo, Operation operation, McpServerProxy proxy, boolean requiredAdapting) {
 
         Tool(ToolInfo toolInfo, Operation operation) {
@@ -447,12 +824,11 @@ public final class McpServer implements Server {
                 case BIG_INTEGER -> doc;
                 default -> badType(fromType, toType);
             };
-            case BIG_INTEGER ->
-                switch (fromType) {
-                    case STRING -> Document.of(new BigInteger(doc.asString()));
-                    case BIG_INTEGER -> doc;
-                    default -> badType(fromType, toType);
-                };
+            case BIG_INTEGER -> switch (fromType) {
+                case STRING -> Document.of(new BigInteger(doc.asString()));
+                case BIG_INTEGER -> doc;
+                default -> badType(fromType, toType);
+            };
             case BLOB -> switch (fromType) {
                 case STRING -> Document.of(doc.asString().getBytes(StandardCharsets.UTF_8));
                 case BLOB -> doc;
