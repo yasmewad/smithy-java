@@ -62,6 +62,7 @@ public class ConfigUtils {
 
     private static final Path CONFIG_DIR = getSmithyMcpCliHome();
     private static final Path BUNDLE_DIR = CONFIG_DIR.resolve("bundles");
+    private static final Path PROMPTS_DIR = CONFIG_DIR.resolve("prompts");
     private static final Path SHIMS_DIR = CONFIG_DIR.resolve("mcp-servers");
     private static final Path CONFIG_PATH = CONFIG_DIR.resolve("config.json");
 
@@ -84,6 +85,7 @@ public class ConfigUtils {
             ensureDirectoryExists(CONFIG_DIR);
             ensureDirectoryExists(BUNDLE_DIR);
             ensureDirectoryExists(SHIMS_DIR);
+            ensureDirectoryExists(PROMPTS_DIR);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -107,6 +109,15 @@ public class ConfigUtils {
             userHome = System.getProperty("user.home");
         }
         return Paths.get(userHome, paths);
+    }
+
+    /**
+     * Gets the default prompts directory path.
+     *
+     * @return Path to the prompts directory (~/.config/smithy-mcp/prompts)
+     */
+    public static Path getPromptsDir() {
+        return PROMPTS_DIR;
     }
 
     /**

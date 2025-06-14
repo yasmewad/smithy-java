@@ -5,6 +5,7 @@
 
 package software.amazon.smithy.java.mcp.server;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -12,6 +13,9 @@ import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,6 +26,9 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import software.amazon.smithy.java.core.schema.Schema;
 import software.amazon.smithy.java.core.schema.SerializableShape;
 import software.amazon.smithy.java.core.schema.SerializableStruct;
@@ -31,21 +38,7 @@ import software.amazon.smithy.java.framework.model.ValidationException;
 import software.amazon.smithy.java.json.JsonCodec;
 import software.amazon.smithy.java.json.JsonSettings;
 import software.amazon.smithy.java.logging.InternalLogger;
-import software.amazon.smithy.java.mcp.model.CallToolResult;
-import software.amazon.smithy.java.mcp.model.Capabilities;
-import software.amazon.smithy.java.mcp.model.InitializeResult;
-import software.amazon.smithy.java.mcp.model.JsonArraySchema;
-import software.amazon.smithy.java.mcp.model.JsonObjectSchema;
-import software.amazon.smithy.java.mcp.model.JsonPrimitiveSchema;
-import software.amazon.smithy.java.mcp.model.JsonPrimitiveType;
-import software.amazon.smithy.java.mcp.model.JsonRpcErrorResponse;
-import software.amazon.smithy.java.mcp.model.JsonRpcRequest;
-import software.amazon.smithy.java.mcp.model.JsonRpcResponse;
-import software.amazon.smithy.java.mcp.model.ListToolsResult;
-import software.amazon.smithy.java.mcp.model.ServerInfo;
-import software.amazon.smithy.java.mcp.model.TextContent;
-import software.amazon.smithy.java.mcp.model.ToolInfo;
-import software.amazon.smithy.java.mcp.model.Tools;
+import software.amazon.smithy.java.mcp.model.*;
 import software.amazon.smithy.java.server.Operation;
 import software.amazon.smithy.java.server.Server;
 import software.amazon.smithy.java.server.Service;
@@ -64,8 +57,10 @@ public final class McpServer implements Server {
                     .useJsonName(true)
                     .build())
             .build();
+    private static final Pattern PROMPT_ARGUMENT_PLACEHOLDER = Pattern.compile("\\{\\{(\\w+)\\}\\}");
 
     private final Map<String, Tool> tools;
+    private final Map<String, PromptInfo> prompts;
     private final Thread listener;
     private final InputStream is;
     private final OutputStream os;
@@ -75,6 +70,16 @@ public final class McpServer implements Server {
 
     McpServer(McpServerBuilder builder) {
         this.tools = createTools(builder.serviceList);
+
+        // Handle prompts path - allow null but log an error
+        if (builder.promptsPath == null) {
+            LOG.warn("Prompts path is null. Server will start but no prompts will be available.");
+            this.prompts = Map.of();
+        } else {
+            validatePromptsPath(builder.promptsPath);
+            this.prompts = loadPrompts(builder.promptsPath);
+        }
+
         this.is = builder.is;
         this.os = builder.os;
         this.name = builder.name;
@@ -113,12 +118,29 @@ public final class McpServer implements Server {
                         InitializeResult.builder()
                                 .capabilities(Capabilities.builder()
                                         .tools(Tools.builder().listChanged(true).build())
+                                        .prompts(Prompts.builder().listChanged(true).build())
                                         .build())
                                 .serverInfo(ServerInfo.builder()
                                         .name(name)
                                         .version("1.0.0")
                                         .build())
                                 .build());
+                case "prompts/list" -> writeResponse(req.getId(),
+                        ListPromptsResult.builder().prompts(prompts.values().stream().toList()).build());
+                case "prompts/get" -> {
+                    var promptName = req.getParams().getMember("name").asString();
+                    var promptArguments = req.getParams().getMember("arguments");
+
+                    var prompt = prompts.get(promptName);
+
+                    if (prompt == null) {
+                        internalError(req, new RuntimeException("Prompt not found: " + promptName));
+                        return;
+                    }
+
+                    var result = buildPromptResult(prompt, promptArguments);
+                    writeResponse(req.getId(), result);
+                }
                 case "tools/list" -> writeResponse(req.getId(),
                         ListToolsResult.builder().tools(tools.values().stream().map(Tool::toolInfo).toList()).build());
                 case "tools/call" -> {
@@ -262,6 +284,71 @@ public final class McpServer implements Server {
                 LOG.error("Error encoding response", e);
             }
         }
+    }
+
+    private static void validatePromptsPath(String promptsPath) {
+        if (promptsPath == null) {
+            // Path is null, validation will be skipped
+            return;
+        }
+
+        var path = Paths.get(promptsPath);
+        if (!Files.exists(path)) {
+            LOG.error("Invalid prompts path: " + promptsPath + " - path does not exist");
+        }
+    }
+
+    /**
+     * Loads prompts from a file or directory path.
+     * 
+     * @param promptsPath Path to a file or directory containing prompt definitions
+     * @return PromptData containing prompts and templates
+     */
+    private static Map<String, PromptInfo> loadPrompts(String promptsPath) {
+        Map<String, PromptInfo> prompts = Map.of();
+        // Handle null path
+        if (promptsPath == null) {
+            LOG.error("Cannot load prompts: path is null");
+            return prompts;
+        }
+
+        try {
+            Path path = Paths.get(promptsPath);
+            if (!Files.exists(path)) {
+                LOG.error("Cannot load prompts: path does not exist: " + promptsPath);
+                return prompts;
+            }
+            if (Files.isDirectory(path)) {
+                return loadPromptsFromDirectory(path);
+            } else {
+                return loadPromptsFromFile(path);
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to load prompts from: " + promptsPath, e);
+            return prompts;
+        }
+    }
+
+    private static Map<String, PromptInfo> loadPromptsFromFile(Path file) throws IOException {
+        String content = Files.readString(file);
+        PromptInfo doc = CODEC.deserializeShape(content, PromptInfo.builder());
+        return Map.of(doc.getName(), doc);
+    }
+
+    private static Map<String, PromptInfo> loadPromptsFromDirectory(Path dir) throws IOException {
+        Map<String, PromptInfo> allPrompts = new HashMap<>();
+
+        Files.walk(dir)
+                .filter(path -> path.toString().endsWith(".json"))
+                .forEach(file -> {
+                    try {
+                        allPrompts.putAll(loadPromptsFromFile(file));
+                    } catch (IOException e) {
+                        LOG.error("Failed to load prompts from file: " + file, e);
+                    }
+                });
+
+        return allPrompts;
     }
 
     private static Map<String, Tool> createTools(List<Service> serviceList) {
@@ -450,12 +537,131 @@ public final class McpServer implements Server {
         }
     }
 
+    private record Prompt(String promptName, PromptInfo promptInfo) {}
+
     private static String appendSentences(String first, String second) {
         first = first.trim();
         if (!first.endsWith(".")) {
             first = first + ". ";
         }
         return first + second;
+    }
+
+    private GetPromptResult buildPromptResult(PromptInfo prompt, Document arguments) {
+        String template = prompt.getTemplate();
+        if (template == null) {
+            return GetPromptResult.builder()
+                    .description(prompt.getDescription())
+                    .messages(List.of(
+                            PromptMessage.builder()
+                                    .role(PromptRole.ASSISTANT)
+                                    .content(PromptMessageContent.builder()
+                                            .typeMember(PromptMessageContentType.from("text"))
+                                            .text("Template is required for the prompt:" + prompt.getName())
+                                            .build())
+                                    .build()))
+                    .build();
+        }
+
+        var requiredArguments = getRequiredArguments(prompt);
+
+        if (!requiredArguments.isEmpty() && arguments == null) {
+            return GetPromptResult.builder()
+                    .description(prompt.getDescription())
+                    .messages(List.of(PromptMessage.builder()
+                            .role(PromptRole.USER)
+                            .content(PromptMessageContent.builder()
+                                    .typeMember(PromptMessageContentType.TEXT)
+                                    .text("Tell user that there are missing arguments for the prompt : "
+                                            + requiredArguments)
+                                    .build())
+                            .build()))
+                    .build();
+        }
+
+        String processedText = applyTemplateArguments(template, arguments);
+
+        return GetPromptResult.builder()
+                .description(prompt.getDescription())
+                .messages(List.of(
+                        PromptMessage.builder()
+                                .role(PromptRole.USER)
+                                .content(PromptMessageContent.builder()
+                                        .typeMember(PromptMessageContentType.TEXT)
+                                        .text(processedText)
+                                        .build())
+                                .build()))
+                .build();
+    }
+
+    private Set<String> getRequiredArguments(PromptInfo promptInfo) {
+        return promptInfo.getArguments()
+                .stream()
+                .filter(PromptArgument::isRequired)
+                .map(PromptArgument::getName)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Applies template arguments to a template string with maximum efficiency.
+     *
+     * @param template The template string containing {{placeholder}} patterns
+     * @param arguments Document containing replacement values
+     * @return The template with all placeholders replaced
+     */
+    private String applyTemplateArguments(String template, Document arguments) {
+        // Common cases
+        if (template == null || arguments == null || template.isEmpty()) {
+            return template;
+        }
+
+        // Avoid any regex work if there are no potential placeholders
+        int firstBrace = template.indexOf("{{");
+        if (firstBrace == -1) {
+            return template;
+        }
+
+        Matcher matcher = PROMPT_ARGUMENT_PLACEHOLDER.matcher(template);
+
+        int matchCount = 0;
+        int estimatedResultLength = template.length();
+        Map<String, String> replacementCache = new HashMap<>();
+
+        while (matcher.find()) {
+            matchCount++;
+            String argName = matcher.group(1);
+
+            // Only look up each unique argument once
+            if (!replacementCache.containsKey(argName)) {
+                Document argValue = arguments.getMember(argName);
+                String replacement = (argValue != null) ? argValue.asString() : "";
+                replacementCache.put(argName, replacement);
+
+                // Adjust estimated length (subtract placeholder length, add replacement length)
+                estimatedResultLength = estimatedResultLength - matcher.group(0).length() + replacement.length();
+            }
+        }
+
+        // If no matches found, return original template
+        if (matchCount == 0) {
+            return template;
+        }
+
+        // Reset matcher for the actual replacement pass
+        matcher.reset();
+
+        StringBuilder result = new StringBuilder(estimatedResultLength);
+
+        // Single-pass replacement using cached values
+        while (matcher.find()) {
+            String argName = matcher.group(1);
+            String replacement = replacementCache.get(argName);
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+        }
+
+        matcher.appendTail(result);
+
+        return result.toString();
     }
 
     private static Document adaptDocument(Document doc, Schema schema) {
@@ -467,12 +673,11 @@ public final class McpServer implements Server {
                 case BIG_INTEGER -> doc;
                 default -> badType(fromType, toType);
             };
-            case BIG_INTEGER ->
-                switch (fromType) {
-                    case STRING -> Document.of(new BigInteger(doc.asString()));
-                    case BIG_INTEGER -> doc;
-                    default -> badType(fromType, toType);
-                };
+            case BIG_INTEGER -> switch (fromType) {
+                case STRING -> Document.of(new BigInteger(doc.asString()));
+                case BIG_INTEGER -> doc;
+                default -> badType(fromType, toType);
+            };
             case BLOB -> switch (fromType) {
                 case STRING -> Document.of(doc.asString().getBytes(StandardCharsets.UTF_8));
                 case BLOB -> doc;

@@ -107,6 +107,38 @@ list ToolInfoList {
     member: ToolInfo
 }
 
+structure ListPromptsResult {
+    prompts: PromptInfoList
+}
+
+list PromptInfoList {
+    member: PromptInfo
+}
+
+structure PromptArgument {
+    @required
+    name: String
+
+    description: String
+
+    required: Boolean
+}
+
+list PromptArgumentList {
+    member: PromptArgument
+}
+
+structure PromptInfo {
+    @required
+    name: String
+
+    description: String
+
+    arguments: PromptArgumentList
+
+    template: String
+}
+
 structure JsonObjectSchema {
     @required
     type: String = "object"
@@ -181,4 +213,37 @@ structure TextContent {
     type: String
 
     text: String
+}
+
+structure PromptMessageContent {
+    @required
+    type: PromptMessageContentType = "text"
+
+    text: String
+}
+
+enum PromptMessageContentType {
+    TEXT = "text"
+}
+
+structure PromptMessage {
+    @required
+    role: PromptRole
+
+    @required
+    content: PromptMessageContent
+}
+
+enum PromptRole {
+    user
+    assistant
+}
+
+list PromptMessageList {
+    member: PromptMessage
+}
+
+structure GetPromptResult {
+    description: String
+    messages: PromptMessageList
 }

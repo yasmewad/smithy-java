@@ -58,6 +58,9 @@ public final class StartServer extends SmithyMcpCommand {
     @Option(names = "--registry-server", description = "Serve the registry as an MCP server")
     boolean registryServer;
 
+    @Option(names = "--prompts-path", description = "Path to prompts directory or file")
+    String promptsPath;
+
     @Unmatched
     List<String> additionalArgs;
 
@@ -163,8 +166,11 @@ public final class StartServer extends SmithyMcpCommand {
                         .build());
             }
 
-            this.mcpServer =
-                    (McpServer) McpServer.builder().stdio().addServices(services).name("smithy-mcp-server").build();
+            var builder = McpServer.builder().stdio().addServices(services).name("smithy-mcp-server");
+            // Use default prompts directory if no explicit path provided
+            String effectivePromptsPath = promptsPath != null ? promptsPath : ConfigUtils.getPromptsDir().toString();
+            builder.promptsPath(effectivePromptsPath);
+            this.mcpServer = (McpServer) builder.build();
             mcpServer.start();
             awaitCompletion = mcpServer::awaitCompletion;
             shutdownMethod = mcpServer::shutdown;

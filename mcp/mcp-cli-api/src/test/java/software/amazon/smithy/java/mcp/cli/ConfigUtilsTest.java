@@ -266,6 +266,16 @@ class ConfigUtilsTest {
     }
 
     @Test
+    void testGetPromptsDir() {
+        Path promptsDir = ConfigUtils.getPromptsDir();
+        assertNotNull(promptsDir);
+        assertTrue(promptsDir.toString().endsWith("prompts"));
+        // Verify it's under the config directory structure
+        assertTrue(promptsDir.toString().contains(".config"));
+        assertTrue(promptsDir.toString().contains("smithy-mcp"));
+    }
+
+    @Test
     void testRemoveFromClientConfigs_NonExistentClientConfig() throws IOException {
         // Setup
         assertFalse(Files.exists(nonExistentConfigPath));
