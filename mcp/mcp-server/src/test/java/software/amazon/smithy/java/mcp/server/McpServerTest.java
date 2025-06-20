@@ -120,6 +120,112 @@ public class McpServerTest {
     }
 
     @Test
+    void testNumberAndStringIds() {
+        server = McpServer.builder()
+                .input(input)
+                .output(output)
+                .addService(ProxyService.builder()
+                        .service(ShapeId.from("smithy.test#TestService"))
+                        .proxyEndpoint("http://localhost")
+                        .model(MODEL)
+                        .build())
+                .build();
+
+        server.start();
+
+        // Test with numeric ID
+        write("tools/list", Document.of(Map.of()), Document.of(42));
+        var response = read();
+        assertEquals(42, response.getId().asNumber().intValue());
+        assertNotNull(response.getResult());
+
+        // Test with string ID
+        write("tools/list", Document.of(Map.of()), Document.of("test-id-1"));
+        response = read();
+        assertEquals("test-id-1", response.getId().asString());
+        assertNotNull(response.getResult());
+
+        // Test sequence: number -> string -> number -> string
+        write("tools/list", Document.of(Map.of()), Document.of(1));
+        response = read();
+        assertEquals(1, response.getId().asNumber().intValue());
+
+        write("tools/list", Document.of(Map.of()), Document.of("mixed-test"));
+        response = read();
+        assertEquals("mixed-test", response.getId().asString());
+
+        write("tools/list", Document.of(Map.of()), Document.of(999));
+        response = read();
+        assertEquals(999, response.getId().asNumber().intValue());
+
+        write("tools/list", Document.of(Map.of()), Document.of("final-string-id"));
+        response = read();
+        assertEquals("final-string-id", response.getId().asString());
+    }
+
+    @Test
+    void testInvalidIds() {
+        server = McpServer.builder()
+                .input(input)
+                .output(output)
+                .addService(ProxyService.builder()
+                        .service(ShapeId.from("smithy.test#TestService"))
+                        .proxyEndpoint("http://localhost")
+                        .model(MODEL)
+                        .build())
+                .build();
+
+        server.start();
+
+        // Test with boolean ID (should fail)
+        write("tools/list", Document.of(Map.of()), Document.of(true));
+        var response = read();
+        assertNotNull(response.getError());
+        assertTrue(response.getError().getMessage().contains("Request id is of invalid type"));
+
+        // Test with double ID (should fail)
+        write("tools/list", Document.of(Map.of()), Document.of(3.14));
+        response = read();
+        assertNotNull(response.getError());
+        assertTrue(response.getError().getMessage().contains("Request id is of invalid type"));
+
+        // Test with array ID (should fail)
+        write("tools/list",
+                Document.of(Map.of()),
+                Document.of(List.of(Document.of(1), Document.of(2), Document.of(3))));
+        response = read();
+        assertNotNull(response.getError());
+        assertTrue(response.getError().getMessage().contains("Request id is of invalid type"));
+
+        // Test with object ID (should fail)
+        write("tools/list", Document.of(Map.of()), Document.of(Map.of("key", Document.of("value"))));
+        response = read();
+        assertNotNull(response.getError());
+        assertTrue(response.getError().getMessage().contains("Request id is of invalid type"));
+    }
+
+    @Test
+    void testRequestsRequireIds() {
+        server = McpServer.builder()
+                .input(input)
+                .output(output)
+                .addService(ProxyService.builder()
+                        .service(ShapeId.from("smithy.test#TestService"))
+                        .proxyEndpoint("http://localhost")
+                        .model(MODEL)
+                        .build())
+                .build();
+
+        server.start();
+
+        // Test regular request without ID (should fail with specific message)
+        write("tools/list", Document.of(Map.of()), null);
+        var response = read();
+        assertNotNull(response.getError());
+        assertTrue(response.getError().getMessage().contains("Requests are expected to have ids"));
+    }
+
+    @Test
     void testInputAdaptation() {
         AtomicReference<StructDocument> capturedInput = new AtomicReference<>();
         server = McpServer.builder()
@@ -224,6 +330,34 @@ public class McpServerTest {
         server.shutdown().join();
     }
 
+    @Test
+    void testNotificationsDoNotRequireRequestId() {
+        server = McpServer.builder()
+                .input(input)
+                .output(output)
+                .addService(ProxyService.builder()
+                        .service(ShapeId.from("smithy.test#TestService"))
+                        .proxyEndpoint("http://localhost")
+                        .model(MODEL)
+                        .build())
+                .build();
+
+        server.start();
+
+        // Test notifications/initialized without ID (should not produce any error response)
+        writeNotification("notifications/initialized", Document.of(Map.of()));
+        output.assertNoOutput();
+
+        // Test another notification to ensure it's consistently handled
+        writeNotification("notifications/progress", Document.of(Map.of("progressToken", Document.of("test"))));
+        output.assertNoOutput();
+
+        // Send a regular request to verify the server is still functioning
+        write("tools/list", Document.of(Map.of()));
+        var response = read();
+        assertNotNull(response.getResult());
+    }
+
     private void validateNestedStructure(Map<String, Document> properties) {
         var nestedStr = properties.get("nestedStr").asStringMap();
         assertEquals("string", nestedStr.get("type").asString());
@@ -243,8 +377,12 @@ public class McpServerTest {
     }
 
     private void write(String method, Document document) {
+        write(method, document, Document.of(id++));
+    }
+
+    private void write(String method, Document document, Document requestId) {
         var request = JsonRpcRequest.builder()
-                .id(id++)
+                .id(requestId)
                 .method(method)
                 .params(document)
                 .jsonrpc("2.0")
@@ -255,7 +393,18 @@ public class McpServerTest {
 
     private JsonRpcResponse read() {
         var line = output.read();
+        System.out.println(line);
         return CODEC.deserializeShape(line, JsonRpcResponse.builder());
+    }
+
+    private void writeNotification(String method, Document params) {
+        var request = JsonRpcRequest.builder()
+                .method(method)
+                .params(params)
+                .jsonrpc("2.0")
+                .build();
+        input.write(CODEC.serializeToString(request));
+        input.write("\n");
     }
 
     private static final String MODEL_STR = """
