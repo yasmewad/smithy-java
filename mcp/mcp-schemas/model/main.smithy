@@ -217,17 +217,26 @@ structure TextContent {
 
 structure PromptMessageContent {
     @required
-    type: String = "text"
+    type: PromptMessageContentType = "text"
 
     text: String
 }
 
+enum PromptMessageContentType {
+    TEXT = "text"
+}
+
 structure PromptMessage {
     @required
-    role: String
+    role: PromptRole
 
     @required
     content: PromptMessageContent
+}
+
+enum PromptRole {
+    user
+    assistant
 }
 
 list PromptMessageList {

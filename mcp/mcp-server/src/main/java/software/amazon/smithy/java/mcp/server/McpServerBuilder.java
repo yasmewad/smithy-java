@@ -23,8 +23,7 @@ public final class McpServerBuilder {
     List<Service> serviceList = new ArrayList<>();
     List<McpServerProxy> proxyList = new ArrayList<>();
     String name;
-
-    McpServerBuilder() {}
+    String promptsPath;
 
     public McpServerBuilder stdio() {
         this.is = System.in;
@@ -44,6 +43,20 @@ public final class McpServerBuilder {
 
     public McpServerBuilder name(String name) {
         this.name = name;
+        return this;
+    }
+
+    /**
+     * Sets the path to the prompts file or directory.
+     * <p>
+     * If the path is null, the server will log an error but still start without any prompts.
+     * If the path is valid, prompts will be loaded from the specified file or directory.
+     *
+     * @param promptsPath Path to a file or directory containing prompt definitions
+     * @return This builder for method chaining
+     */
+    public McpServerBuilder promptsPath(String promptsPath) {
+        this.promptsPath = promptsPath;
         return this;
     }
 
