@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "sources": ["model"],
+  "plugins": {
+    "trait-codegen": {
+      "package": "software.amazon.smithy.llm",
+      "namespace": "amazon.smithy.llm",
+      "header": []
+    }
+  }
+}
