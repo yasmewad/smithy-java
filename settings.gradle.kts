@@ -96,6 +96,7 @@ include(":examples:lambda")
 include(":examples:restjson-client")
 include(":examples:standalone-types")
 include(":examples:mcp-server")
+include(":examples:mcp-traits-example")
 
 //MCP
 include(":mcp")
@@ -104,6 +105,7 @@ include(":mcp:mcp-server")
 include(":mcp:mcp-cli")
 include(":mcp:mcp-cli-api")
 include(":mcp:mcp-bundle-api")
+include(":mcp:mcp-traits")
 
 include(":model-bundle")
 include(":model-bundle:model-bundle-api")
