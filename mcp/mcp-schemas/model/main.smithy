@@ -107,6 +107,36 @@ list ToolInfoList {
     member: ToolInfo
 }
 
+structure PromptsResult {
+    prompts: PromptList
+}
+
+list PromptList {
+    member: PromptInfo
+}
+
+structure PromptArgument {
+    @required
+    name: String
+
+    description: String
+
+    required: Boolean
+}
+
+list PromptArgumentList {
+    member: PromptArgument
+}
+
+structure PromptInfo {
+    @required
+    name: String
+
+    description: String
+
+    arguments: PromptArgumentList
+}
+
 structure JsonObjectSchema {
     @required
     type: String = "object"
@@ -181,4 +211,37 @@ structure TextContent {
     type: String
 
     text: String
+}
+
+structure McpResource {
+    uri: String
+    text: String
+    mimeType: String
+}
+
+// Updated MessageContent structure to match the MCP specification
+structure MessageContent {
+    @required
+    type: String = "text"
+
+    text: String
+
+    resource: McpResource
+}
+
+structure Message {
+    @required
+    role: String
+
+    @required
+    content: MessageContent
+}
+
+list MessageList {
+    member: Message
+}
+
+structure PromptGetResult {
+    description: String
+    messages: MessageList
 }
