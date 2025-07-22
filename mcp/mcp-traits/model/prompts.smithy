@@ -3,7 +3,7 @@ $version: "2"
 namespace amazon.smithy.llm
 
 // Prompt template trait - applied at operation level to provide guidance to LLMs
-@trait(selector: "service, resource, operation")
+@trait(selector: ":is(service, resource, operation)")
 map prompts {
     /// Name of the prompt template
     key: String
