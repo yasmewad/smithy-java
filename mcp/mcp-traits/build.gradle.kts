@@ -10,8 +10,7 @@ extra["moduleName"] = "software.amazon.smithy.java.mcp.traits"
 
 dependencies {
     api(libs.smithy.model)
-    api(libs.smithy.traitcodegen)
-    implementation(libs.smithy.traitcodegen)
+    compileOnly(libs.smithy.traitcodegen)
     testImplementation(libs.junit.jupiter.api)
     testImplementation(libs.assertj.core)
 }
