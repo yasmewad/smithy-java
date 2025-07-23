@@ -25,6 +25,31 @@ union McpBundleConfig {
     genericConfig: GenericToolBundleConfig
 }
 
+structure TelemetryData {
+    @required
+    command: String
+
+    @required
+    cliVersion: String
+
+    @required
+    @default({})
+    counters: Counters
+
+    @required
+    @default({})
+    properties: Properties
+
+    @required
+    @default({})
+    timings: Timings
+
+    @required
+    exitCode: PrimitiveInteger = 0
+
+    params: String
+}
+
 @mixin
 structure CommonToolConfig {
     name: String
@@ -116,6 +141,21 @@ list ArgsList {
 }
 
 map EnvVars {
+    key: String
+    value: String
+}
+
+map Counters {
+    key: String
+    value: PrimitiveLong
+}
+
+map Timings {
+    key: String
+    value: PrimitiveLong
+}
+
+map Properties {
     key: String
     value: String
 }
