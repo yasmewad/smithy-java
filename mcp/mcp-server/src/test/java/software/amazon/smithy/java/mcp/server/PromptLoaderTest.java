@@ -8,10 +8,8 @@ package software.amazon.smithy.java.mcp.server;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import software.amazon.smithy.java.mcp.model.PromptArgument;
 import software.amazon.smithy.java.mcp.model.PromptInfo;
