@@ -54,7 +54,7 @@ final class PromptLoader {
 
             });
             for (Map.Entry<String, PromptTemplateDefinition> entry : promptDefinitions.entrySet()) {
-                var promptName = entry.getKey().toLowerCase();
+                var promptName = entry.getKey();
                 var promptTemplateDefinition = entry.getValue();
                 var templateString = promptTemplateDefinition.getTemplate();
 
@@ -76,8 +76,20 @@ final class PromptLoader {
                                 : List.of())
                         .build();
 
+                var normalizedName = normalize(promptName);
+
+                if (prompts.containsKey(normalizedName)) {
+                    var existingPrompt = prompts.get(normalizedName);
+                    throw new RuntimeException(String.format(
+                            "Duplicate normalized prompt name '%s' found. " +
+                                    "Original name '%s' conflicts with previously registered name '%s'.",
+                            normalizedName,
+                            promptName,
+                            existingPrompt.promptInfo().getName()));
+                }
+
                 prompts.put(
-                        promptName,
+                        normalizedName,
                         new Prompt(promptInfo, finalTemplateString));
             }
         }
@@ -117,5 +129,9 @@ final class PromptLoader {
         }
 
         return promptArguments;
+    }
+
+    public static String normalize(String promptName) {
+        return promptName.toLowerCase();
     }
 }

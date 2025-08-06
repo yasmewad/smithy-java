@@ -5,6 +5,8 @@
 
 package software.amazon.smithy.java.mcp.server;
 
+import static software.amazon.smithy.java.mcp.server.PromptLoader.normalize;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -146,7 +148,7 @@ public final class McpServer implements Server {
                     var promptName = req.getParams().getMember("name").asString();
                     var promptArguments = req.getParams().getMember("arguments");
 
-                    var prompt = prompts.get(promptName);
+                    var prompt = prompts.get(normalize(promptName));
 
                     if (prompt == null) {
                         internalError(req, new RuntimeException("Prompt not found: " + promptName));
