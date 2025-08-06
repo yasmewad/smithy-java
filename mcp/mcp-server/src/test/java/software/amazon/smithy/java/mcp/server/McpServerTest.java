@@ -395,6 +395,16 @@ public class McpServerTest {
         assertEquals("search_users", servicePromptMap.get("name").asString());
         assertEquals("Test Template", servicePromptMap.get("description").asString());
         assertTrue(servicePromptMap.get("arguments").asList().isEmpty());
+
+        var promptNames = prompts.stream()
+                .map(p -> p.asStringMap().get("name").asString())
+                .toList();
+        assertTrue(promptNames.contains("search_users"));
+        assertTrue(promptNames.contains("perform_operation"));
+
+        for (String name : promptNames) {
+            assertEquals(name.toLowerCase(), name, "Prompt name should be normalized to lowercase: " + name);
+        }
     }
 
     @Test
@@ -431,6 +441,76 @@ public class McpServerTest {
     }
 
     @Test
+    void testPromptsGetWithDifferentCasing() {
+        server = McpServer.builder()
+                .input(input)
+                .output(output)
+                .addService("test-mcp",
+                        ProxyService.builder()
+                                .service(ShapeId.from("smithy.test#TestService"))
+                                .proxyEndpoint("http://localhost")
+                                .model(MODEL)
+                                .build())
+                .build();
+
+        server.start();
+
+        // Test with uppercase prompt name
+        write("prompts/get",
+                Document.of(Map.of(
+                        "name",
+                        Document.of("SEARCH_USERS"))));
+        var response = read();
+        var result = response.getResult().asStringMap();
+
+        assertEquals("Test Template", result.get("description").asString());
+        var messages = result.get("messages").asList();
+        assertEquals(1, messages.size());
+
+        var message = messages.get(0).asStringMap();
+        assertEquals("user", message.get("role").asString());
+        var content = message.get("content").asStringMap();
+        assertEquals("text", content.get("type").asString());
+        assertEquals("Search for if many results expected.", content.get("text").asString());
+
+        // Test with mixed case prompt name
+        write("prompts/get",
+                Document.of(Map.of(
+                        "name",
+                        Document.of("Search_Users"))));
+        response = read();
+        result = response.getResult().asStringMap();
+
+        assertEquals("Test Template", result.get("description").asString());
+        messages = result.get("messages").asList();
+        assertEquals(1, messages.size());
+
+        message = messages.get(0).asStringMap();
+        assertEquals("user", message.get("role").asString());
+        content = message.get("content").asStringMap();
+        assertEquals("text", content.get("type").asString());
+        assertEquals("Search for if many results expected.", content.get("text").asString());
+
+        // Test with perform_operation prompt in different case
+        write("prompts/get",
+                Document.of(Map.of(
+                        "name",
+                        Document.of("PERFORM_OPERATION"))));
+        response = read();
+        result = response.getResult().asStringMap();
+
+        assertEquals("perform operation", result.get("description").asString());
+        messages = result.get("messages").asList();
+        assertEquals(1, messages.size());
+
+        message = messages.get(0).asStringMap();
+        assertEquals("user", message.get("role").asString());
+        content = message.get("content").asStringMap();
+        assertEquals("text", content.get("type").asString());
+        assertEquals("use tool TestOperation with some information.", content.get("text").asString());
+    }
+
+    @Test
     void testPromptsGetWithInvalidPrompt() {
         server = McpServer.builder()
                 .input(input)
@@ -452,6 +532,15 @@ public class McpServerTest {
         var response = read();
         assertNotNull(response.getError());
         assertTrue(response.getError().getMessage().contains("Prompt not found: nonexistent_prompt"));
+
+        // Test with invalid prompt in different case - should still fail
+        write("prompts/get",
+                Document.of(Map.of(
+                        "name",
+                        Document.of("NONEXISTENT_PROMPT"))));
+        response = read();
+        assertNotNull(response.getError());
+        assertTrue(response.getError().getMessage().contains("Prompt not found: NONEXISTENT_PROMPT"));
     }
 
     @Test
