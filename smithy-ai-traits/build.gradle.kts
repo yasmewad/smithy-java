@@ -42,6 +42,10 @@ spotbugs {
     ignoreFailures = true
 }
 
+tasks.compileJava {
+    options.release.set(8)
+}
+
 java.sourceSets["main"].java {
     srcDirs("model", "src/main/smithy")
 }
