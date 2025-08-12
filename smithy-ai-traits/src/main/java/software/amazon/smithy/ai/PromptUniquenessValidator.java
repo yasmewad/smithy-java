@@ -46,17 +46,17 @@ public final class PromptUniquenessValidator extends AbstractValidator {
             }
         });
 
-        for (OperationShape operation : service.getOperations()
+        service.getOperations()
                 .stream()
                 .map(shapeId -> model.expectShape(shapeId, OperationShape.class))
-                .toList()) {
+                .forEach(operation -> {
 
-            operation.getTrait(PromptsTrait.class).ifPresent(promptsTrait -> {
-                for (String promptName : promptsTrait.getValues().keySet()) {
-                    checkPromptUniqueness(promptName, operation, seenPromptNames, events);
-                }
-            });
-        }
+                    operation.getTrait(PromptsTrait.class).ifPresent(promptsTrait -> {
+                        for (String promptName : promptsTrait.getValues().keySet()) {
+                            checkPromptUniqueness(promptName, operation, seenPromptNames, events);
+                        }
+                    });
+                });
     }
 
     private void checkPromptUniqueness(
