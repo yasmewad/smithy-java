@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 4 · The Codec Layer</title>
+<style>
+  :root{--ink:#1c1917;--muted:#57534e;--faint:#a8a29e;--bg:#fefdfb;--card:#fff;--line:#e7e2da;
+    --accent:#c2410c;--accent-soft:#fff4ed;--accent-line:#f5b896;--code-bg:#f5f2ee;
+    --good:#15803d;--good-bg:#f0fdf4;--bad:#b91c1c;--bad-bg:#fef2f2;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;font-size:17px;}
+  .wrap{max-width:820px;margin:0 auto;padding:56px 28px 110px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:33px;line-height:1.14;margin:.3em 0 .2em;letter-spacing:-.02em}
+  .lede{font-size:19px;color:var(--muted);margin:.2em 0 0}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  h2{font-size:23px;margin:48px 0 6px;letter-spacing:-.01em}
+  h2 .n{color:var(--accent-line);font-weight:800;margin-right:10px}
+  h3{font-size:18px;margin:30px 0 4px}
+  p{margin:14px 0}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--code-bg);padding:1.5px 6px;border-radius:5px;color:#9a3412}
+  pre{background:#1c1917;color:#f5f0e8;padding:18px 20px;border-radius:11px;overflow-x:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.6;margin:18px 0;border:1px solid #2c2622}
+  pre code{background:none;color:inherit;padding:0;font-size:inherit}
+  .c-key{color:#fbbf24}.c-type{color:#7dd3fc}.c-com{color:#a8a29e;font-style:italic}.c-str{color:#bef264}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-line)}
+  a:hover{background:var(--accent-soft)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:22px 24px;margin:22px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .note{background:var(--accent-soft);border:1px solid var(--accent-line);border-left:4px solid var(--accent);border-radius:9px;padding:14px 18px;margin:22px 0;font-size:15.5px;color:#7c2d12}
+  .note b{color:#7c2d12}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  td code{font-size:13px}
+  .quiz{background:var(--card);border:1.5px solid var(--accent-line);border-radius:14px;padding:24px 26px;margin:26px 0}
+  .quiz h3{margin-top:0;display:flex;align-items:center;gap:9px}
+  .q{margin:22px 0}.q p.stem{font-weight:600;margin:0 0 10px}
+  .opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:11px 15px;margin:7px 0;cursor:pointer;font-size:15.5px;color:var(--ink);transition:border-color .12s,background .12s;font-family:inherit}
+  .opt:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+  .opt.correct{border-color:var(--good);background:var(--good-bg);color:var(--good);font-weight:600}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+  .opt:disabled{cursor:default}
+  .fb{font-size:14.5px;margin-top:9px;padding:11px 14px;border-radius:8px;display:none}
+  .fb.show{display:block}.fb.ok{background:var(--good-bg);color:var(--good);border:1px solid #bbf7d0}.fb.no{background:var(--bad-bg);color:var(--bad);border:1px solid #fecaca}
+  .scoreline{margin-top:8px;font-size:14px;color:var(--muted)}
+  .askbox{background:#1c1917;color:#f5f0e8;border-radius:13px;padding:22px 26px;margin:40px 0 0}
+  .askbox h3{margin:0 0 8px;color:#fff}.askbox p{margin:6px 0;color:#d6d3d1;font-size:15.5px}.askbox code{background:#2c2622;color:#fbbf24}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+  @media print{body{font-size:11pt}.opt{border:1px solid #ccc}.askbox{background:#eee;color:#000}pre{background:#f5f2ee;color:#222}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">smithy-java · protocol track · lesson 4</div>
+  <h1>The Codec Layer</h1>
+  <p class="lede">Your protocol returns a <code>Codec</code> from <code>payloadCodec()</code>. That object is the bridge between schema-carrying shapes and raw bytes. This lesson shows what the <code>Codec</code> interface actually is — and the key decision: <em>reuse</em> a codec vs <em>write</em> one.</p>
+
+  <div class="meta">
+    <span><b>Goal</b> — Know what a Codec is &amp; when to write one</span>
+    <span><b>Time</b> — ~11 min</span>
+    <span><b>Builds on</b> — Lesson 3 (the serde interfaces)</span>
+  </div>
+
+  <h2><span class="n">1</span>The interface is tiny</h2>
+  <p>A <code>Codec</code> is just a factory for the two visitor implementations you met in Lesson 3, plus two convenience methods:</p>
+  <pre><code><span class="c-key">public interface</span> <span class="c-type">Codec</span> <span class="c-key">extends</span> AutoCloseable {
+    <span class="c-type">ShapeSerializer</span>   createSerializer(OutputStream sink);     <span class="c-com">// struct → bytes</span>
+    <span class="c-type">ShapeDeserializer</span> createDeserializer(ByteBuffer source);    <span class="c-com">// bytes → struct</span>
+
+    <span class="c-com">// Convenience, built on the two above:</span>
+    <span class="c-key">default</span> ByteBuffer serialize(SerializableShape shape) { ... }
+    <span class="c-key">default</span> &lt;T&gt; T deserializeShape(ByteBuffer src, ShapeBuilder&lt;T&gt; builder) { ... }
+}</code></pre>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/core/src/main/java/software/amazon/smithy/java/core/serde/Codec.java"><code>core/.../core/serde/Codec.java</code></a></p>
+
+  <p>That's the whole contract. When <code>AbstractRpcV2ClientProtocol</code> called <code>codec().serialize(input)</code> in Lesson 2, it used the <code>default serialize</code> here, which spins up a <code>ShapeSerializer</code>, lets the shape push its members into it, and collects the bytes.</p>
+
+  <h2><span class="n">2</span>The three codecs that ship today</h2>
+  <table>
+    <tr><th>Codec</th><th>Format</th><th>Notes</th></tr>
+    <tr><td><code>JsonCodec</code></td><td>JSON</td><td>Pluggable <code>JsonSerdeProvider</code>; options for <code>useJsonName</code>, timestamp format, pretty-print. Hand-written parser on <code>byte[]</code> — no Jackson on the hot path.</td></tr>
+    <tr><td><code>Rpcv2CborCodec</code></td><td>CBOR</td><td>Pluggable <code>CborSerdeProvider</code>; binary, compact. <code>VarHandle</code> for big-endian reads.</td></tr>
+    <tr><td><code>XmlCodec</code></td><td>XML</td><td>StAX-based; <code>wrapperElements</code> for AWS Query; honors XML traits.</td></tr>
+  </table>
+  <p>Note how protocols configure, not reimplement, these. <code>RestJsonClientProtocol</code> builds its codec with options tuned for REST JSON:</p>
+  <pre><code>this.codec = <span class="c-type">JsonCodec</span>.builder()
+    .useJsonName(<span class="c-key">true</span>)            <span class="c-com">// respect @jsonName</span>
+    .useTimestampFormat(<span class="c-key">true</span>)     <span class="c-com">// respect @timestampFormat</span>
+    .defaultNamespace(service.getNamespace())
+    .build();</code></pre>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/aws/client/aws-client-restjson/src/main/java/software/amazon/smithy/java/aws/client/restjson/RestJsonClientProtocol.java"><code>RestJsonClientProtocol.java</code></a></p>
+
+  <h2><span class="n">3</span>The decision: reuse or write?</h2>
+  <div class="note"><b>Default to reuse.</b> If your new protocol's body is JSON, CBOR, or XML — even with quirks — you configure an existing codec via its builder. You write a <em>new</em> codec only when the <strong>byte format itself</strong> is genuinely new (MessagePack, Protobuf, a bespoke binary layout). That's a much rarer and bigger task than "add a protocol."</div>
+
+  <p>Two distinct axes, often confused:</p>
+  <table>
+    <tr><th>Axis</th><th>What changes</th><th>Example</th></tr>
+    <tr><td><b>Protocol</b></td><td>Framing: URI, method, headers, how errors are signaled, where members bind</td><td>restJson1 vs AWS JSON 1.0 — <em>both use JSON</em></td></tr>
+    <tr><td><b>Codec</b></td><td>The payload byte encoding itself</td><td>JSON vs CBOR vs XML</td></tr>
+  </table>
+  <p>restJson1 and AWS JSON 1.0 share <code>JsonCodec</code> but are different <em>protocols</em>. rpcv2Cbor and a hypothetical rpcv2Json share framing but differ by <em>codec</em>. Knowing which axis you're moving on tells you how much work you're signing up for.</p>
+
+  <p>If you <em>do</em> write a codec, the steps (from the KT doc's "Adding a new codec"):</p>
+  <pre><code><span class="c-com">1.</span> Implement Codec, ShapeSerializer, ShapeDeserializer in a new module
+<span class="c-com">2.</span> Add a SchemaExtensionProvider to precompute trait-derived wire data  <span class="c-com">// Lesson 5</span>
+<span class="c-com">3.</span> Register the codec's extension via ServiceLoader in META-INF/services/
+<span class="c-com">4.</span> Add protocol compliance tests                                       <span class="c-com">// Lesson 7</span></code></pre>
+
+  <div class="quiz">
+    <h3>🔁 Quick check</h3>
+
+    <div class="q" data-correct="b">
+      <p class="stem">1. What are the two methods that <em>define</em> a <code>Codec</code> (everything else is a default)?</p>
+      <button class="opt" data-k="a"><code>encode()</code> and <code>decode()</code></button>
+      <button class="opt" data-k="b"><code>createSerializer(OutputStream)</code> and <code>createDeserializer(ByteBuffer)</code></button>
+      <button class="opt" data-k="c"><code>serialize()</code> and <code>deserializeShape()</code></button>
+      <div class="fb" data-k="a">Not the actual method names — the codec produces visitor objects, it doesn't encode directly.</div>
+      <div class="fb" data-k="b">Right. A codec is a <em>factory</em> for a <code>ShapeSerializer</code> and a <code>ShapeDeserializer</code>. Those visitors do the work.</div>
+      <div class="fb" data-k="c">Those are the <em>default</em> convenience methods built on top of the two factory methods.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <p class="stem">2. Your new protocol sends JSON bodies but with AWS-JSON-style framing (X-Amz-Target header, full-body payload). Do you write a new codec?</p>
+      <button class="opt" data-k="a">Yes — different protocol means different codec.</button>
+      <button class="opt" data-k="b">Yes — the header changes the byte format.</button>
+      <button class="opt" data-k="c">No — the byte format is still JSON. You reuse <code>JsonCodec</code> and put the framing in your <code>ClientProtocol</code>.</button>
+      <div class="fb" data-k="a">Protocol ≠ codec. restJson1 and AWS JSON are different protocols sharing one JSON codec.</div>
+      <div class="fb" data-k="b">Headers are framing, not payload bytes. The body is still JSON.</div>
+      <div class="fb" data-k="c">Exactly. Framing lives in the protocol; the codec only encodes the body. Reuse <code>JsonCodec</code>.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <p class="stem">3. How does <code>RestJsonClientProtocol</code> make its codec honor <code>@jsonName</code>?</p>
+      <button class="opt" data-k="a">It configures the builder: <code>JsonCodec.builder().useJsonName(true)</code>.</button>
+      <button class="opt" data-k="b">It subclasses <code>JsonCodec</code> and overrides field naming.</button>
+      <button class="opt" data-k="c">It reads <code>@jsonName</code> at request time inside <code>createRequest</code>.</button>
+      <div class="fb" data-k="a">Correct. Codecs are configured through their builders — a flag flips precomputed-field-name behavior. No subclassing, no per-request trait reads.</div>
+      <div class="fb" data-k="b">No subclassing needed — it's a builder option.</div>
+      <div class="fb" data-k="c">That'd be a hot-path trait lookup, which the design forbids (Lesson 3).</div>
+    </div>
+    <div class="scoreline" id="score"></div>
+  </div>
+
+  <h2><span class="n">4</span>What you now know</h2>
+  <p>You can describe the <code>Codec</code> interface (two factory methods + two conveniences), name the three shipping codecs, and — crucially — separate the <strong>protocol axis</strong> (framing) from the <strong>codec axis</strong> (byte format). That distinction is what makes "add a protocol" usually a small job. <strong>Lesson 5</strong> covers the schema-extension SPI: how a codec/protocol precomputes its wire data and registers it so the framework finds it.</p>
+
+  <div class="askbox">
+    <h3>💬 Ask me anything</h3>
+    <p>• <code>"Walk me through JsonCodec.serialize end-to-end for a 2-field struct"</code><br>
+       • <code>"What's a JsonSerdeProvider and why is it pluggable?"</code><br>
+       • <code>"Is XmlCodec really safe to reuse? The KT doc calls it less battle-tested."</code></p>
+    <p style="margin-top:10px">Say <b>"next lesson"</b> for Lesson 5: the schema-extension SPI.</p>
+  </div>
+
+  <footer>Lesson 4 of the smithy-java protocol track · <a href="../reference/glossary.html">Glossary</a> · Prev: <a href="0003-schema-directed-serde.html">Lesson 3</a></footer>
+</div>
+<script>
+  let answered=0,correct=0;
+  document.querySelectorAll('.q').forEach(q=>{
+    const key=q.dataset.correct,opts=q.querySelectorAll('.opt');
+    opts.forEach(opt=>opt.addEventListener('click',()=>{
+      if(q.dataset.done)return;q.dataset.done="1";answered++;
+      const chosen=opt.dataset.k;if(chosen===key)correct++;
+      opts.forEach(o=>{o.disabled=true;if(o.dataset.k===key)o.classList.add('correct');else if(o.dataset.k===chosen)o.classList.add('wrong');});
+      const fb=q.querySelector('.fb[data-k="'+chosen+'"]');if(fb)fb.classList.add('show',chosen===key?'ok':'no');
+      document.getElementById('score').textContent=`Answered ${answered}/3 · ${correct} correct`+(answered===3?(correct===3?"  — on to Lesson 5.":"  — re-read the misses, then say \"next lesson\"."):"");
+    }));
+  });
+</script>
+</body>
+</html>

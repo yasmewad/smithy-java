@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 3 · Schema-Directed Serde</title>
+<style>
+  :root{--ink:#1c1917;--muted:#57534e;--faint:#a8a29e;--bg:#fefdfb;--card:#fff;--line:#e7e2da;
+    --accent:#c2410c;--accent-soft:#fff4ed;--accent-line:#f5b896;--code-bg:#f5f2ee;
+    --good:#15803d;--good-bg:#f0fdf4;--bad:#b91c1c;--bad-bg:#fef2f2;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;font-size:17px;}
+  .wrap{max-width:820px;margin:0 auto;padding:56px 28px 110px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:33px;line-height:1.14;margin:.3em 0 .2em;letter-spacing:-.02em}
+  .lede{font-size:19px;color:var(--muted);margin:.2em 0 0}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  h2{font-size:23px;margin:48px 0 6px;letter-spacing:-.01em}
+  h2 .n{color:var(--accent-line);font-weight:800;margin-right:10px}
+  h3{font-size:18px;margin:30px 0 4px}
+  p{margin:14px 0}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--code-bg);padding:1.5px 6px;border-radius:5px;color:#9a3412}
+  pre{background:#1c1917;color:#f5f0e8;padding:18px 20px;border-radius:11px;overflow-x:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.6;margin:18px 0;border:1px solid #2c2622}
+  pre code{background:none;color:inherit;padding:0;font-size:inherit}
+  .c-key{color:#fbbf24}.c-type{color:#7dd3fc}.c-com{color:#a8a29e;font-style:italic}.c-str{color:#bef264}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-line)}
+  a:hover{background:var(--accent-soft)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:22px 24px;margin:22px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .note{background:var(--accent-soft);border:1px solid var(--accent-line);border-left:4px solid var(--accent);border-radius:9px;padding:14px 18px;margin:22px 0;font-size:15.5px;color:#7c2d12}
+  .note b{color:#7c2d12}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+  .cols .card{margin:0}
+  .cols h4{margin:0 0 8px;font-size:15px;color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  td code{font-size:13px}
+  .quiz{background:var(--card);border:1.5px solid var(--accent-line);border-radius:14px;padding:24px 26px;margin:26px 0}
+  .quiz h3{margin-top:0;display:flex;align-items:center;gap:9px}
+  .q{margin:22px 0}.q p.stem{font-weight:600;margin:0 0 10px}
+  .opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:11px 15px;margin:7px 0;cursor:pointer;font-size:15.5px;color:var(--ink);transition:border-color .12s,background .12s;font-family:inherit}
+  .opt:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+  .opt.correct{border-color:var(--good);background:var(--good-bg);color:var(--good);font-weight:600}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+  .opt:disabled{cursor:default}
+  .fb{font-size:14.5px;margin-top:9px;padding:11px 14px;border-radius:8px;display:none}
+  .fb.show{display:block}.fb.ok{background:var(--good-bg);color:var(--good);border:1px solid #bbf7d0}.fb.no{background:var(--bad-bg);color:var(--bad);border:1px solid #fecaca}
+  .scoreline{margin-top:8px;font-size:14px;color:var(--muted)}
+  .askbox{background:#1c1917;color:#f5f0e8;border-radius:13px;padding:22px 26px;margin:40px 0 0}
+  .askbox h3{margin:0 0 8px;color:#fff}.askbox p{margin:6px 0;color:#d6d3d1;font-size:15.5px}.askbox code{background:#2c2622;color:#fbbf24}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+  @media print{body{font-size:11pt}.opt{border:1px solid #ccc}.askbox{background:#eee;color:#000}pre{background:#f5f2ee;color:#222}.cols{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">smithy-java · protocol track · lesson 3</div>
+  <h1>Schema-Directed Serde</h1>
+  <p class="lede">Lesson 2 ended on <code>codec().serialize(input)</code>. <em>How</em> does that produce JSON or CBOR from a generated shape — with no reflection, and without the shape knowing which protocol is active? This is the single most important idea in the framework. Get it, and protocols stop being mysterious.</p>
+
+  <div class="meta">
+    <span><b>Goal</b> — Understand why protocols ⊥ generated code</span>
+    <span><b>Time</b> — ~12 min</span>
+    <span><b>Builds on</b> — Lesson 2 (codec is the pivot)</span>
+  </div>
+
+  <h2><span class="n">1</span>The problem it solves</h2>
+  <p>You have generated shape classes (<code>PutItemInput</code>, etc.) and you have protocols (JSON, CBOR, XML). The naive design couples them: each shape knows how to write itself as JSON. But then adding a protocol means regenerating every shape, and the shape carries N serializers. smithy-java refuses that.</p>
+  <p>The insight: put a <strong><code>Schema</code></strong> between them. The shape knows its schema and pushes its members; the protocol reads schemas and decides wire format. <strong>Neither imports the other.</strong></p>
+
+  <div class="note"><b>One line to remember:</b> the <code>Schema</code> is the first argument to <em>every</em> serde method. That's not a style choice — it's the entire decoupling mechanism. The schema is the contract; the protocol and the shape only ever talk <em>through</em> it.</div>
+
+  <h2><span class="n">2</span>The two sides: push and interpret</h2>
+  <div class="cols">
+    <div class="card">
+      <h4>① The shape pushes (generated)</h4>
+      <pre style="margin:0;font-size:12.5px"><code><span class="c-key">public void</span> serializeMembers(
+        ShapeSerializer ser) {
+  ser.writeString($SCHEMA_NAME, name);
+  ser.writeInteger($SCHEMA_AGE, age);
+}</code></pre>
+      <p style="font-size:13.5px;margin:10px 0 0;color:var(--muted)">Each member is pushed with <em>its schema</em>. The shape has no idea if this is JSON or CBOR.</p>
+    </div>
+    <div class="card">
+      <h4>② The codec interprets</h4>
+      <pre style="margin:0;font-size:12.5px"><code><span class="c-key">void</span> writeString(Schema s, String v) {
+  <span class="c-com">// JSON codec: look up the</span>
+  <span class="c-com">// precomputed field-name bytes</span>
+  <span class="c-com">// for s, arraycopy, write v</span>
+}</code></pre>
+      <p style="font-size:13.5px;margin:10px 0 0;color:var(--muted)">The codec implements <code>ShapeSerializer</code>. It reads the schema to decide bytes.</p>
+    </div>
+  </div>
+
+  <p>The interface that connects them — every method takes a <code>Schema</code> first:</p>
+  <pre><code><span class="c-key">public interface</span> <span class="c-type">ShapeSerializer</span> <span class="c-key">extends</span> Flushable, AutoCloseable {
+    <span class="c-key">void</span> writeStruct(<span class="c-type">Schema</span> schema, SerializableStruct struct);
+    <span class="c-key">void</span> writeString(<span class="c-type">Schema</span> schema, String value);
+    <span class="c-key">void</span> writeInteger(<span class="c-type">Schema</span> schema, int value);
+    <span class="c-key">void</span> writeTimestamp(<span class="c-type">Schema</span> schema, Instant value);
+    &lt;T&gt; <span class="c-key">void</span> writeList(<span class="c-type">Schema</span> schema, T state, <span class="c-key">int</span> size, BiConsumer&lt;T, ShapeSerializer&gt; consumer);
+    <span class="c-com">// ... every write takes the member's Schema first</span>
+}</code></pre>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/core/src/main/java/software/amazon/smithy/java/core/serde/ShapeSerializer.java"><code>core/.../core/serde/ShapeSerializer.java</code></a></p>
+
+  <h2><span class="n">3</span>Deserialization inverts it: a callback by index</h2>
+  <p>Reading is the mirror image. The codec reads wire bytes, resolves them to a member schema, and calls back. The generated builder dispatches on <code>memberIndex()</code> — which the compiler turns into a <code>tableswitch</code>, no string compares:</p>
+  <pre><code>decoder.readStruct($SCHEMA, <span class="c-key">this</span>, (builder, member, de) -> {
+    <span class="c-key">switch</span> (member.memberIndex()) {        <span class="c-com">// JVM tableswitch — O(1)</span>
+        <span class="c-key">case</span> <span class="c-str">0</span> -> builder.name(de.readString(member));
+        <span class="c-key">case</span> <span class="c-str">1</span> -> builder.age(de.readInteger(member));
+    }
+});</code></pre>
+  <p>The codec owns the field loop; the shape owns the per-field action. Again: they meet only at the schema.</p>
+
+  <h2><span class="n">4</span>Why no trait lookups on the hot path</h2>
+  <p>"The schema decides the wire format" sounds like it'd inspect traits (<code>@jsonName</code>, <code>@timestampFormat</code>) at write time. It doesn't — that would be slow. Instead, each protocol <strong>precomputes</strong> what it needs onto the schema <em>once</em>, into a <em>schema extension</em>:</p>
+  <table>
+    <tr><th>Extension</th><th>Precomputes</th><th>So <code>writeString</code> can…</th></tr>
+    <tr><td><code>SmithyJsonSchemaExtensions</code></td><td><code>byte[][]</code> field-name tables (with quotes+colon, honoring <code>@jsonName</code>)</td><td>do <code>table[memberIndex]</code> → <code>System.arraycopy</code></td></tr>
+    <tr><td><code>CborSchemaExtensions</code></td><td><code>byte[][]</code> CBOR-encoded field names</td><td>same O(1) array index</td></tr>
+    <tr><td><code>HttpBindingSchemaExtensions</code></td><td>binding location (HEADER/QUERY/LABEL/BODY), timestamp formats</td><td>route the member to the right HTTP place</td></tr>
+  </table>
+  <p>So at serialization time there are <em>no</em> trait lookups, no hashing — just an array index and a memory copy. The trait reading happened once, at schema construction. <strong>You'll meet the extension SPI properly in Lesson 5</strong>; for now just hold the shape of it.</p>
+
+  <div class="note"><b>The protocol-author payoff:</b> because the same <code>serializeMembers()</code> works for any codec, <em>adding a protocol never requires regenerating shapes</em>. You write a codec (or reuse one) + a schema extension to precompute your wire data. The generated code is already protocol-agnostic and waiting for you.</div>
+
+  <div class="quiz">
+    <h3>🔁 Quick check</h3>
+
+    <div class="q" data-correct="c">
+      <p class="stem">1. Why is <code>Schema</code> the first argument to every <code>ShapeSerializer</code> method?</p>
+      <button class="opt" data-k="a">For logging/debugging — it identifies the field by name.</button>
+      <button class="opt" data-k="b">Java requires interface methods to share a first parameter.</button>
+      <button class="opt" data-k="c">It's the decoupling contract: the shape pushes a member + its schema; the codec reads the schema to decide wire format. Neither side imports the other.</button>
+      <div class="fb" data-k="a">It's used for far more than logging — it carries the precomputed wire data the codec needs.</div>
+      <div class="fb" data-k="b">No such requirement exists; this is a deliberate design choice.</div>
+      <div class="fb" data-k="c">Exactly. The schema is the meeting point. That's what lets one generated shape serialize as JSON, CBOR, or XML with no changes.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <p class="stem">2. A teammate says "let's read the <code>@jsonName</code> trait inside <code>writeString</code> to get the field name." Why does the codebase avoid this?</p>
+      <button class="opt" data-k="a">Traits aren't available at runtime.</button>
+      <button class="opt" data-k="b">It's on the hot path. The field-name bytes are precomputed into a schema extension once; <code>writeString</code> just does an array index + arraycopy.</button>
+      <button class="opt" data-k="c">Because <code>@jsonName</code> only exists for XML protocols.</button>
+      <div class="fb" data-k="a">Traits are available — they're just not consulted per-write for performance reasons.</div>
+      <div class="fb" data-k="b">Right. Precompute-once, index-many. Trait inspection per field per request would be death by a thousand cuts (Tenet 3: Performance).</div>
+      <div class="fb" data-k="c"><code>@jsonName</code> is a JSON concern; and the point is <em>when</em> it's read, not which protocol.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <p class="stem">3. On the deserialize side, the generated builder does <code>switch(member.memberIndex())</code>. Why an integer index instead of matching field names?</p>
+      <button class="opt" data-k="a">The compiler turns it into a <code>tableswitch</code> — O(1) dispatch, no string comparisons.</button>
+      <button class="opt" data-k="b">Field names aren't known until runtime.</button>
+      <button class="opt" data-k="c">It's required by the <code>ServiceLoader</code> SPI.</button>
+      <div class="fb" data-k="a">Correct. The codec resolves wire bytes → member schema (with a fast speculative path), then the shape dispatches by dense integer index. Fast and allocation-free.</div>
+      <div class="fb" data-k="b">Field names are known from the schema; the index is a performance optimization over comparing them.</div>
+      <div class="fb" data-k="c">Unrelated to ServiceLoader — this is purely a dispatch optimization.</div>
+    </div>
+    <div class="scoreline" id="score"></div>
+  </div>
+
+  <h2><span class="n">5</span>What you now know</h2>
+  <p>You can explain <em>why</em> a protocol and a generated shape never know about each other, and how the <code>Schema</code>-as-first-argument design makes one shape serialize to any format. You know wire decisions are precomputed into schema extensions, not read per-write. That's the conceptual core. <strong>Lesson 4</strong> zooms into the <code>Codec</code> itself — the object your protocol returns from <code>payloadCodec()</code> — and what it takes to pick or build one.</p>
+
+  <div class="askbox">
+    <h3>💬 Ask me anything</h3>
+    <p>• <code>"Show me a real generated serializeMembers() in the repo"</code><br>
+       • <code>"How does the codec resolve wire bytes back to a memberIndex?"</code> (the speculative fast path)<br>
+       • <code>"What about the document type — shapes with no fixed schema?"</code></p>
+    <p style="margin-top:10px">Say <b>"next lesson"</b> for Lesson 4: the Codec layer.</p>
+  </div>
+
+  <footer>Lesson 3 of the smithy-java protocol track · <a href="../reference/glossary.html">Glossary</a> · Prev: <a href="0002-smallest-real-protocol.html">Lesson 2</a></footer>
+</div>
+<script>
+  let answered=0,correct=0;
+  document.querySelectorAll('.q').forEach(q=>{
+    const key=q.dataset.correct,opts=q.querySelectorAll('.opt');
+    opts.forEach(opt=>opt.addEventListener('click',()=>{
+      if(q.dataset.done)return;q.dataset.done="1";answered++;
+      const chosen=opt.dataset.k;if(chosen===key)correct++;
+      opts.forEach(o=>{o.disabled=true;if(o.dataset.k===key)o.classList.add('correct');else if(o.dataset.k===chosen)o.classList.add('wrong');});
+      const fb=q.querySelector('.fb[data-k="'+chosen+'"]');if(fb)fb.classList.add('show',chosen===key?'ok':'no');
+      document.getElementById('score').textContent=`Answered ${answered}/3 · ${correct} correct`+(answered===3?(correct===3?"  — you've got the core idea. On to Lesson 4.":"  — re-read the misses, then say \"next lesson\"."):"");
+    }));
+  });
+</script>
+</body>
+</html>

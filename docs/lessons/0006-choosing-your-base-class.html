@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 6 · Choosing Your Base Class</title>
+<style>
+  :root{--ink:#1c1917;--muted:#57534e;--faint:#a8a29e;--bg:#fefdfb;--card:#fff;--line:#e7e2da;
+    --accent:#c2410c;--accent-soft:#fff4ed;--accent-line:#f5b896;--code-bg:#f5f2ee;
+    --good:#15803d;--good-bg:#f0fdf4;--bad:#b91c1c;--bad-bg:#fef2f2;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;font-size:17px;}
+  .wrap{max-width:820px;margin:0 auto;padding:56px 28px 110px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:33px;line-height:1.14;margin:.3em 0 .2em;letter-spacing:-.02em}
+  .lede{font-size:19px;color:var(--muted);margin:.2em 0 0}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  h2{font-size:23px;margin:48px 0 6px;letter-spacing:-.01em}
+  h2 .n{color:var(--accent-line);font-weight:800;margin-right:10px}
+  h3{font-size:18px;margin:30px 0 4px}
+  p{margin:14px 0}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--code-bg);padding:1.5px 6px;border-radius:5px;color:#9a3412}
+  pre{background:#1c1917;color:#f5f0e8;padding:18px 20px;border-radius:11px;overflow-x:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.6;margin:18px 0;border:1px solid #2c2622}
+  pre code{background:none;color:inherit;padding:0;font-size:inherit}
+  .c-key{color:#fbbf24}.c-type{color:#7dd3fc}.c-com{color:#a8a29e;font-style:italic}.c-str{color:#bef264}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-line)}
+  a:hover{background:var(--accent-soft)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:22px 24px;margin:22px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .note{background:var(--accent-soft);border:1px solid var(--accent-line);border-left:4px solid var(--accent);border-radius:9px;padding:14px 18px;margin:22px 0;font-size:15.5px;color:#7c2d12}
+  .note b{color:#7c2d12}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+  th,td{text-align:left;padding:10px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  td code{font-size:12.5px}
+  .decide{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+  .decide .card{margin:0}
+  .decide h4{margin:0 0 6px;font-size:16px;color:var(--accent)}
+  .decide ul{margin:8px 0 0;padding-left:18px;font-size:14.5px;color:var(--muted)}
+  .decide li{margin:5px 0}
+  .quiz{background:var(--card);border:1.5px solid var(--accent-line);border-radius:14px;padding:24px 26px;margin:26px 0}
+  .quiz h3{margin-top:0;display:flex;align-items:center;gap:9px}
+  .q{margin:22px 0}.q p.stem{font-weight:600;margin:0 0 10px}
+  .opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:11px 15px;margin:7px 0;cursor:pointer;font-size:15.5px;color:var(--ink);transition:border-color .12s,background .12s;font-family:inherit}
+  .opt:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+  .opt.correct{border-color:var(--good);background:var(--good-bg);color:var(--good);font-weight:600}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+  .opt:disabled{cursor:default}
+  .fb{font-size:14.5px;margin-top:9px;padding:11px 14px;border-radius:8px;display:none}
+  .fb.show{display:block}.fb.ok{background:var(--good-bg);color:var(--good);border:1px solid #bbf7d0}.fb.no{background:var(--bad-bg);color:var(--bad);border:1px solid #fecaca}
+  .scoreline{margin-top:8px;font-size:14px;color:var(--muted)}
+  .askbox{background:#1c1917;color:#f5f0e8;border-radius:13px;padding:22px 26px;margin:40px 0 0}
+  .askbox h3{margin:0 0 8px;color:#fff}.askbox p{margin:6px 0;color:#d6d3d1;font-size:15.5px}.askbox code{background:#2c2622;color:#fbbf24}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+  @media print{body{font-size:11pt}.opt{border:1px solid #ccc}.askbox{background:#eee;color:#000}pre{background:#f5f2ee;color:#222}.decide{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">smithy-java · protocol track · lesson 6</div>
+  <h1>Choosing Your Base Class</h1>
+  <p class="lede">The biggest decision when adding an HTTP protocol is which parent to extend: <code>HttpClientProtocol</code> (RPC) or <code>HttpBindingClientProtocol</code> (REST). Pick right and you inherit the correct half of the work. This lesson makes the choice mechanical.</p>
+
+  <div class="meta">
+    <span><b>Goal</b> — Pick RPC vs REST base correctly</span>
+    <span><b>Time</b> — ~12 min</span>
+    <span><b>Builds on</b> — Lessons 2 &amp; 5</span>
+  </div>
+
+  <h2><span class="n">1</span>The fork in the road</h2>
+  <p>Both bases implement <code>ClientProtocol&lt;HttpRequest, HttpResponse&gt;</code> and both give you <code>id()</code>, <code>messageExchange()</code>, <code>setServiceEndpoint()</code> for free. They differ in <em>how the request body and members are arranged</em> — which determines how much of <code>createRequest</code>/<code>deserializeResponse</code> you write.</p>
+
+  <div class="decide">
+    <div class="card">
+      <h4>HttpClientProtocol → RPC</h4>
+      <p style="font-size:14.5px;margin:0;color:var(--muted)">The whole input is one serialized payload. Routing is by operation name (path or header). <strong>You write</strong> <code>createRequest</code>/<code>deserializeResponse</code> (or extend a family base like <code>AbstractRpcV2ClientProtocol</code> that already did).</p>
+      <ul>
+        <li>rpcv2Cbor, rpcv2Json</li>
+        <li>AWS JSON 1.0 / 1.1 (<code>X-Amz-Target</code>)</li>
+        <li>AWS Query, EC2 Query (<code>Action</code> form param)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>HttpBindingClientProtocol&lt;F&gt; → REST</h4>
+      <p style="font-size:14.5px;margin:0;color:var(--muted)">Members scatter across method/path/query/headers/body via <code>@http*</code> traits. The HTTP binding layer does the scattering. <strong>You write</strong> almost nothing — just declare codec, media type, and error deserializer.</p>
+      <ul>
+        <li>restJson1</li>
+        <li>restXml</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="n">2</span>What REST gives you for free</h2>
+  <p>This is the entire abstract surface of <code>HttpBindingClientProtocol</code> — the binding layer already implemented <code>createRequest</code> and <code>deserializeResponse</code> generically:</p>
+  <pre><code><span class="c-key">public abstract class</span> <span class="c-type">HttpBindingClientProtocol</span>&lt;F <span class="c-key">extends</span> Frame&lt;?&gt;&gt; <span class="c-key">extends</span> <span class="c-type">HttpClientProtocol</span> {
+    <span class="c-key">abstract protected</span> String payloadMediaType();              <span class="c-com">// you supply</span>
+    <span class="c-key">abstract protected</span> HttpErrorDeserializer getErrorDeserializer(Context ctx); <span class="c-com">// you supply</span>
+    <span class="c-key">protected boolean</span> omitEmptyPayload() { <span class="c-key">return false</span>; }   <span class="c-com">// you may override</span>
+
+    <span class="c-com">// createRequest + deserializeResponse: ALREADY IMPLEMENTED via HttpBinding</span>
+}</code></pre>
+  <p>So a REST protocol like <code>RestJsonClientProtocol</code> mostly just configures a <code>JsonCodec</code> and an error deserializer. The member-to-HTTP-location mapping (<code>@httpHeader</code>, <code>@httpLabel</code>, …) is handled by <code>HttpBindingSchemaExtensions</code> — the extension you met in Lesson 5.</p>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/client/client-http-binding/src/main/java/software/amazon/smithy/java/client/http/binding/HttpBindingClientProtocol.java"><code>HttpBindingClientProtocol.java</code></a></p>
+
+  <h2><span class="n">3</span>What the real protocols extend (verified)</h2>
+  <table>
+    <tr><th>Protocol</th><th>Extends</th><th>Family</th></tr>
+    <tr><td><code>RestJsonClientProtocol</code></td><td><code>HttpBindingClientProtocol&lt;AwsEventFrame&gt;</code></td><td>REST</td></tr>
+    <tr><td><code>RestXmlClientProtocol</code></td><td><code>HttpBindingClientProtocol&lt;AwsEventFrame&gt;</code></td><td>REST</td></tr>
+    <tr><td><code>RpcV2CborProtocol</code></td><td><code>AbstractRpcV2ClientProtocol</code> → <code>HttpClientProtocol</code></td><td>RPC</td></tr>
+    <tr><td><code>AwsJsonProtocol</code> (sealed)</td><td><code>HttpClientProtocol</code> (permits 1.0 &amp; 1.1)</td><td>RPC</td></tr>
+    <tr><td><code>AwsQueryClientProtocol</code></td><td><code>HttpClientProtocol</code></td><td>RPC</td></tr>
+    <tr><td><code>Ec2QueryClientProtocol</code></td><td><code>HttpClientProtocol</code></td><td>RPC</td></tr>
+  </table>
+  <p style="font-size:14.5px;color:var(--muted)">These are the literal <code>class … extends …</code> lines in the repo. Pattern: anything "REST-ish" (URI templates + scattered bindings) extends the binding base; anything "call this operation with this body" extends the plain HTTP base.</p>
+
+  <div class="note"><b>Decision rule.</b> Ask: <em>"Does the Smithy model use <code>@http</code>, <code>@httpLabel</code>, <code>@httpQuery</code> on operations/members?"</em> — Yes → REST → <code>HttpBindingClientProtocol</code>. No; the operation name routes and the whole input is the body → RPC → <code>HttpClientProtocol</code> (and check whether a family base like <code>AbstractRpcV2ClientProtocol</code> already fits, so you write ~45 lines instead of two full methods).</div>
+
+  <h2><span class="n">4</span>The non-HTTP escape hatch</h2>
+  <p>Not all protocols are HTTP. <code>ClientProtocol</code> is generic over <code>&lt;RequestT, ResponseT&gt;</code> precisely so you <em>could</em> implement it directly for a different transport — your <code>messageExchange()</code> would return a non-HTTP exchange, and the pipeline would only pair you with a matching transport (recall <code>findProtocolMatchingTransport</code> from Lesson 5). That's a much larger undertaking; for the overwhelming majority of new protocols, one of the two HTTP bases is the right parent.</p>
+
+  <div class="quiz">
+    <h3>🔁 Quick check</h3>
+
+    <div class="q" data-correct="b">
+      <p class="stem">1. A protocol's Smithy model puts <code>@httpLabel</code> on path members and <code>@httpQuery</code> on others. Which base?</p>
+      <button class="opt" data-k="a"><code>HttpClientProtocol</code> — it's still HTTP.</button>
+      <button class="opt" data-k="b"><code>HttpBindingClientProtocol</code> — the <code>@http*</code> traits mean members scatter across the request; the binding layer handles that.</button>
+      <button class="opt" data-k="c">Implement <code>ClientProtocol</code> directly.</button>
+      <div class="fb" data-k="a">Both are HTTP — the binding traits are the tell. With <code>@httpLabel</code>/<code>@httpQuery</code> you want the binding base so you don't hand-write the scattering.</div>
+      <div class="fb" data-k="b">Right. HTTP binding traits ⇒ REST ⇒ <code>HttpBindingClientProtocol</code>. You'd inherit createRequest/deserializeResponse and just supply codec + media type + error deserializer.</div>
+      <div class="fb" data-k="c">Way too much work — and unnecessary, since it's a standard HTTP/REST shape.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <p class="stem">2. What do you typically NOT have to write in a <code>HttpBindingClientProtocol</code> subclass?</p>
+      <button class="opt" data-k="a"><code>payloadMediaType()</code></button>
+      <button class="opt" data-k="b"><code>getErrorDeserializer()</code></button>
+      <button class="opt" data-k="c"><code>createRequest()</code> and <code>deserializeResponse()</code> — the binding layer already implements them.</button>
+      <div class="fb" data-k="a">That's abstract — you must supply it.</div>
+      <div class="fb" data-k="b">Also abstract — you must supply it.</div>
+      <div class="fb" data-k="c">Correct. That's the whole point of the binding base: the two big methods are done; you just declare codec, media type, and error handling.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <p class="stem">3. AWS JSON 1.0 routes by an <code>X-Amz-Target</code> header and sends the full input as the JSON body. Which family, and why?</p>
+      <button class="opt" data-k="a">RPC (<code>HttpClientProtocol</code>) — operation-name routing + whole-body payload, no <code>@http*</code> member bindings.</button>
+      <button class="opt" data-k="b">REST — it uses HTTP headers, so it's binding-based.</button>
+      <button class="opt" data-k="c">Neither — it needs a custom transport.</button>
+      <div class="fb" data-k="a">Right. Using <em>a</em> header for routing isn't the same as <code>@httpHeader</code> member bindings. The body is one payload ⇒ RPC. Indeed <code>AwsJsonProtocol extends HttpClientProtocol</code>.</div>
+      <div class="fb" data-k="b">A routing header ≠ HTTP binding traits on members. The input isn't scattered; it's one JSON body. That's RPC.</div>
+      <div class="fb" data-k="c">It's plain HTTP — no custom transport needed.</div>
+    </div>
+    <div class="scoreline" id="score"></div>
+  </div>
+
+  <h2><span class="n">5</span>What you now know</h2>
+  <p>You can look at a protocol's Smithy model and pick its base class in one question (does it use <code>@http*</code> member bindings?), and you know what each base hands you for free. You've now seen every structural piece: the contract, a tiny concrete example, schema-directed serde, codecs, the two SPIs, and base-class selection. <strong>Lesson 7</strong> closes the loop with the thing that proves you got it right — protocol compliance tests.</p>
+
+  <div class="askbox">
+    <h3>💬 Ask me anything</h3>
+    <p>• <code>"Why is AwsJsonProtocol sealed with two permits?"</code><br>
+       • <code>"Show me how AwsQueryClientProtocol builds its form body in createRequest"</code><br>
+       • <code>"What's the &lt;F extends Frame&gt; type param on the binding base for?"</code> (event streaming)</p>
+    <p style="margin-top:10px">Say <b>"next lesson"</b> for Lesson 7: proving it with compliance tests.</p>
+  </div>
+
+  <footer>Lesson 6 of the smithy-java protocol track · <a href="../reference/glossary.html">Glossary</a> · Prev: <a href="0005-extensions-and-discovery.html">Lesson 5</a></footer>
+</div>
+<script>
+  let answered=0,correct=0;
+  document.querySelectorAll('.q').forEach(q=>{
+    const key=q.dataset.correct,opts=q.querySelectorAll('.opt');
+    opts.forEach(opt=>opt.addEventListener('click',()=>{
+      if(q.dataset.done)return;q.dataset.done="1";answered++;
+      const chosen=opt.dataset.k;if(chosen===key)correct++;
+      opts.forEach(o=>{o.disabled=true;if(o.dataset.k===key)o.classList.add('correct');else if(o.dataset.k===chosen)o.classList.add('wrong');});
+      const fb=q.querySelector('.fb[data-k="'+chosen+'"]');if(fb)fb.classList.add('show',chosen===key?'ok':'no');
+      document.getElementById('score').textContent=`Answered ${answered}/3 · ${correct} correct`+(answered===3?(correct===3?"  — on to the finale, Lesson 7.":"  — re-read the misses, then say \"next lesson\"."):"");
+    }));
+  });
+</script>
+</body>
+</html>

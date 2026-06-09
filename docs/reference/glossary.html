@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glossary — Protocols in smithy-java</title>
+<style>
+  :root{
+    --ink:#1c1917; --muted:#57534e; --faint:#a8a29e;
+    --bg:#fefdfb; --card:#ffffff; --line:#e7e2da;
+    --accent:#c2410c; --accent-soft:#fff4ed; --accent-line:#f5b896;
+    --code-bg:#f5f2ee;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6; font-size:17px;
+  }
+  .wrap{max-width:860px; margin:0 auto; padding:64px 28px 96px}
+  header.masthead{border-bottom:2px solid var(--accent); padding-bottom:22px; margin-bottom:8px}
+  .kicker{font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:700}
+  h1{font-size:34px; line-height:1.15; margin:.35em 0 .15em; letter-spacing:-.02em}
+  .sub{color:var(--muted); font-size:16px; margin:0}
+  h2{font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+     margin:46px 0 0; padding-bottom:8px; border-bottom:1px solid var(--line)}
+  dl{margin:0}
+  .term{padding:20px 0; border-bottom:1px solid var(--line); display:grid;
+        grid-template-columns:1fr; gap:6px}
+  dt{font-weight:700; font-size:18px; color:var(--ink)}
+  dt code{font-size:16px}
+  dd{margin:0; color:var(--muted)}
+  dd .where{display:block; margin-top:6px; font-size:13.5px; color:var(--faint)}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:14.5px;
+       background:var(--code-bg); padding:1.5px 6px; border-radius:5px; color:#9a3412}
+  .pill{display:inline-block; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+        background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-line);
+        border-radius:999px; padding:2px 10px; font-weight:700; vertical-align:middle; margin-left:8px}
+  a{color:var(--accent); text-decoration:none; border-bottom:1px solid var(--accent-line)}
+  a:hover{background:var(--accent-soft)}
+  .note{background:var(--accent-soft); border:1px solid var(--accent-line); border-left:4px solid var(--accent);
+        border-radius:8px; padding:14px 18px; margin:24px 0; font-size:15px; color:#7c2d12}
+  footer{margin-top:48px; padding-top:18px; border-top:1px solid var(--line); color:var(--faint); font-size:13px}
+  @media print{
+    body{font-size:11pt; background:#fff}
+    .wrap{padding:0}
+    a{color:var(--ink); border:none}
+    .term{break-inside:avoid}
+    h2{break-after:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="kicker">smithy-java · reference</div>
+    <h1>Glossary: Protocols &amp; Serde</h1>
+    <p class="sub">The shared vocabulary for adding a new protocol. Every lesson uses these terms exactly as defined here.</p>
+  </header>
+
+  <h2>The protocol contract</h2>
+  <dl>
+    <div class="term">
+      <dt><code>ClientProtocol&lt;RequestT, ResponseT&gt;</code> <span class="pill">core interface</span></dt>
+      <dd>The interface every client protocol implements. It turns an <em>operation + input shape</em> into a transport request, and a transport response back into an <em>output shape</em>. Parameterized by the request/response types it works with (e.g. <code>HttpRequest</code>/<code>HttpResponse</code>).
+        <span class="where">client/client-core/.../client/core/ClientProtocol.java</span></dd>
+    </div>
+    <div class="term">
+      <dt><code>ClientProtocolFactory&lt;T extends Trait&gt;</code> <span class="pill">SPI entry point</span></dt>
+      <dd>Creates a <code>ClientProtocol</code> from a Smithy protocol <em>trait</em>. This is the class registered with <code>ServiceLoader</code>. Its <code>id()</code> is the protocol trait's <code>ShapeId</code>; its <code>createProtocol(settings, trait)</code> builds the instance.
+        <span class="where">client/client-core/.../client/core/ClientProtocolFactory.java</span></dd>
+    </div>
+    <div class="term">
+      <dt><code>ProtocolSettings</code></dt>
+      <dd>The bundle of info handed to a factory at construction time: the service <code>ShapeId</code>, optional service version (AWS Query needs it), and the service <code>Schema</code> (carries service-level traits like <code>xmlNamespace</code>).
+        <span class="where">client/client-core/.../client/core/ProtocolSettings.java</span></dd>
+    </div>
+    <div class="term">
+      <dt><code>MessageExchange&lt;RequestT, ResponseT&gt;</code></dt>
+      <dd>A pure marker interface naming the request/response pair a protocol and a transport speak. The pipeline checks that a protocol's exchange matches the transport's before wiring them together. For HTTP it's <code>HttpMessageExchange.INSTANCE</code>.
+        <span class="where">client/client-core/.../client/core/MessageExchange.java</span></dd>
+    </div>
+  </dl>
+
+  <h2>Serialization core</h2>
+  <dl>
+    <div class="term">
+      <dt><code>Schema</code> <span class="pill">runtime shape</span></dt>
+      <dd>A trimmed-down runtime representation of a Smithy shape — just enough to drive serde. It is the <strong>first argument to every serde method</strong>. Protocols read schemas (and their precomputed extensions) to decide wire format; they never inspect raw traits on the hot path.
+        <span class="where">core/.../core/schema/Schema.java</span></dd>
+    </div>
+    <div class="term">
+      <dt><code>Codec</code></dt>
+      <dd>The payload encoder/decoder a protocol delegates to. Produces a <code>ShapeSerializer</code> (struct → bytes) and a <code>ShapeDeserializer</code> (bytes → struct). Examples: <code>JsonCodec</code>, <code>Rpcv2CborCodec</code>, <code>XmlCodec</code>. A protocol picks a codec; it rarely writes one.
+        <span class="where">core/.../core/serde/Codec.java</span></dd>
+    </div>
+    <div class="term">
+      <dt><code>ShapeSerializer</code> / <code>ShapeDeserializer</code></dt>
+      <dd>The visitor interfaces a codec implements. Generated shapes "push" their members into a <code>ShapeSerializer</code> (<code>writeString(schema, value)</code>, …). Deserialization is a callback: the codec reads bytes, resolves a member schema, and calls back by <code>memberIndex</code>.
+        <span class="where">core/.../core/serde/</span></dd>
+    </div>
+    <div class="term">
+      <dt>Schema-directed serde <span class="pill">key idea</span></dt>
+      <dd>The central design move: generated code and protocols never know about each other. The <code>Schema</code> is the contract between them. Same <code>serializeMembers()</code> works for JSON, CBOR, or XML — switching protocols needs no regeneration.</dd>
+    </div>
+    <div class="term">
+      <dt><code>SchemaExtension</code> / <code>SchemaExtensionProvider</code></dt>
+      <dd>Protocol-specific data <em>precomputed</em> onto a schema once (UTF-8 field-name byte tables, timestamp formatters, HTTP binding locations). Accessed via a <code>SchemaExtensionKey</code> at O(1). This is why no trait lookups happen during serialization.
+        <span class="where">core/.../core/schema/  (e.g. SmithyJsonSchemaExtensions, CborSchemaExtensions, HttpBindingSchemaExtensions)</span></dd>
+    </div>
+  </dl>
+
+  <h2>Protocol families</h2>
+  <dl>
+    <div class="term">
+      <dt><code>HttpClientProtocol</code> <span class="pill">RPC base</span></dt>
+      <dd>Abstract base for HTTP protocols where the protocol builds the request directly (no <code>@http*</code> binding traits). Used by RPC-style protocols (rpcv2Cbor, AWS JSON). Supplies <code>id()</code>, <code>messageExchange()</code>, and <code>setServiceEndpoint()</code>.
+        <span class="where">client/client-http/.../client/http/HttpClientProtocol.java</span></dd>
+    </div>
+    <div class="term">
+      <dt><code>HttpBindingClientProtocol</code> <span class="pill">REST base</span></dt>
+      <dd>Abstract base for REST-style protocols that map <code>@httpHeader</code>, <code>@httpQuery</code>, <code>@httpLabel</code>, <code>@httpPayload</code> to the wire automatically via the HTTP binding layer. Used by restJson1, restXml.
+        <span class="where">client/client-http-binding/.../client/http/binding/HttpBindingClientProtocol.java</span></dd>
+    </div>
+    <div class="term">
+      <dt>RPC vs REST</dt>
+      <dd><strong>RPC</strong>: operation name routes the call (path or header), whole body is one serialized payload. <strong>REST</strong>: HTTP binding traits scatter members across method/path/query/headers/body. The base class you extend is the single biggest decision when adding a protocol.</dd>
+    </div>
+  </dl>
+
+  <h2>Discovery &amp; testing</h2>
+  <dl>
+    <div class="term">
+      <dt><code>ServiceLoader</code> / <code>META-INF/services</code> <span class="pill">discovery</span></dt>
+      <dd>The universal extension mechanism. A protocol is "found" only if its <code>Factory</code> is listed in <code>META-INF/services/software.amazon.smithy.java.client.core.ClientProtocolFactory</code>. Missing line = feature silently absent.</dd>
+    </div>
+    <div class="term">
+      <dt>Protocol trait</dt>
+      <dd>A Smithy trait (e.g. <code>smithy.protocols#rpcv2Cbor</code>, <code>aws.protocols#restJson1</code>) applied to a service shape, marked with <code>@protocolDefinition</code>. Its <code>ShapeId</code> is the join key between the model and the <code>ClientProtocolFactory</code>.</dd>
+    </div>
+    <div class="term">
+      <dt>Protocol compliance tests <span class="pill">authoritative</span></dt>
+      <dd>Smithy-defined <code>@httpRequestTests</code> / <code>@httpResponseTests</code> run against real client/server code by the <code>protocol-test-harness</code>. A unit test that passes but a compliance test that fails is a bug. This is how correctness is proven.
+        <span class="where">protocol-test-harness/  ·  annotated via @ProtocolTest, @HttpClientRequestTests</span></dd>
+    </div>
+  </dl>
+
+  <div class="note">
+    <strong>Reading paths:</strong> <code>...</code> stands for the package prefix
+    <code>src/main/java/software/amazon/smithy/java</code>. Full source lives at
+    <a href="https://github.com/smithy-lang/smithy-java">github.com/smithy-lang/smithy-java</a>.
+  </div>
+
+  <footer>
+    Glossary · smithy-java protocol track · adheres across all lessons. Revise here first when a term's meaning sharpens.
+  </footer>
+</div>
+</body>
+</html>
