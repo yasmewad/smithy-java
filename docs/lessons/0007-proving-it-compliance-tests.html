@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 7 · Proving It — Compliance Tests</title>
+<style>
+  :root{--ink:#1c1917;--muted:#57534e;--faint:#a8a29e;--bg:#fefdfb;--card:#fff;--line:#e7e2da;
+    --accent:#c2410c;--accent-soft:#fff4ed;--accent-line:#f5b896;--code-bg:#f5f2ee;
+    --good:#15803d;--good-bg:#f0fdf4;--bad:#b91c1c;--bad-bg:#fef2f2;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;font-size:17px;}
+  .wrap{max-width:820px;margin:0 auto;padding:56px 28px 110px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:33px;line-height:1.14;margin:.3em 0 .2em;letter-spacing:-.02em}
+  .lede{font-size:19px;color:var(--muted);margin:.2em 0 0}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  h2{font-size:23px;margin:48px 0 6px;letter-spacing:-.01em}
+  h2 .n{color:var(--accent-line);font-weight:800;margin-right:10px}
+  h3{font-size:18px;margin:30px 0 4px}
+  p{margin:14px 0}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--code-bg);padding:1.5px 6px;border-radius:5px;color:#9a3412}
+  pre{background:#1c1917;color:#f5f0e8;padding:18px 20px;border-radius:11px;overflow-x:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.6;margin:18px 0;border:1px solid #2c2622}
+  pre code{background:none;color:inherit;padding:0;font-size:inherit}
+  .c-key{color:#fbbf24}.c-type{color:#7dd3fc}.c-com{color:#a8a29e;font-style:italic}.c-str{color:#bef264}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-line)}
+  a:hover{background:var(--accent-soft)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:22px 24px;margin:22px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .note{background:var(--accent-soft);border:1px solid var(--accent-line);border-left:4px solid var(--accent);border-radius:9px;padding:14px 18px;margin:22px 0;font-size:15.5px;color:#7c2d12}
+  .note b{color:#7c2d12}
+  .checklist{list-style:none;margin:18px 0;padding:0;counter-reset:step}
+  .checklist li{position:relative;padding:14px 16px 14px 56px;margin:10px 0;border:1px solid var(--line);border-radius:11px;background:#fff;font-size:15.5px}
+  .checklist li::before{counter-increment:step;content:counter(step);position:absolute;left:14px;top:14px;width:28px;height:28px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  .checklist li b{color:var(--ink)}
+  .checklist li .ref{display:block;font-size:13px;color:var(--faint);margin-top:3px}
+  .quiz{background:var(--card);border:1.5px solid var(--accent-line);border-radius:14px;padding:24px 26px;margin:26px 0}
+  .quiz h3{margin-top:0;display:flex;align-items:center;gap:9px}
+  .q{margin:22px 0}.q p.stem{font-weight:600;margin:0 0 10px}
+  .opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:11px 15px;margin:7px 0;cursor:pointer;font-size:15.5px;color:var(--ink);transition:border-color .12s,background .12s;font-family:inherit}
+  .opt:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+  .opt.correct{border-color:var(--good);background:var(--good-bg);color:var(--good);font-weight:600}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+  .opt:disabled{cursor:default}
+  .fb{font-size:14.5px;margin-top:9px;padding:11px 14px;border-radius:8px;display:none}
+  .fb.show{display:block}.fb.ok{background:var(--good-bg);color:var(--good);border:1px solid #bbf7d0}.fb.no{background:var(--bad-bg);color:var(--bad);border:1px solid #fecaca}
+  .scoreline{margin-top:8px;font-size:14px;color:var(--muted)}
+  .askbox{background:#1c1917;color:#f5f0e8;border-radius:13px;padding:22px 26px;margin:40px 0 0}
+  .askbox h3{margin:0 0 8px;color:#fff}.askbox p{margin:6px 0;color:#d6d3d1;font-size:15.5px}.askbox code{background:#2c2622;color:#fbbf24}
+  .trophy{text-align:center;font-size:40px;margin:30px 0 0}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+  @media print{body{font-size:11pt}.opt{border:1px solid #ccc}.askbox{background:#eee;color:#000}pre{background:#f5f2ee;color:#222}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">smithy-java · protocol track · lesson 7 · finale</div>
+  <h1>Proving It — Compliance Tests</h1>
+  <p class="lede">A protocol you can't prove correct is a liability. smithy-java's answer is <em>protocol compliance tests</em>: Smithy-defined request/response cases run against your real code. This is the authoritative correctness bar — and the last piece of adding a protocol.</p>
+
+  <div class="meta">
+    <span><b>Goal</b> — Prove a protocol &amp; recap the whole flow</span>
+    <span><b>Time</b> — ~12 min</span>
+    <span><b>Builds on</b> — the whole track</span>
+  </div>
+
+  <h2><span class="n">1</span>Why compliance tests, not just unit tests</h2>
+  <p>The Smithy spec ships <code>@httpRequestTests</code> and <code>@httpResponseTests</code> — declarative cases that say "given this input, the wire bytes must be exactly this" (and vice-versa for responses). The <code>protocol-test-harness</code> runs them against your actual protocol + codec. From the engineering tenets:</p>
+  <div class="note"><b>A passing unit test that fails a compliance test is a bug.</b> Compliance tests are the source of truth because they test the contract the wire format actually promises — not your interpretation of it. Run them before <em>and</em> after any serde/codec/binding change.</div>
+
+  <h2><span class="n">2</span>What a compliance test class looks like</h2>
+  <p>Strikingly little code — the harness generates the cases; you just declare the service under test and how to compare. This is the entire CBOR client test:</p>
+  <pre><code><span class="c-key">@ProtocolTest</span>(
+    service = <span class="c-str">"smithy.protocoltests.rpcv2Cbor#RpcV2Protocol"</span>,
+    testType = <span class="c-type">TestType</span>.CLIENT)
+<span class="c-key">public class</span> <span class="c-type">RpcV2CborProtocolTests</span> {
+
+    <span class="c-key">@HttpClientRequestTests</span>
+    <span class="c-key">@ProtocolTestFilter</span>(skipTests = { <span class="c-str">"...known-broken-case..."</span> })
+    <span class="c-key">public void</span> requestTest(DataStream expected, DataStream actual) {
+        <span class="c-type">CborComparator</span>.assertEquals(expected.asByteBuffer(), actual.asByteBuffer());
+    }
+
+    <span class="c-key">@HttpClientResponseTests</span>
+    <span class="c-key">public void</span> responseTest(Runnable test) { test.run(); }
+}</code></pre>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/client/client-rpcv2-cbor/src/it/java/software/amazon/smithy/java/client/rpcv2/RpcV2CborProtocolTests.java"><code>RpcV2CborProtocolTests.java</code></a> · <code>@ProtocolTest</code> is a JUnit 5 extension (<a href="https://github.com/smithy-lang/smithy-java/blob/main/protocol-test-harness/src/main/java/software/amazon/smithy/java/protocoltests/harness/ProtocolTest.java"><code>ProtocolTest.java</code></a>).</p>
+
+  <p>Three things make this work, and you supply all three in the module's <code>build.gradle.kts</code>:</p>
+  <pre><code>plugins { id(<span class="c-str">"smithy-java.protocol-testing-conventions"</span>) }   <span class="c-com">// wires the harness + integ tests</span>
+
+testImplementation(libs.smithy.protocol.tests)             <span class="c-com">// the Smithy-defined test models</span>
+
+<span class="c-com">// generate test sources from the protocol's test service:</span>
+addGenerateSrcsTask(generator, <span class="c-str">"rpcv2Cbor"</span>, <span class="c-str">"smithy.protocoltests.rpcv2Cbor#RpcV2Protocol"</span>)</code></pre>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/client/client-rpcv2-cbor/build.gradle.kts"><code>client-rpcv2-cbor/build.gradle.kts</code></a></p>
+
+  <h2><span class="n">3</span>Running them</h2>
+  <pre><code><span class="c-com"># the authoritative correctness check across all protocols</span>
+./gradlew :protocol-test-harness:test
+
+<span class="c-com"># your protocol's own compliance suite (it = integration tests)</span>
+./gradlew :client:client-rpcv2-cbor:integ</code></pre>
+  <p>The <code>protocol-testing-conventions</code> plugin even wires <code>test</code> to be finalized by <code>integ</code>, so compliance runs as part of the normal suite. A protocol without a green compliance run is not done.</p>
+
+  <h2><span class="n">4</span>The whole flow, end to end</h2>
+  <p>Everything from the track, as the checklist you'd actually follow to add an HTTP protocol:</p>
+  <ol class="checklist">
+    <li><b>Get the protocol trait.</b> Reference an existing <code>*Trait.ID</code>, or define a new <code>@protocolDefinition</code> trait in a Smithy model. <span class="ref">Lesson 5 · the join key</span></li>
+    <li><b>Pick your base class.</b> <code>@http*</code> member bindings → <code>HttpBindingClientProtocol</code> (REST); operation-name routing + whole-body → <code>HttpClientProtocol</code> (RPC). <span class="ref">Lesson 6</span></li>
+    <li><b>Choose a codec.</b> Reuse <code>JsonCodec</code>/<code>Rpcv2CborCodec</code>/<code>XmlCodec</code> via its builder; write a new <code>Codec</code> only if the byte format is genuinely new. <span class="ref">Lesson 4</span></li>
+    <li><b>Implement the class.</b> Override the handful of abstract methods (codec, media type, error deserializer). Inherit <code>createRequest</code>/<code>deserializeResponse</code> where possible. <span class="ref">Lessons 1–2</span></li>
+    <li><b>Add a schema extension if needed.</b> Precompute trait-derived wire data as a record; needed when your wire format reads new traits. <span class="ref">Lessons 3 &amp; 5</span></li>
+    <li><b>Register both SPIs.</b> <code>ClientProtocolFactory</code> (and any <code>SchemaExtensionProvider</code>) in <code>META-INF/services/</code>. The silent-failure trap. <span class="ref">Lesson 5</span></li>
+    <li><b>Prove it.</b> Add a <code>@ProtocolTest</code> class, wire the gradle conventions, run the compliance suite green. <span class="ref">this lesson</span></li>
+  </ol>
+
+  <div class="quiz">
+    <h3>🔁 Final check</h3>
+
+    <div class="q" data-correct="b">
+      <p class="stem">1. Your unit tests pass but a <code>@httpRequestTests</code> case fails. What's the verdict?</p>
+      <button class="opt" data-k="a">The compliance test is too strict; ship it.</button>
+      <button class="opt" data-k="b">It's a bug in your protocol — compliance tests are the authoritative correctness bar.</button>
+      <button class="opt" data-k="c">Unit and compliance tests are independent; ignore the conflict.</button>
+      <div class="fb" data-k="a">No — the compliance case encodes the wire contract. If it fails, your bytes are wrong.</div>
+      <div class="fb" data-k="b">Right. "A passing unit test that fails a compliance test is a bug." The wire format is the contract; the compliance suite is the source of truth.</div>
+      <div class="fb" data-k="c">They're not independent — the compliance test is the higher authority. A conflict means fix the code.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <p class="stem">2. How many wire-format assertion cases do you hand-write in a <code>@ProtocolTest</code> class?</p>
+      <button class="opt" data-k="a">One per operation.</button>
+      <button class="opt" data-k="b">One per member.</button>
+      <button class="opt" data-k="c">None — the harness generates cases from the Smithy test model; you only declare the service and a comparison method.</button>
+      <div class="fb" data-k="a">No — you don't enumerate operations; the test model already defines the cases.</div>
+      <div class="fb" data-k="b">Definitely not per member — that's what the generated cases cover.</div>
+      <div class="fb" data-k="c">Correct. You wire the gradle conventions + point at the test service; the harness supplies the cases. Your job is the comparator (e.g. <code>CborComparator.assertEquals</code>).</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <p class="stem">3. Final synthesis: a teammate adds "rpcv2Json." They reuse <code>JsonCodec</code>, extend <code>AbstractRpcV2ClientProtocol</code>, register the factory — but the client can't find it. Most likely cause?</p>
+      <button class="opt" data-k="a">The <code>META-INF/services/...ClientProtocolFactory</code> entry is missing or names the wrong class (e.g. forgot <code>$Factory</code>).</button>
+      <button class="opt" data-k="b"><code>JsonCodec</code> can't be used by an RPC protocol.</button>
+      <button class="opt" data-k="c">They need to regenerate every shape for the new protocol.</button>
+      <div class="fb" data-k="a">Right — and you diagnosed it from Lesson 5. Discovery is ShapeId-matched over <code>ServiceLoader</code>-registered factories; a bad registration fails silently. Check that file first.</div>
+      <div class="fb" data-k="b">Codecs are orthogonal to RPC/REST — <code>JsonCodec</code> is fine for an RPC protocol.</div>
+      <div class="fb" data-k="c">Shapes are protocol-agnostic (Lesson 3) — no regeneration needed.</div>
+    </div>
+    <div class="scoreline" id="score"></div>
+  </div>
+
+  <div class="trophy">🏁</div>
+  <h2 style="text-align:center;border:none;margin-top:8px">Track complete</h2>
+  <p style="text-align:center">You can now trace a call through the contract, read any existing protocol and name its base class, explain why protocols and generated code are decoupled, wire both SPIs, pick the right parent, and prove the result with compliance tests. That's deep architectural mastery — earned through the lens of one concrete task.</p>
+
+  <div class="card">
+    <h3 style="margin-top:0">Where to go next (beyond this track)</h3>
+    <p style="margin:6px 0;font-size:15px">• <b>Server side:</b> <code>ServerProtocol</code> / <code>ServerProtocolProvider</code> / <code>ProtocolResolver</code> — the mirror image, for accepting requests.<br>
+       • <b>Build a toy protocol end-to-end</b> in a scratch module and watch the compliance suite go green.<br>
+       • <b>Read <code>AwsQueryClientProtocol</code></b> — the most "different" protocol (form-encoded body, XML response), to test your model.</p>
+  </div>
+
+  <div class="askbox">
+    <h3>💬 Your teacher is still here</h3>
+    <p>• <code>"Let's build a toy protocol end-to-end in a scratch module."</code><br>
+       • <code>"Now teach me the server-side protocol path."</code><br>
+       • <code>"Quiz me harder — give me a scenario-based design question."</code></p>
+    <p style="margin-top:10px">Say the word and we'll keep going.</p>
+  </div>
+
+  <footer>Lesson 7 of the smithy-java protocol track · <a href="../reference/glossary.html">Glossary</a> · Prev: <a href="0006-choosing-your-base-class.html">Lesson 6</a> · 🏁 Track complete</footer>
+</div>
+<script>
+  let answered=0,correct=0;
+  document.querySelectorAll('.q').forEach(q=>{
+    const key=q.dataset.correct,opts=q.querySelectorAll('.opt');
+    opts.forEach(opt=>opt.addEventListener('click',()=>{
+      if(q.dataset.done)return;q.dataset.done="1";answered++;
+      const chosen=opt.dataset.k;if(chosen===key)correct++;
+      opts.forEach(o=>{o.disabled=true;if(o.dataset.k===key)o.classList.add('correct');else if(o.dataset.k===chosen)o.classList.add('wrong');});
+      const fb=q.querySelector('.fb[data-k="'+chosen+'"]');if(fb)fb.classList.add('show',chosen===key?'ok':'no');
+      document.getElementById('score').textContent=`Answered ${answered}/3 · ${correct} correct`+(answered===3?(correct===3?"  — perfect score. Track mastered. 🏁":"  — review the misses; you're nearly there."):"");
+    }));
+  });
+</script>
+</body>
+</html>

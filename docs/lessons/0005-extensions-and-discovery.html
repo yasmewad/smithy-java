@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 5 · Extensions &amp; Discovery</title>
+<style>
+  :root{--ink:#1c1917;--muted:#57534e;--faint:#a8a29e;--bg:#fefdfb;--card:#fff;--line:#e7e2da;
+    --accent:#c2410c;--accent-soft:#fff4ed;--accent-line:#f5b896;--code-bg:#f5f2ee;
+    --good:#15803d;--good-bg:#f0fdf4;--bad:#b91c1c;--bad-bg:#fef2f2;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;font-size:17px;}
+  .wrap{max-width:820px;margin:0 auto;padding:56px 28px 110px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:33px;line-height:1.14;margin:.3em 0 .2em;letter-spacing:-.02em}
+  .lede{font-size:19px;color:var(--muted);margin:.2em 0 0}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  h2{font-size:23px;margin:48px 0 6px;letter-spacing:-.01em}
+  h2 .n{color:var(--accent-line);font-weight:800;margin-right:10px}
+  h3{font-size:18px;margin:30px 0 4px}
+  p{margin:14px 0}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--code-bg);padding:1.5px 6px;border-radius:5px;color:#9a3412}
+  pre{background:#1c1917;color:#f5f0e8;padding:18px 20px;border-radius:11px;overflow-x:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.6;margin:18px 0;border:1px solid #2c2622}
+  pre code{background:none;color:inherit;padding:0;font-size:inherit}
+  .c-key{color:#fbbf24}.c-type{color:#7dd3fc}.c-com{color:#a8a29e;font-style:italic}.c-str{color:#bef264}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-line)}
+  a:hover{background:var(--accent-soft)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:22px 24px;margin:22px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .note{background:var(--accent-soft);border:1px solid var(--accent-line);border-left:4px solid var(--accent);border-radius:9px;padding:14px 18px;margin:22px 0;font-size:15.5px;color:#7c2d12}
+  .note b{color:#7c2d12}
+  .warn{background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #d97706;border-radius:9px;padding:14px 18px;margin:22px 0;font-size:15.5px;color:#854d0e}
+  .filebox{background:#f5f2ee;border:1px dashed var(--accent-line);border-radius:9px;padding:12px 16px;margin:16px 0;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+  .filebox .path{color:var(--accent);font-weight:700;display:block;margin-bottom:6px}
+  .quiz{background:var(--card);border:1.5px solid var(--accent-line);border-radius:14px;padding:24px 26px;margin:26px 0}
+  .quiz h3{margin-top:0;display:flex;align-items:center;gap:9px}
+  .q{margin:22px 0}.q p.stem{font-weight:600;margin:0 0 10px}
+  .opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:11px 15px;margin:7px 0;cursor:pointer;font-size:15.5px;color:var(--ink);transition:border-color .12s,background .12s;font-family:inherit}
+  .opt:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+  .opt.correct{border-color:var(--good);background:var(--good-bg);color:var(--good);font-weight:600}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+  .opt:disabled{cursor:default}
+  .fb{font-size:14.5px;margin-top:9px;padding:11px 14px;border-radius:8px;display:none}
+  .fb.show{display:block}.fb.ok{background:var(--good-bg);color:var(--good);border:1px solid #bbf7d0}.fb.no{background:var(--bad-bg);color:var(--bad);border:1px solid #fecaca}
+  .scoreline{margin-top:8px;font-size:14px;color:var(--muted)}
+  .askbox{background:#1c1917;color:#f5f0e8;border-radius:13px;padding:22px 26px;margin:40px 0 0}
+  .askbox h3{margin:0 0 8px;color:#fff}.askbox p{margin:6px 0;color:#d6d3d1;font-size:15.5px}.askbox code{background:#2c2622;color:#fbbf24}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+  @media print{body{font-size:11pt}.opt{border:1px solid #ccc}.askbox{background:#eee;color:#000}pre{background:#f5f2ee;color:#222}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">smithy-java · protocol track · lesson 5</div>
+  <h1>Extensions &amp; Discovery</h1>
+  <p class="lede">Two SPIs make a protocol real. <strong>Schema extensions</strong> precompute your wire data (Lesson 3's promise, kept). <strong>ServiceLoader</strong> is how the framework <em>finds</em> your protocol at all. Miss either and your protocol is silently absent.</p>
+
+  <div class="meta">
+    <span><b>Goal</b> — Precompute wire data &amp; register a protocol</span>
+    <span><b>Time</b> — ~13 min</span>
+    <span><b>Builds on</b> — Lessons 3–4 (serde &amp; codecs)</span>
+  </div>
+
+  <h2><span class="n">1</span>Schema extensions: precompute once, index forever</h2>
+  <p>Lesson 3 said wire decisions are precomputed, not read per-write. The mechanism is a pair of types. A <strong>key</strong> (a unique integer ID → array slot):</p>
+  <pre><code><span class="c-key">public final class</span> <span class="c-type">SchemaExtensionKey</span>&lt;T&gt; {
+    <span class="c-key">private static final</span> AtomicInteger NEXT_ID = <span class="c-key">new</span> AtomicInteger();
+    <span class="c-key">final int</span> id;
+    <span class="c-key">public</span> SchemaExtensionKey() { <span class="c-key">this</span>.id = NEXT_ID.getAndIncrement(); }  <span class="c-com">// O(1) lookup later</span>
+}</code></pre>
+  <p>And a <strong>provider</strong> that computes the value for each schema (discovered via ServiceLoader):</p>
+  <pre><code><span class="c-key">public interface</span> <span class="c-type">SchemaExtensionProvider</span>&lt;T&gt; {
+    <span class="c-type">SchemaExtensionKey</span>&lt;T&gt; key();        <span class="c-com">// which slot</span>
+    T provide(<span class="c-type">Schema</span> schema);            <span class="c-com">// compute wire data from the schema's traits</span>
+}</code></pre>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/core/src/main/java/software/amazon/smithy/java/core/schema/SchemaExtensionProvider.java"><code>SchemaExtensionProvider.java</code></a> · <a href="https://github.com/smithy-lang/smithy-java/blob/main/core/src/main/java/software/amazon/smithy/java/core/schema/SchemaExtensionKey.java"><code>SchemaExtensionKey.java</code></a></p>
+
+  <div class="note"><b>The contract that bites:</b> <code>provide()</code>'s result is published across threads via a <em>plain</em> array store (no lock, benign race). The Javadoc requires the returned object's fields to be <strong>all <code>final</code></strong> — which is why these are <strong>records</strong>. The JMM guarantees final-field visibility once the constructor returns (JLS 17.5). Return a mutable object and you have a data race.</div>
+
+  <p>At serialization, the codec does <code>schema.getExtension(KEY)</code> — an array index, no hashing — to get its precomputed bytes/formatters. This is the "no trait lookups on the hot path" claim made concrete.</p>
+
+  <h2><span class="n">2</span>Registering it: <code>META-INF/services</code></h2>
+  <p>A provider that isn't registered never runs. Registration is a plain-text file named after the <em>fully-qualified interface</em>, containing the implementation class name(s):</p>
+  <div class="filebox">
+    <span class="path">codecs/json-codec/src/main/resources/META-INF/services/<br>&nbsp;&nbsp;software.amazon.smithy.java.core.schema.SchemaExtensionProvider</span>
+    software.amazon.smithy.java.json.JsonSchemaExtensions<br>
+    software.amazon.smithy.java.json.smithy.SmithyJsonSchemaExtensions
+  </div>
+  <p style="font-size:14.5px;color:var(--muted)">Real file, verbatim — note JSON registers <em>two</em> providers. CBOR and HTTP-binding each register their own.</p>
+
+  <h2><span class="n">3</span>The other SPI: finding the protocol itself</h2>
+  <p>Same mechanism, different interface. Your <code>ClientProtocolFactory</code> (the <code>Factory</code> inner class from Lesson 2) is registered under <em>its</em> interface name:</p>
+  <div class="filebox">
+    <span class="path">client/client-rpcv2-cbor/src/main/resources/META-INF/services/<br>&nbsp;&nbsp;software.amazon.smithy.java.client.core.ClientProtocolFactory</span>
+    software.amazon.smithy.java.client.rpcv2.RpcV2CborProtocol$Factory
+  </div>
+  <p>(The <code>$Factory</code> is the nested class.) Now watch the framework consume it — this is the actual discovery loop, from <code>DetectProtocolPlugin</code>:</p>
+  <pre><code><span class="c-key">static</span> {
+    <span class="c-key">for</span> (<span class="c-key">var</span> impl : <span class="c-type">ServiceLoader</span>.load(<span class="c-type">ClientProtocolFactory</span>.class, ...)) {
+        PROTOCOL_FACTORIES.add(impl);     <span class="c-com">// every registered factory, loaded once</span>
+    }
+}
+<span class="c-com">// later, given a service's protocol traits:</span>
+<span class="c-key">for</span> (<span class="c-key">var</span> impl : PROTOCOL_FACTORIES) {
+    <span class="c-key">if</span> (protocols.containsKey(impl.id())) {       <span class="c-com">// trait ShapeId == factory.id()</span>
+        <span class="c-key">return</span> impl.createProtocol(settings, protocols.get(impl.id()));
+    }
+}</code></pre>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/client/dynamic-client/src/main/java/software/amazon/smithy/java/dynamicclient/plugins/DetectProtocolPlugin.java"><code>DetectProtocolPlugin.java</code></a></p>
+
+  <p>This closes the loop opened in Lesson 1: <code>id()</code> returns the protocol trait's <code>ShapeId</code> precisely so this matching works. The service model says "I speak <code>smithy.protocols#rpcv2Cbor</code>"; the framework finds the factory whose <code>id()</code> equals that ShapeId, and builds it with <code>ProtocolSettings</code>.</p>
+
+  <div class="warn">⚠️ <b>The #1 "my protocol doesn't work" bug:</b> the class is written correctly but the <code>META-INF/services</code> line is missing, misspelled, or points to the wrong class (forgetting the <code>$Factory</code> suffix for a nested class). <code>ServiceLoader</code> fails <em>silently</em> — no error, the protocol is just never found. Check this file first.</div>
+
+  <h2><span class="n">4</span>The protocol trait, briefly</h2>
+  <p>The join key — the <code>ShapeId</code> — comes from a Smithy <em>protocol trait</em> applied to the service, e.g. <code>@rpcv2Cbor</code> or <code>@restJson1</code>. These traits are marked with <code>@protocolDefinition</code> in their Smithy model and ship as <code>*Trait</code> Java classes (<code>Rpcv2CborTrait.ID</code>, <code>RestJson1Trait.ID</code>) you reference directly. For an existing standard protocol the trait already exists; for a brand-new one you'd define the trait in a Smithy model first. Either way, <code>factory.id()</code> returns <code>YourTrait.ID</code>.</p>
+
+  <div class="quiz">
+    <h3>🔁 Quick check</h3>
+
+    <div class="q" data-correct="b">
+      <p class="stem">1. Why must a <code>SchemaExtensionProvider</code> return a record (or all-final object)?</p>
+      <button class="opt" data-k="a">Records are shorter to write.</button>
+      <button class="opt" data-k="b">The result is published across threads via a plain array store with no lock; final fields guarantee safe visibility (JLS 17.5).</button>
+      <button class="opt" data-k="c"><code>ServiceLoader</code> only instantiates records.</button>
+      <div class="fb" data-k="a">Conciseness is a bonus, not the reason — the reason is thread-safety.</div>
+      <div class="fb" data-k="b">Right. The benign-race, lock-free publication is safe <em>only</em> because final fields are visible after construction. A mutable extension would be a data race.</div>
+      <div class="fb" data-k="c"><code>ServiceLoader</code> instantiates any class with a no-arg constructor; records aren't special to it.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <p class="stem">2. You wrote a perfect <code>ClientProtocol</code> + <code>Factory</code>, but the client says "no matching protocol." First thing to check?</p>
+      <button class="opt" data-k="a">Recompile the generated shapes.</button>
+      <button class="opt" data-k="b">Whether the codec supports your timestamp format.</button>
+      <button class="opt" data-k="c">The <code>META-INF/services/...ClientProtocolFactory</code> file — present? correct class name? <code>$Factory</code> suffix for the nested class?</button>
+      <div class="fb" data-k="a">Shapes are protocol-agnostic; regenerating won't help discovery.</div>
+      <div class="fb" data-k="b">That'd cause a serialization bug, not a "protocol not found" — discovery happens before any serialization.</div>
+      <div class="fb" data-k="c">Exactly. Silent <code>ServiceLoader</code> failure from a missing/typo'd registration is the classic cause. Verify that file before anything else.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <p class="stem">3. How does the framework match a service to your protocol implementation?</p>
+      <button class="opt" data-k="a">It compares each registered factory's <code>id()</code> (a <code>ShapeId</code>) against the protocol traits on the service.</button>
+      <button class="opt" data-k="b">By the Java package name of the protocol class.</button>
+      <button class="opt" data-k="c">Alphabetically by class name.</button>
+      <div class="fb" data-k="a">Correct. <code>factory.id() == YourTrait.ID</code>, and the service's <code>@yourProtocol</code> trait carries that same ShapeId. That's why Lesson 1 stressed what <code>id()</code> returns.</div>
+      <div class="fb" data-k="b">Package names are irrelevant to matching — only the ShapeId matters.</div>
+      <div class="fb" data-k="c">No alphabetical logic; it's ShapeId equality. (When multiple match, the first found wins — see the code.)</div>
+    </div>
+    <div class="scoreline" id="score"></div>
+  </div>
+
+  <h2><span class="n">5</span>What you now know</h2>
+  <p>You can wire the two SPIs that make a protocol exist: a <code>SchemaExtensionProvider</code> (record-typed, registered) to precompute wire data, and a <code>ClientProtocolFactory</code> (registered under its interface) so <code>ServiceLoader</code> discovery matches your <code>id()</code> to a service's protocol trait. You know the silent-failure trap. <strong>Lesson 6</strong> uses all this to compare the two base-class families head-to-head, so you can pick the right parent for a new protocol.</p>
+
+  <div class="askbox">
+    <h3>💬 Ask me anything</h3>
+    <p>• <code>"Show me CborSchemaExtensions.provide() — what does it precompute?"</code><br>
+       • <code>"How do I define a brand-new @protocolDefinition trait in Smithy?"</code><br>
+       • <code>"What's the difference between AutoClientPlugin discovery and this?"</code></p>
+    <p style="margin-top:10px">Say <b>"next lesson"</b> for Lesson 6: choosing your base class.</p>
+  </div>
+
+  <footer>Lesson 5 of the smithy-java protocol track · <a href="../reference/glossary.html">Glossary</a> · Prev: <a href="0004-the-codec-layer.html">Lesson 4</a></footer>
+</div>
+<script>
+  let answered=0,correct=0;
+  document.querySelectorAll('.q').forEach(q=>{
+    const key=q.dataset.correct,opts=q.querySelectorAll('.opt');
+    opts.forEach(opt=>opt.addEventListener('click',()=>{
+      if(q.dataset.done)return;q.dataset.done="1";answered++;
+      const chosen=opt.dataset.k;if(chosen===key)correct++;
+      opts.forEach(o=>{o.disabled=true;if(o.dataset.k===key)o.classList.add('correct');else if(o.dataset.k===chosen)o.classList.add('wrong');});
+      const fb=q.querySelector('.fb[data-k="'+chosen+'"]');if(fb)fb.classList.add('show',chosen===key?'ok':'no');
+      document.getElementById('score').textContent=`Answered ${answered}/3 · ${correct} correct`+(answered===3?(correct===3?"  — on to Lesson 6.":"  — re-read the misses, then say \"next lesson\"."):"");
+    }));
+  });
+</script>
+</body>
+</html>

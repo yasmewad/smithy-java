@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2 · The Smallest Real Protocol</title>
+<style>
+  :root{--ink:#1c1917;--muted:#57534e;--faint:#a8a29e;--bg:#fefdfb;--card:#fff;--line:#e7e2da;
+    --accent:#c2410c;--accent-soft:#fff4ed;--accent-line:#f5b896;--code-bg:#f5f2ee;
+    --good:#15803d;--good-bg:#f0fdf4;--bad:#b91c1c;--bad-bg:#fef2f2;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;font-size:17px;}
+  .wrap{max-width:820px;margin:0 auto;padding:56px 28px 110px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-size:33px;line-height:1.14;margin:.3em 0 .2em;letter-spacing:-.02em}
+  .lede{font-size:19px;color:var(--muted);margin:.2em 0 0}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13.5px;color:var(--faint)}
+  .meta b{color:var(--muted);font-weight:600}
+  h2{font-size:23px;margin:48px 0 6px;letter-spacing:-.01em}
+  h2 .n{color:var(--accent-line);font-weight:800;margin-right:10px}
+  h3{font-size:18px;margin:30px 0 4px}
+  p{margin:14px 0}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--code-bg);padding:1.5px 6px;border-radius:5px;color:#9a3412}
+  pre{background:#1c1917;color:#f5f0e8;padding:18px 20px;border-radius:11px;overflow-x:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.6;margin:18px 0;border:1px solid #2c2622}
+  pre code{background:none;color:inherit;padding:0;font-size:inherit}
+  .c-key{color:#fbbf24}.c-type{color:#7dd3fc}.c-com{color:#a8a29e;font-style:italic}.c-str{color:#bef264}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-line)}
+  a:hover{background:var(--accent-soft)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:22px 24px;margin:22px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .note{background:var(--accent-soft);border:1px solid var(--accent-line);border-left:4px solid var(--accent);border-radius:9px;padding:14px 18px;margin:22px 0;font-size:15.5px;color:#7c2d12}
+  .note b{color:#7c2d12}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  td code{font-size:13px}
+  .chain{margin:18px 0;padding:0;list-style:none}
+  .chain li{position:relative;padding:12px 16px;margin:8px 0;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .chain li b{color:var(--accent)}
+  .chain .arrow{text-align:center;color:var(--accent-line);font-size:20px;margin:-2px 0;font-weight:800}
+  .quiz{background:var(--card);border:1.5px solid var(--accent-line);border-radius:14px;padding:24px 26px;margin:26px 0}
+  .quiz h3{margin-top:0;display:flex;align-items:center;gap:9px}
+  .q{margin:22px 0}
+  .q p.stem{font-weight:600;margin:0 0 10px}
+  .opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:11px 15px;margin:7px 0;cursor:pointer;font-size:15.5px;color:var(--ink);transition:border-color .12s,background .12s;font-family:inherit}
+  .opt:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+  .opt.correct{border-color:var(--good);background:var(--good-bg);color:var(--good);font-weight:600}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+  .opt:disabled{cursor:default}
+  .fb{font-size:14.5px;margin-top:9px;padding:11px 14px;border-radius:8px;display:none}
+  .fb.show{display:block}.fb.ok{background:var(--good-bg);color:var(--good);border:1px solid #bbf7d0}.fb.no{background:var(--bad-bg);color:var(--bad);border:1px solid #fecaca}
+  .scoreline{margin-top:8px;font-size:14px;color:var(--muted)}
+  .askbox{background:#1c1917;color:#f5f0e8;border-radius:13px;padding:22px 26px;margin:40px 0 0}
+  .askbox h3{margin:0 0 8px;color:#fff}.askbox p{margin:6px 0;color:#d6d3d1;font-size:15.5px}.askbox code{background:#2c2622;color:#fbbf24}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+  @media print{body{font-size:11pt}.opt{border:1px solid #ccc}.askbox{background:#eee;color:#000}pre{background:#f5f2ee;color:#222}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">smithy-java · protocol track · lesson 2</div>
+  <h1>The Smallest Real Protocol</h1>
+  <p class="lede">In Lesson 1 you learned the six-method contract. Now watch a <em>real</em> protocol satisfy it in ~45 lines. The trick: inheritance does almost all the work, and that tells you exactly how much code <em>you'd</em> write.</p>
+
+  <div class="meta">
+    <span><b>Goal</b> — Read RpcV2CborProtocol &amp; see the inheritance chain</span>
+    <span><b>Time</b> — ~12 min</span>
+    <span><b>Builds on</b> — Lesson 1 (the contract)</span>
+  </div>
+
+  <h2><span class="n">1</span>The whole protocol, in 45 lines</h2>
+  <p>This is the complete CBOR client protocol — the entire file, lightly trimmed:</p>
+  <pre><code><span class="c-key">public final class</span> <span class="c-type">RpcV2CborProtocol</span> <span class="c-key">extends</span> <span class="c-type">AbstractRpcV2ClientProtocol</span> {
+    <span class="c-key">private static final</span> String PAYLOAD_MEDIA_TYPE = <span class="c-str">"application/cbor"</span>;
+    <span class="c-key">private static final</span> <span class="c-type">Codec</span> CBOR_CODEC = <span class="c-type">Rpcv2CborCodec</span>.builder().build();
+
+    <span class="c-key">public</span> RpcV2CborProtocol(<span class="c-type">ShapeId</span> service) {
+        <span class="c-key">super</span>(<span class="c-type">Rpcv2CborTrait</span>.ID, service, PAYLOAD_MEDIA_TYPE);
+    }
+
+    <span class="c-key">@Override protected</span> <span class="c-type">Codec</span> codec() { <span class="c-key">return</span> CBOR_CODEC; }
+
+    <span class="c-com">// The factory — the SPI entry point (Lesson 6 covers this)</span>
+    <span class="c-key">public static final class</span> <span class="c-type">Factory</span> <span class="c-key">implements</span> <span class="c-type">ClientProtocolFactory</span>&lt;Rpcv2CborTrait&gt; {
+        <span class="c-key">@Override public</span> <span class="c-type">ShapeId</span> id() { <span class="c-key">return</span> <span class="c-type">Rpcv2CborTrait</span>.ID; }
+        <span class="c-key">@Override public</span> <span class="c-type">ClientProtocol</span>&lt;?,?&gt; createProtocol(<span class="c-type">ProtocolSettings</span> s, <span class="c-type">Rpcv2CborTrait</span> t) {
+            <span class="c-key">return new</span> RpcV2CborProtocol(s.service());
+        }
+    }
+}</code></pre>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/client/client-rpcv2-cbor/src/main/java/software/amazon/smithy/java/client/rpcv2/RpcV2CborProtocol.java"><code>client/client-rpcv2-cbor/.../RpcV2CborProtocol.java</code></a></p>
+
+  <p>Notice what's <em>missing</em>: no <code>createRequest</code>, no <code>deserializeResponse</code>, no <code>setServiceEndpoint</code>. This class only declares <strong>two facts</strong>: "my codec is CBOR" and "my media type is <code>application/cbor</code>." Everything else is inherited.</p>
+
+  <h2><span class="n">2</span>The inheritance chain</h2>
+  <p>Each layer of the hierarchy contributes a slice of the six-method contract. Read it top-down — the work gets more specific as you descend:</p>
+
+  <ul class="chain">
+    <li><b>ClientProtocol&lt;Req,Resp&gt;</b> — the interface. Declares all six methods. <span style="color:var(--faint)">(Lesson 1)</span></li>
+    <li class="arrow">▲ implements</li>
+    <li><b>HttpClientProtocol</b> — supplies <code>id()</code>, <code>messageExchange()</code> (HTTP), and <code>setServiceEndpoint()</code>. Now <code>Req=HttpRequest</code>, <code>Resp=HttpResponse</code>.</li>
+    <li class="arrow">▲ extends</li>
+    <li><b>AbstractRpcV2ClientProtocol</b> — supplies <code>createRequest()</code> and <code>deserializeResponse()</code> for the RPC-v2 wire shape (POST to <code>/service/X/operation/Y</code>, body = serialized payload). Leaves one hole: <code>abstract Codec codec()</code>.</li>
+    <li class="arrow">▲ extends</li>
+    <li><b>RpcV2CborProtocol</b> — fills the hole: <code>codec() → CBOR</code>. Done.</li>
+  </ul>
+
+  <div class="note"><b>The pattern to internalize:</b> a sibling protocol, <code>RpcV2JsonProtocol</code>, would be the <em>same 45 lines</em> with <code>JsonCodec</code> and <code>"application/json"</code>. The wire framing lives in the abstract base; the concrete class only picks a codec. <strong>That's the payoff of schema-directed serde</strong> (Lesson 3): the body encoding is a swappable knob.</p></div>
+
+  <h2><span class="n">3</span>What the abstract base actually does</h2>
+  <p>Look inside <code>AbstractRpcV2ClientProtocol</code> to see the contract being honored. Its <code>createRequest</code> is the outbound half from Lesson 1, made concrete:</p>
+  <pre><code><span class="c-key">public</span> HttpRequest createRequest(operation, input, context, endpoint) {
+    <span class="c-key">var</span> target = <span class="c-str">"/service/"</span> + service.getName() + <span class="c-str">"/operation/"</span> + operation.schema().id().getName();
+    <span class="c-key">var</span> builder = templateRequest.toModifiableCopy();   <span class="c-com">// POST + smithy-protocol headers</span>
+    builder.setUri(endpoint.withConcatPath(target));
+
+    <span class="c-key">if</span> (operation.inputSchema().hasTrait(UNIT_TYPE_TRAIT)) {
+        builder.setBody(DataStream.ofEmpty());            <span class="c-com">// no input → empty body</span>
+    } <span class="c-key">else</span> {
+        builder.addHeader(CONTENT_TYPE, payloadMediaType);
+        builder.setBody(DataStream.ofByteBuffer(<span class="c-type">codec()</span>.serialize(input), payloadMediaType));
+    }                                                     <span class="c-com">// ▲ the codec turns the shape into bytes</span>
+    <span class="c-key">return</span> builder;
+}</code></pre>
+  <p>And its <code>deserializeResponse</code> is the inbound half — status check, then hand the bytes to the codec:</p>
+  <pre><code><span class="c-key">public</span> O deserializeResponse(operation, ctx, typeRegistry, request, response) {
+    <span class="c-key">if</span> (response.statusCode() != <span class="c-str">200</span>)
+        <span class="c-key">throw</span> errorDeserializer().createError(ctx, operation, typeRegistry, response);
+    <span class="c-key">var</span> builder = operation.outputBuilder();
+    <span class="c-key">return</span> <span class="c-type">codec()</span>.deserializeShape(response.body().asByteBuffer(), builder);
+}</code></pre>
+  <p style="font-size:14.5px;color:var(--muted)">Source: <a href="https://github.com/smithy-lang/smithy-java/blob/main/client/client-rpcv2/src/main/java/software/amazon/smithy/java/client/rpcv2/AbstractRpcV2ClientProtocol.java"><code>client/client-rpcv2/.../AbstractRpcV2ClientProtocol.java</code></a></p>
+
+  <p>See how <code>codec()</code> — the one method <code>RpcV2CborProtocol</code> overrides — is the pivot? The base class wrote all the framing logic <em>in terms of</em> a codec it doesn't yet know. The concrete subclass supplies it. This is the Template Method pattern, and it's how you'll structure a new protocol family.</p>
+
+  <div class="quiz">
+    <h3>🔁 Quick check</h3>
+
+    <div class="q" data-correct="b">
+      <p class="stem">1. <code>RpcV2CborProtocol</code> overrides only <code>codec()</code>. Where does its <code>createRequest()</code> come from?</p>
+      <button class="opt" data-k="a">It's generated by the Smithy codegen at build time.</button>
+      <button class="opt" data-k="b">It's inherited from <code>AbstractRpcV2ClientProtocol</code>, which writes the RPC framing in terms of <code>codec()</code>.</button>
+      <button class="opt" data-k="c">From <code>ClientProtocol</code> as a default method.</button>
+      <div class="fb" data-k="a">No — protocols are hand-written runtime classes; codegen generates the <em>shapes</em>, not the protocol.</div>
+      <div class="fb" data-k="b">Right. The abstract base implements the outbound/inbound halves generically; the subclass only plugs in the codec. Template Method.</div>
+      <div class="fb" data-k="c"><code>ClientProtocol</code> declares <code>createRequest</code> but provides no body — it's an interface method, not a default.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <p class="stem">2. You want to add an "RPC v2 + MessagePack" protocol. Based on this lesson, what's the minimal shape of the work?</p>
+      <button class="opt" data-k="a">Reimplement <code>createRequest</code>/<code>deserializeResponse</code> from scratch.</button>
+      <button class="opt" data-k="b">Fork <code>HttpClientProtocol</code> and change the transport.</button>
+      <button class="opt" data-k="c">Extend <code>AbstractRpcV2ClientProtocol</code>, return a MessagePack <code>Codec</code> from <code>codec()</code>, set the media type.</button>
+      <div class="fb" data-k="a">Overkill — the RPC framing is identical; only the body encoding differs.</div>
+      <div class="fb" data-k="b">The transport isn't the issue — it's still HTTP. Only the payload codec changes.</div>
+      <div class="fb" data-k="c">Exactly. If the wire framing matches RPC v2, you inherit it and supply a codec + media type — ~45 lines, like CBOR.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <p class="stem">3. In <code>createRequest</code>, what specifically turns the typed <code>input</code> shape into bytes?</p>
+      <button class="opt" data-k="a"><code>codec().serialize(input)</code> — the codec drives serialization.</button>
+      <button class="opt" data-k="b">Java reflection over the input's fields.</button>
+      <button class="opt" data-k="c">The transport, after the request is built.</button>
+      <div class="fb" data-k="a">Correct. The protocol delegates body encoding to its <code>Codec</code>. The protocol decides framing (URI, headers); the codec decides bytes. We unpack <em>how</em> the codec does it — with zero reflection — in Lesson 3.</div>
+      <div class="fb" data-k="b">No reflection anywhere — smithy-java avoids it on principle (performance). The codec uses schema-directed push serialization.</div>
+      <div class="fb" data-k="c">The transport only sends already-serialized bytes; it never touches the shape.</div>
+    </div>
+    <div class="scoreline" id="score"></div>
+  </div>
+
+  <h2><span class="n">4</span>What you now know</h2>
+  <p>A concrete protocol can be tiny because the contract is satisfied by a chain of base classes, each contributing a slice. You can read <code>RpcV2CborProtocol</code> and immediately say which class supplies which method — and you know that adding a same-family protocol means picking a codec, not rewriting framing. Next, <strong>Lesson 3</strong> answers the question this raises: <em>how</em> does <code>codec().serialize(input)</code> work without reflection, and why does that decoupling exist?</p>
+
+  <div class="askbox">
+    <h3>💬 Ask me anything</h3>
+    <p>• <code>"Show me RpcV2JsonProtocol — is it really the same shape?"</code><br>
+       • <code>"What's in the templateRequest that gets copied per call?"</code><br>
+       • <code>"When would I NOT be able to reuse an abstract base like this?"</code></p>
+    <p style="margin-top:10px">Say <b>"next lesson"</b> for Lesson 3: schema-directed serde.</p>
+  </div>
+
+  <footer>Lesson 2 of the smithy-java protocol track · <a href="../reference/glossary.html">Glossary</a> · Prev: <a href="0001-the-clientprotocol-contract.html">Lesson 1</a></footer>
+</div>
+<script>
+  let answered=0,correct=0;
+  document.querySelectorAll('.q').forEach(q=>{
+    const key=q.dataset.correct,opts=q.querySelectorAll('.opt');
+    opts.forEach(opt=>opt.addEventListener('click',()=>{
+      if(q.dataset.done)return;q.dataset.done="1";answered++;
+      const chosen=opt.dataset.k;if(chosen===key)correct++;
+      opts.forEach(o=>{o.disabled=true;if(o.dataset.k===key)o.classList.add('correct');else if(o.dataset.k===chosen)o.classList.add('wrong');});
+      const fb=q.querySelector('.fb[data-k="'+chosen+'"]');if(fb)fb.classList.add('show',chosen===key?'ok':'no');
+      document.getElementById('score').textContent=`Answered ${answered}/3 · ${correct} correct`+(answered===3?(correct===3?"  — nailed it. On to Lesson 3.":"  — re-read the misses, then say \"next lesson\"."):"");
+    }));
+  });
+</script>
+</body>
+</html>

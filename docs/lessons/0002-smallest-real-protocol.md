@@ -1,0 +1,148 @@
+# Lesson 2 — The Smallest Real Protocol
+
+> **smithy-java · protocol track · lesson 2**
+> **Goal:** Read `RpcV2CborProtocol` and see the contract satisfied by inheritance.
+> **Time:** ~12 min · **Builds on:** Lesson 1 (the six-method contract).
+
+In Lesson 1 you learned the six-method `ClientProtocol` contract. Now watch a *real* protocol
+satisfy it in ~45 lines. The trick: inheritance does almost all the work — and that tells you
+exactly how much code *you'd* write.
+
+---
+
+## 1. The whole protocol, in 45 lines
+
+This is the complete CBOR client protocol — the entire file, lightly trimmed:
+
+```java
+public final class RpcV2CborProtocol extends AbstractRpcV2ClientProtocol {
+    private static final String PAYLOAD_MEDIA_TYPE = "application/cbor";
+    private static final Codec CBOR_CODEC = Rpcv2CborCodec.builder().build();
+
+    public RpcV2CborProtocol(ShapeId service) {
+        super(Rpcv2CborTrait.ID, service, PAYLOAD_MEDIA_TYPE);
+    }
+
+    @Override protected Codec codec() { return CBOR_CODEC; }
+
+    // The factory — the SPI entry point (Lesson 5 covers this)
+    public static final class Factory implements ClientProtocolFactory<Rpcv2CborTrait> {
+        @Override public ShapeId id() { return Rpcv2CborTrait.ID; }
+        @Override public ClientProtocol<?,?> createProtocol(ProtocolSettings s, Rpcv2CborTrait t) {
+            return new RpcV2CborProtocol(s.service());
+        }
+    }
+}
+```
+
+> Source: [`client/client-rpcv2-cbor/.../RpcV2CborProtocol.java`](https://github.com/smithy-lang/smithy-java/blob/main/client/client-rpcv2-cbor/src/main/java/software/amazon/smithy/java/client/rpcv2/RpcV2CborProtocol.java)
+
+Notice what's *missing*: no `createRequest`, no `deserializeResponse`, no `setServiceEndpoint`.
+This class declares only **two facts** — "my codec is CBOR" and "my media type is
+`application/cbor`." Everything else is inherited.
+
+---
+
+## 2. The inheritance chain
+
+Each layer contributes a slice of the six-method contract. Read it top-down; the work gets more
+specific as you descend:
+
+```
+ClientProtocol<Req,Resp>          ← the interface; declares all six methods   (Lesson 1)
+        ▲ implements
+HttpClientProtocol                ← supplies id(), messageExchange() (HTTP),
+                                     setServiceEndpoint(). Req=HttpRequest, Resp=HttpResponse
+        ▲ extends
+AbstractRpcV2ClientProtocol       ← supplies createRequest() + deserializeResponse() for the
+                                     RPC-v2 wire shape. Leaves one hole: abstract Codec codec()
+        ▲ extends
+RpcV2CborProtocol                 ← fills the hole: codec() → CBOR. Done.
+```
+
+**The pattern to internalize:** a sibling protocol, `RpcV2JsonProtocol`, would be the *same 45
+lines* with `JsonCodec` and `"application/json"`. The wire framing lives in the abstract base; the
+concrete class only picks a codec. That's the payoff of schema-directed serde (Lesson 3): the body
+encoding is a swappable knob.
+
+---
+
+## 3. What the abstract base actually does
+
+Inside `AbstractRpcV2ClientProtocol`, the contract is honored. `createRequest` is Lesson 1's
+outbound half, made concrete:
+
+```java
+public HttpRequest createRequest(operation, input, context, endpoint) {
+    var target = "/service/" + service.getName() + "/operation/" + operation.schema().id().getName();
+    var builder = templateRequest.toModifiableCopy();   // POST + smithy-protocol headers
+    builder.setUri(endpoint.withConcatPath(target));
+
+    if (operation.inputSchema().hasTrait(UNIT_TYPE_TRAIT)) {
+        builder.setBody(DataStream.ofEmpty());            // no input → empty body
+    } else {
+        builder.addHeader(CONTENT_TYPE, payloadMediaType);
+        builder.setBody(DataStream.ofByteBuffer(codec().serialize(input), payloadMediaType));
+    }                                                     // ▲ the codec turns the shape into bytes
+    return builder;
+}
+```
+
+And `deserializeResponse` is the inbound half — status check, then hand the bytes to the codec:
+
+```java
+public O deserializeResponse(operation, ctx, typeRegistry, request, response) {
+    if (response.statusCode() != 200)
+        throw errorDeserializer().createError(ctx, operation, typeRegistry, response);
+    var builder = operation.outputBuilder();
+    return codec().deserializeShape(response.body().asByteBuffer(), builder);
+}
+```
+
+> Source: [`client/client-rpcv2/.../AbstractRpcV2ClientProtocol.java`](https://github.com/smithy-lang/smithy-java/blob/main/client/client-rpcv2/src/main/java/software/amazon/smithy/java/client/rpcv2/AbstractRpcV2ClientProtocol.java)
+
+`codec()` — the one method `RpcV2CborProtocol` overrides — is the pivot. The base class wrote all
+the framing logic *in terms of* a codec it doesn't yet know; the concrete subclass supplies it.
+This is the **Template Method** pattern, and it's how you'll structure a new protocol family.
+
+---
+
+## 4. Quick check
+
+**Q1.** `RpcV2CborProtocol` overrides only `codec()`. Where does its `createRequest()` come from?
+- a) Generated by Smithy codegen at build time.
+- b) Inherited from `AbstractRpcV2ClientProtocol`, which writes the RPC framing in terms of `codec()`.
+- c) From `ClientProtocol` as a default method.
+
+**Q2.** You want to add "RPC v2 + MessagePack." What's the minimal shape of the work?
+- a) Reimplement `createRequest`/`deserializeResponse` from scratch.
+- b) Fork `HttpClientProtocol` and change the transport.
+- c) Extend `AbstractRpcV2ClientProtocol`, return a MessagePack `Codec` from `codec()`, set the media type.
+
+**Q3.** In `createRequest`, what turns the typed `input` into bytes?
+- a) `codec().serialize(input)` — the codec drives serialization.
+- b) Java reflection over the input's fields.
+- c) The transport, after the request is built.
+
+<details><summary><strong>Answers</strong></summary>
+
+- **Q1 → b.** Template Method: the abstract base implements the outbound/inbound halves generically; the subclass plugs in the codec. (Codegen generates *shapes*, not protocols.)
+- **Q2 → c.** If the wire framing matches RPC v2, you inherit it and supply a codec + media type — ~45 lines, like CBOR. The transport is still HTTP; only the body encoding changes.
+- **Q3 → a.** The protocol delegates body encoding to its `Codec`. No reflection anywhere (smithy-java avoids it on principle); the codec uses schema-directed push serialization — Lesson 3.
+
+</details>
+
+---
+
+## 5. What you now know
+
+A concrete protocol can be tiny because the contract is satisfied by a chain of base classes, each
+contributing a slice. You can read `RpcV2CborProtocol` and say which class supplies which method —
+and you know adding a same-family protocol means picking a codec, not rewriting framing.
+
+**Next — Lesson 3:** *how* does `codec().serialize(input)` work without reflection, and why does
+that decoupling exist?
+
+## Reference
+- [Glossary](../reference/glossary.html)
+- [`RpcV2CborProtocol.java`](https://github.com/smithy-lang/smithy-java/blob/main/client/client-rpcv2-cbor/src/main/java/software/amazon/smithy/java/client/rpcv2/RpcV2CborProtocol.java) · [`AbstractRpcV2ClientProtocol.java`](https://github.com/smithy-lang/smithy-java/blob/main/client/client-rpcv2/src/main/java/software/amazon/smithy/java/client/rpcv2/AbstractRpcV2ClientProtocol.java)
