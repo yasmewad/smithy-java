@@ -4,7 +4,7 @@
 
 Start from zero and finish able to read, and add, a protocol in smithy-java. One concrete task, used as a guided tour of the whole framework. Each lesson is ~5–8 minutes and ends with a self-check.
 
-Prefer the interactive version with quizzes? Open [`index.html`](index.html). Keep the [glossary](../reference/glossary.md) handy.
+Prefer the interactive version with quizzes? Open [`index.html`](index.html). Keep the [glossary](../reference/glossary.html) handy.
 
 ## The track
 

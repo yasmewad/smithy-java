@@ -136,4 +136,4 @@ It passes its identity (trait `ID`, service, and `"application/cbor"`) to `super
 
 ---
 
-[← Prev: The ClientProtocol contract](0002-the-clientprotocol-contract.md) · [Track overview](../index.md) · [Next: Schema-directed serde →](0004-schema-directed-serde.md)
+[← Prev: The ClientProtocol contract](0002-the-clientprotocol-contract.md) · [Track overview](index.md) · [Next: Schema-directed serde →](0004-schema-directed-serde.md)
