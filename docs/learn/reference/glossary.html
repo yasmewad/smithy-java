@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossary · Adding a protocol — smithy.io/learn</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<style>
+  dl.gloss { margin: 2rem 0; }
+  dl.gloss dt { font-family: var(--font-ui); font-weight: 700; font-size: 1rem; margin: 1.6rem 0 0.3rem; color: var(--ink); }
+  dl.gloss dt code { font-size: 0.85em; }
+  dl.gloss dd { margin: 0 0 0.4rem; color: var(--ink-soft); font-size: 0.98rem; }
+  dl.gloss dd .anchor { font-family: var(--font-ui); font-size: 0.72rem; color: var(--ink-faint); display: block; margin-top: 0.2rem; }
+  .idx { font-family: var(--font-ui); font-size: 0.82rem; columns: 2; column-gap: 2rem; margin: 1.4rem 0 2.4rem; }
+  .idx a { display: block; padding: 0.15rem 0; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">smithy<b>.io</b>/learn · adding a protocol</span>
+  <a href="../lessons/index.html">Track overview →</a>
+</div>
+
+<main class="wide">
+  <p class="eyebrow">Reference · canonical vocabulary</p>
+  <h1>Glossary</h1>
+  <p class="dek">The words this track uses, defined once. Every term is anchored to the real smithy-java source or the internal KT doc, so the definitions stay honest.</p>
+
+  <div class="idx">
+    <a href="#shape">Shape</a>
+    <a href="#model">Model</a>
+    <a href="#codegen">Code generation</a>
+    <a href="#protocol">Protocol</a>
+    <a href="#clientprotocol">ClientProtocol</a>
+    <a href="#factory">ClientProtocolFactory</a>
+    <a href="#protocolsettings">ProtocolSettings</a>
+    <a href="#messageexchange">MessageExchange</a>
+    <a href="#schema">Schema</a>
+    <a href="#serde">Schema-directed serde</a>
+    <a href="#shapeserializer">ShapeSerializer</a>
+    <a href="#codec">Codec</a>
+    <a href="#extension">SchemaExtensionProvider</a>
+    <a href="#spi">SPI / ServiceLoader</a>
+    <a href="#restrpc">REST vs RPC base</a>
+    <a href="#compliance">Compliance tests</a>
+    <a href="#trait">Trait</a>
+    <a href="#typeregistry">TypeRegistry</a>
+  </div>
+
+  <dl class="gloss">
+    <dt id="shape">Shape</dt>
+    <dd>The unit of a Smithy model: a structure, a member (field), an operation, a service. A shape says <em>what</em> the data is, never <em>how</em> it looks on the wire.
+      <span class="anchor">KT doc §2; smithy.io/2.0</span></dd>
+
+    <dt id="model">Model</dt>
+    <dd>The abstract description of a whole service — its operations and their inputs/outputs — written in the Smithy language, independent of any wire format.
+      <span class="anchor">KT doc "Getting Started"; smithy.io/2.0</span></dd>
+
+    <dt id="codegen">Code generation (“codegen”)</dt>
+    <dd>The step that reads a model and writes Java for you: builder classes, accessors, and the plumbing to send/receive each operation. Entry point <code>JavaCodegenPlugin</code> (build plugin name <code>"java-codegen"</code>), modes <code>CLIENT</code>/<code>SERVER</code>/<code>TYPES</code>.
+      <span class="anchor">codegen/codegen-plugin/…/JavaCodegenPlugin.java; KT doc §16</span></dd>
+
+    <dt id="protocol">Protocol</dt>
+    <dd>The rules for turning an operation call into bytes and back. smithy-java ships restJson1, restXml, AWS JSON 1.0/1.1, AWS Query, and rpcv2Cbor. The same shapes serialize under any of them.
+      <span class="anchor">KT doc §11</span></dd>
+
+    <dt id="clientprotocol"><code>ClientProtocol&lt;RequestT, ResponseT&gt;</code></dt>
+    <dd>The one interface a client protocol must satisfy. Six members: <code>id()</code> → <code>ShapeId</code>; <code>payloadCodec()</code> → <code>Codec</code> (may be null); <code>messageExchange()</code>; <code>createRequest(...)</code>; <code>setServiceEndpoint(...)</code>; <code>deserializeResponse(...)</code>.
+      <span class="anchor">client/client-core/…/client/core/ClientProtocol.java</span></dd>
+
+    <dt id="factory"><code>ClientProtocolFactory&lt;T extends Trait&gt;</code></dt>
+    <dd>Builds a protocol inside a client builder. Declares <code>id()</code> → <code>ShapeId</code> and <code>createProtocol(ProtocolSettings settings, T trait)</code>. A protocol’s nested <code>Factory</code> is what gets registered for discovery.
+      <span class="anchor">client/client-core/…/client/core/ClientProtocolFactory.java</span></dd>
+
+    <dt id="protocolsettings"><code>ProtocolSettings</code></dt>
+    <dd>The small carrier passed to a factory at construction; notably exposes <code>service()</code> → <code>ShapeId</code>, the service the protocol is being built for.
+      <span class="anchor">client/client-core/…/client/core/ProtocolSettings.java</span></dd>
+
+    <dt id="messageexchange"><code>MessageExchange&lt;RequestT, ResponseT&gt;</code></dt>
+    <dd>A marker interface binding a protocol to a compatible transport’s request/response types; the pipeline validates compatibility at construction.
+      <span class="anchor">client/client-core/…/client/core/MessageExchange.java; KT doc §8</span></dd>
+
+    <dt id="schema"><code>Schema</code></dt>
+    <dd>A trimmed-down runtime representation of a Smithy shape — just enough to drive serde. Sealed hierarchy (<code>RootSchema</code>, <code>MemberSchema</code>, deferred/resolved variants). Carries a dense <code>memberIndex()</code> for array dispatch.
+      <span class="anchor">core/…/core/schema/; KT doc §2</span></dd>
+
+    <dt id="serde">Schema-directed serde</dt>
+    <dd>The design where <em>Schema is the first argument to every serde method</em>. Generated code pushes members; the protocol codec reads the schema to decide wire format. Traits are never inspected at write time — they’re precomputed into extensions.
+      <span class="anchor">KT doc §2</span></dd>
+
+    <dt id="shapeserializer"><code>ShapeSerializer</code> / <code>ShapeDeserializer</code></dt>
+    <dd>The visitor interfaces a codec implements. Serialization is “push” (<code>serializeMembers(ShapeSerializer)</code>); deserialization is a callback (<code>readStruct(schema, state, consumer)</code> then <code>switch(member.memberIndex())</code>).
+      <span class="anchor">core/…/core/serde/ShapeSerializer.java, ShapeDeserializer.java</span></dd>
+
+    <dt id="codec"><code>Codec</code></dt>
+    <dd>The bridge between structures (which carry schemas) and bytes; produces <code>ShapeSerializer</code>/<code>ShapeDeserializer</code>. Interface lives in <code>core</code>; implementations (<code>JsonCodec</code>, <code>Rpcv2CborCodec</code>, <code>XmlCodec</code>) live in <code>codecs/</code>. A new protocol often <em>reuses</em> an existing codec.
+      <span class="anchor">core/…/core/serde/Codec.java; codecs/; KT doc §5</span></dd>
+
+    <dt id="extension"><code>SchemaExtensionProvider</code> / <code>SchemaExtensionKey</code></dt>
+    <dd>The SPI that attaches precomputed, protocol-specific data to a schema once at construction (e.g. UTF-8 field-name byte tables). Accessed via <code>schema.getExtension(KEY)</code>. Examples: <code>SmithyJsonSchemaExtensions</code>, <code>CborSchemaExtensions</code>, <code>HttpBindingSchemaExtensions</code>.
+      <span class="anchor">KT doc §2 (Extension System)</span></dd>
+
+    <dt id="spi">SPI / <code>ServiceLoader</code> / <code>META-INF/services</code></dt>
+    <dd>The universal discovery mechanism. A protocol becomes “known” by registering its factory in a service file. Real example: <code>client-rpcv2-cbor/…/META-INF/services/software.amazon.smithy.java.client.core.ClientProtocolFactory</code> contains the single line <code>software.amazon.smithy.java.client.rpcv2.RpcV2CborProtocol$Factory</code>. Missing registration = feature silently absent.
+      <span class="anchor">verified service file; KT doc "Code Conventions"</span></dd>
+
+    <dt id="restrpc">REST base vs RPC base</dt>
+    <dd>REST protocols (restJson1, restXml) extend <code>HttpBindingClientProtocol</code>, which auto-maps <code>@http*</code> traits to wire locations. RPC protocols (AWS JSON, AWS Query, rpcv2Cbor) extend <code>HttpClientProtocol</code> directly and serialize the whole body.
+      <span class="anchor">client/client-http/…/HttpClientProtocol.java; client/client-http-binding/…/HttpBindingClientProtocol.java; KT doc §11</span></dd>
+
+    <dt id="compliance">Protocol compliance tests</dt>
+    <dd>The authoritative correctness bar. <code>protocol-test-harness/</code> runs Smithy-defined <code>@httpRequestTests</code>/<code>@httpResponseTests</code> against real client/server code. Run with <code>./gradlew :protocol-test-harness:test</code>. A unit test that passes but fails compliance is a bug.
+      <span class="anchor">protocol-test-harness/; KT doc "Correctness First"</span></dd>
+
+    <dt id="trait">Trait</dt>
+    <dd>An annotation on a shape in the model (e.g. <code>@httpHeader</code>, <code>@required</code>, <code>@timestampFormat</code>). Protocols are also identified by a trait — e.g. rpcv2Cbor by <code>Rpcv2CborTrait.ID</code>, which a factory’s <code>id()</code> returns.
+      <span class="anchor">KT doc §2, §6; RpcV2CborProtocol.java</span></dd>
+
+    <dt id="typeregistry"><code>TypeRegistry</code></dt>
+    <dd>Maps an error discriminator (<code>__type</code> in JSON, <code>x-amzn-errortype</code> header) to the right error builder, populated at codegen time. Used by <code>deserializeResponse</code> to turn an error response into the correct modeled exception.
+      <span class="anchor">KT doc §2 (Polymorphic Error Deserialization)</span></dd>
+  </dl>
+
+  <div class="ask">
+    A term here still fuzzy? <b>Ask your teacher</b> to expand it with a concrete example from the codebase.
+  </div>
+
+  <div class="pager">
+    <a class="prv" href="../lessons/index.html"><span class="lbl">Back</span>← Track overview</a>
+    <a class="nxt" href="../lessons/0001-what-is-a-protocol.html"><span class="lbl">Start</span>Lesson 1 →</a>
+  </div>
+</main>
+</body>
+</html>

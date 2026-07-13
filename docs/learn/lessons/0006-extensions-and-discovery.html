@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 6 · Extensions and discovery — smithy.io/learn</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">smithy<b>.io</b>/learn · adding a protocol</span>
+  <span class="progress">○ ○ ○ ○ ○ ● ○ ○</span>
+</div>
+
+<main class="wrap">
+  <p class="eyebrow">Lesson 6 of 8 · Wiring it up</p>
+  <h1>Extensions and discovery: making a protocol <em>known</em></h1>
+  <p class="dek">You can write a perfect protocol class and the framework will still act as if it doesn’t exist. Two small wiring mechanisms are what turn your code from “compiled” into “found and used.”</p>
+  <p class="meta"><span class="chip">≈ 7 min</span><span class="chip">SPI wiring</span><span class="chip">META-INF/services</span></p>
+
+  <p>By now you’ve met the <code>ClientProtocol</code> contract (Lesson 2), the smallest real protocol (Lesson 3), the schema-directed serde trick (Lesson 4), and the codec layer (Lesson 5). But there is a gap nobody warns you about: a protocol that <em>compiles</em> is not the same as a protocol the framework can <em>find and run</em>. This lesson is about closing that gap. There are exactly two mechanisms to learn, and both are small.</p>
+
+  <h2>Mechanism 1 — Schema extensions: precompute the wire data once</h2>
+  <p>Recall the key idea from Lesson 4: at write-time, the codec <em>never</em> inspects Smithy traits. As the KT doc puts it, “All protocol decisions are precomputed into extensions (byte arrays, formatters, lookup tables) at Schema construction.” The mechanism that attaches that precomputed data to a <code>Schema</code> is a small SPI pair: a <b>key</b> and a <b>provider</b>.</p>
+
+  <p>The key is a typed label. It just hands out a unique integer id so the data can live in an array slot for O(1) lookup:</p>
+  <p class="filepath">core/src/main/java/software/amazon/smithy/java/core/schema/SchemaExtensionKey.java</p>
+<pre><code>public final class SchemaExtensionKey&lt;T&gt; {
+    private static final AtomicInteger NEXT_ID = new AtomicInteger();
+    final int id;
+    public SchemaExtensionKey() {
+        this.id = NEXT_ID.getAndIncrement();
+    }
+}</code></pre>
+
+  <p>The provider is where a protocol computes what it needs. It declares its key and fills in a value for a given schema:</p>
+  <p class="filepath">core/src/main/java/software/amazon/smithy/java/core/schema/SchemaExtensionProvider.java</p>
+<pre><code>public interface SchemaExtensionProvider&lt;T&gt; {
+    SchemaExtensionKey&lt;T&gt; key();
+    T provide(Schema schema);
+}</code></pre>
+
+  <p>Here is a real one. The CBOR codec precomputes its field-name byte tables and a lookup structure so serialization is a byte-copy, not a trait scan:</p>
+  <p class="filepath">codecs/cbor-codec/src/main/java/software/amazon/smithy/java/cbor/CborSchemaExtensions.java</p>
+<pre><code>public final class CborSchemaExtensions
+        implements SchemaExtensionProvider&lt;CborSchemaExtensions.CborExtension&gt; {
+
+    public static final SchemaExtensionKey&lt;CborExtension&gt; KEY = new SchemaExtensionKey&lt;&gt;();
+
+    public record CborExtension(
+            byte[] memberNameBytes,
+            CborMemberLookup memberLookup,
+            byte[][] fieldNameTable) {}
+
+    @Override public SchemaExtensionKey&lt;CborExtension&gt; key() { return KEY; }
+    @Override public CborExtension provide(Schema schema) { /* precompute from the schema */ }
+}</code></pre>
+
+  <p>At runtime, the codec pulls its precomputed value straight off the schema by key:</p>
+<pre><code>CborSchemaExtensions.CborExtension ext = schema.getExtension(CborSchemaExtensions.KEY);</code></pre>
+
+  <div class="note">
+    <b>The three you’ll see</b>
+    <code>SmithyJsonSchemaExtensions</code> precomputes UTF-8 field-name byte arrays for the native JSON codec. <code>CborSchemaExtensions</code> precomputes CBOR-encoded field names. <code>HttpBindingSchemaExtensions</code> precomputes each member’s binding (HEADER / QUERY / LABEL / PAYLOAD / BODY) and wire names. Each declares its own <code>public static final SchemaExtensionKey&lt;…&gt; KEY</code> and reads it back via <code>schema.getExtension(KEY)</code>.
+  </div>
+
+  <div class="why">
+    <b>Why this is a silent trap</b>
+    The KT doc rule is blunt: “Always update schema extensions when adding trait behavior. Protocol codecs read precomputed extension data, not traits at runtime. Adding a trait without updating its <code>SchemaExtensionProvider</code> silently has no wire effect.” No crash, no warning — the byte just never appears on the wire. If your protocol needs a trait to change the bytes, the extension is where that happens.
+  </div>
+
+  <h2>Mechanism 2 — ServiceLoader: how the framework <em>finds</em> your code</h2>
+  <p>The second mechanism is the one that decides whether your protocol exists at all. smithy-java never hard-codes a list of protocols. Instead it uses Java’s built-in <b>ServiceLoader</b>: at startup it asks “which classes out there implement this interface?” and the answer comes from plain text files under <code>META-INF/services/</code>. This is the same pattern the CLAUDE.md architecture notes call out: “Uses Java ServiceLoader extensively for protocol, transport, and codec discovery.”</p>
+
+  <p>The schema-extension providers you just saw are themselves discovered this way. The core module loads them once at class-load:</p>
+  <p class="filepath">core/src/main/java/software/amazon/smithy/java/core/schema/Schema.java</p>
+<pre><code>var loader = ServiceLoader
+        .load(SchemaExtensionProvider.class, SchemaExtensionProvider.class.getClassLoader());</code></pre>
+
+  <p>For that loader to see the CBOR extension, the cbor-codec module ships a file whose <em>name</em> is the interface and whose <em>contents</em> are the implementing classes:</p>
+  <p class="filepath">codecs/cbor-codec/src/main/resources/META-INF/services/software.amazon.smithy.java.core.schema.SchemaExtensionProvider</p>
+<pre><code>software.amazon.smithy.java.cbor.CborSchemaExtensions</code></pre>
+
+  <p>A protocol is registered the same way, against a different interface — <code>ClientProtocolFactory</code>, the little factory that knows a protocol’s id and how to build it:</p>
+  <p class="filepath">client/client-core/.../ClientProtocolFactory.java</p>
+<pre><code>public interface ClientProtocolFactory&lt;T extends Trait&gt; {
+    ShapeId id();
+    ClientProtocol&lt;?, ?&gt; createProtocol(ProtocolSettings settings, T trait);
+}</code></pre>
+
+  <p>And here is a real registration — the file that makes the CBOR protocol discoverable. This is the exact path you would copy for a new protocol:</p>
+  <p class="filepath">client/client-rpcv2-cbor/src/main/resources/META-INF/services/software.amazon.smithy.java.client.core.ClientProtocolFactory</p>
+<pre><code>software.amazon.smithy.java.client.rpcv2.RpcV2CborProtocol$Factory</code></pre>
+
+  <p>The AWS restJson1 protocol looks identical, just pointing at its own factory:</p>
+  <p class="filepath">aws/client/aws-client-restjson/src/main/resources/META-INF/services/software.amazon.smithy.java.client.core.ClientProtocolFactory</p>
+<pre><code>software.amazon.smithy.java.aws.client.restjson.RestJsonClientProtocol$Factory</code></pre>
+
+  <div class="note">
+    <b>Reading that filename</b>
+    The <code>$Factory</code> at the end is Java’s notation for a nested class: <code>RpcV2CborProtocol.Factory</code>. In the source it is exactly <code>public static final class Factory implements ClientProtocolFactory&lt;Rpcv2CborTrait&gt;</code>. The file name is the SPI interface; the single line inside is the class ServiceLoader should instantiate.
+  </div>
+
+  <div class="warn">
+    <b>Forget this file and the feature is silently absent</b>
+    The KT doc states the rule directly: “Register new SPIs in <code>META-INF/services/</code>. ServiceLoader is the discovery mechanism. Missing registration = feature silently absent.” Your protocol class compiles, your tests that instantiate it directly pass, but the client builder can’t find it. There is no error to grep for — the framework simply behaves as though your protocol was never written.
+  </div>
+
+  <h2>Putting the two together</h2>
+  <p>These two mechanisms answer two different “known” questions. The <b>schema extension</b> makes your protocol’s <em>wire data</em> known to the schema — precomputed once, read on the hot path with no trait lookups. The <b>ServiceLoader registration</b> makes your protocol <em>itself</em> known to the framework — discovered at startup with no code changes anywhere else. Miss the first and the bytes are wrong or missing; miss the second and nothing runs at all. Both failures are silent, which is exactly why they’re on this checklist.</p>
+
+  <div class="quiz" data-answer="1">
+    <p class="eyebrow">Check yourself</p>
+    <p class="q">You wrote and compiled a <code>ClientProtocolFactory</code> but never added it to a <code>META-INF/services/</code> file. What happens?</p>
+    <button class="quiz-opt">The client build fails and stops before finishing</button>
+    <button class="quiz-opt">The protocol is silently absent and never discovered</button>
+    <button class="quiz-opt">The runtime throws a clear and descriptive error</button>
+    <button class="quiz-opt">Other bundled protocols quietly fill the empty slot</button>
+    <div class="quiz-fb right">Right. ServiceLoader reads those files to discover implementations; with no line, your factory is never found. The KT doc: “Missing registration = feature silently absent.” No crash, no warning.</div>
+    <div class="quiz-fb nope">Not quite — there is no error at all, and that’s the danger. ServiceLoader only finds classes listed in <code>META-INF/services/</code>, so an unlisted factory is simply never discovered.</div>
+  </div>
+
+  <div class="source">
+    <p class="eyebrow">Primary source</p>
+    Verified in-repo: <code>core/.../schema/SchemaExtensionProvider.java</code>, <code>SchemaExtensionKey.java</code>, and the service file <code>client/client-rpcv2-cbor/src/main/resources/META-INF/services/software.amazon.smithy.java.client.core.ClientProtocolFactory</code>. Rules quoted from the internal <em>Smithy Java Knowledge Transfer</em> doc (“Register new SPIs in <code>META-INF/services/</code>”). ServiceLoader background: <a href="https://smithy.io/2.0/guides/building-codegen/index.html">smithy.io codegen guide</a>.
+  </div>
+
+  <div class="ask">
+    Stuck on any of this? <b>Ask your teacher.</b> Ask the agent to open the real <code>META-INF/services/</code> file for any protocol, or to trace exactly where <code>ServiceLoader.load(SchemaExtensionProvider.class, …)</code> runs in <code>Schema.java</code>.
+  </div>
+
+  <div class="pager">
+    <a class="prv" href="0005-the-codec-layer.html"><span class="lbl">Prev</span>← The codec layer</a>
+    <a class="nxt" href="0007-choosing-your-base-class.html"><span class="lbl">Next</span>Choosing your base class →</a>
+  </div>
+  <p class="md-note">Prefer plain text? <a href="0006-extensions-and-discovery.md">Read the Markdown version →</a></p>
+</main>
+</body>
+</html>

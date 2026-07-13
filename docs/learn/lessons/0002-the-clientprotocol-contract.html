@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 2 · The ClientProtocol contract — smithy.io/learn</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">smithy<b>.io</b>/learn · adding a protocol</span>
+  <span class="progress">○ ● ○ ○ ○ ○ ○ ○</span>
+</div>
+
+<main class="wrap">
+  <p class="eyebrow">Lesson 2 of 8 · The contract</p>
+  <h1>The <code>ClientProtocol</code> contract</h1>
+  <p class="dek">There is exactly one interface a client-side protocol must satisfy. Meet its six members, in plain language, and see where each one fires when a client makes a call.</p>
+  <p class="meta"><span class="chip">≈ 8 min</span><span class="chip">one interface</span><span class="chip">real signatures</span></p>
+
+  <p>In Lesson 1 you learned that a <em>protocol</em> is the set of rules for turning an operation call into bytes and turning response bytes back into an object. Now the good news: smithy-java gathers <em>all</em> of those rules behind a single Java interface. Satisfy it, and the client runtime knows how to drive your protocol. The interface is <code>ClientProtocol&lt;RequestT, ResponseT&gt;</code>, and it is short enough to read in one sitting.</p>
+
+  <div class="note">
+    <b>What the two type parameters mean</b>
+    <code>RequestT</code> and <code>ResponseT</code> are the <em>transport</em> request and response types — for an HTTP protocol they would be an HTTP request and an HTTP response. The interface is generic so the same contract works whether the wire is HTTP, or something else entirely.
+  </div>
+
+  <p class="filepath">client/client-core/src/main/java/software/amazon/smithy/java/client/core/ClientProtocol.java</p>
+  <pre><code>public interface ClientProtocol&lt;RequestT, ResponseT&gt; {
+    ShapeId id();
+
+    Codec payloadCodec();
+
+    MessageExchange&lt;RequestT, ResponseT&gt; messageExchange();
+
+    &lt;I extends SerializableStruct, O extends SerializableStruct&gt; RequestT createRequest(
+            ApiOperation&lt;I, O&gt; operation, I input, Context context, SmithyUri endpoint);
+
+    RequestT setServiceEndpoint(RequestT request, Endpoint endpoint);
+
+    &lt;I extends SerializableStruct, O extends SerializableStruct&gt; O deserializeResponse(
+            ApiOperation&lt;I, O&gt; operation, Context context, TypeRegistry errorRegistry,
+            RequestT request, ResponseT response);
+}</code></pre>
+
+  <p>The interface’s own Javadoc sums up its job in one line: <em>“Handles request and response serialization.”</em> Six members do that job. Let’s take them one at a time.</p>
+
+  <h2>The three describe-yourself members</h2>
+
+  <p>The first three members ask the protocol to <em>describe itself</em>. They take no work-in-progress data; they just report facts about the protocol.</p>
+
+  <h3>1 · <code>ShapeId id()</code></h3>
+  <p>Returns the protocol’s identity — its name in the Smithy world. The Javadoc gives the example <code>aws.protocols#restJson1</code>. A <code>ShapeId</code> is just Smithy’s type for such a fully-qualified name. This is how the runtime knows <em>which</em> protocol you are.</p>
+
+  <h3>2 · <code>Codec payloadCodec()</code></h3>
+  <p>Returns the <b>codec</b> — the thing that reads and writes the message <em>body</em> (JSON, CBOR, XML). We devote a whole later lesson to codecs; for now, note one detail straight from the Javadoc: it may be <code>null</code>. The comment reads <em>“the payload codec of the protocol, or null if the protocol has no payload codec.”</em> Some protocols put everything in headers or the URI and have no body to encode, so returning <code>null</code> is legal.</p>
+
+  <div class="warn">
+    <b>Don’t assume a codec exists</b>
+    Because <code>payloadCodec()</code> is allowed to return <code>null</code>, code that consumes a protocol must not blindly dereference it. The “may be null” is part of the contract, not an accident.
+  </div>
+
+  <h3>3 · <code>MessageExchange&lt;RequestT, ResponseT&gt; messageExchange()</code></h3>
+  <p>Returns a <b>marker</b> that says what request/response pair this protocol speaks. The interface itself is tiny — its entire body is empty:</p>
+
+  <p class="filepath">client/client-core/src/main/java/software/amazon/smithy/java/client/core/MessageExchange.java</p>
+  <pre><code>public interface MessageExchange&lt;RequestT, ResponseT&gt; {}</code></pre>
+
+  <div class="why">
+    <b>Why an empty interface earns its keep</b>
+    The KT doc calls this <em>“protocol agnosticism via <code>MessageExchange</code>”</em>: protocols and transports “declare a <code>MessageExchange&lt;Req, Resp&gt;</code> and the pipeline validates compatibility at construction.” In plain terms: it lets the runtime confirm that a protocol and a transport agree on the same request/response types <em>before</em> any call is made, rather than crashing mid-flight.
+  </div>
+
+  <h2>The three do-the-work members</h2>
+
+  <p>The last three members do the actual serialization work, and they line up with three moments in a single client call.</p>
+
+  <h3>4 · <code>createRequest(operation, input, context, endpoint)</code></h3>
+  <p>This is the outbound half. Given the <code>operation</code> being called, the caller’s <code>input</code> shape, a <code>Context</code> (a typed key-value bag threaded through the call), and an <code>endpoint</code>, it <em>builds the transport request</em>. Its Javadoc: <em>“Creates the underlying transport request.”</em> This is where your input object first becomes something shaped like a real request.</p>
+
+  <h3>5 · <code>setServiceEndpoint(request, endpoint)</code></h3>
+  <p>A small but important second step. The runtime first builds a request against a placeholder endpoint, then — once the <em>real</em> service endpoint is resolved — hands the request back to the protocol to be re-pointed at it. The Javadoc explains the combining rule: <em>“any existing endpoint information on the request should be combined with the service endpoint … with HTTP protocols, any path found on the request should be concatenated to the end of the service endpoint’s path.”</em></p>
+
+  <h3>6 · <code>deserializeResponse(operation, context, errorRegistry, request, response)</code></h3>
+  <p>The inbound half. It takes the transport <code>response</code> and returns the typed output shape <code>O</code> — <em>or throws</em>. Its Javadoc: <em>“Deserializes the output from the transport response or throws a modeled or unmodeled exception.”</em> The <code>errorRegistry</code> (a <code>TypeRegistry</code>) lets it build a <em>modeled</em> error when the service returns one; if the registry is <code>null</code> or doesn’t know the shape, the protocol falls back to <em>“protocol hints (e.g., HTTP status codes).”</em></p>
+
+  <h2>Where each member fires in <code>Client.call(...)</code></h2>
+
+  <p>The KT doc sketches the “Call Pipeline.” Three of the six members are called directly along it — and the codebase shows the exact spots:</p>
+
+  <table>
+    <thead><tr><th>Step in the call</th><th>Member invoked</th><th>Verified at</th></tr></thead>
+    <tbody>
+      <tr><td>Serialize the input into a request</td><td><code>createRequest(...)</code></td><td><code>ClientPipeline.java:123</code></td></tr>
+      <tr><td>After the real endpoint resolves</td><td><code>setServiceEndpoint(...)</code></td><td><code>ClientPipeline.java:188</code></td></tr>
+      <tr><td>Turn the response back into output</td><td><code>deserializeResponse(...)</code></td><td><code>ClientPipeline.java:410</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>Reading the pipeline top to bottom, from the KT doc’s sketch:</p>
+  <pre><code>Client.call(input, operation, overrideConfig)
+ → apply plugins/overrides → create pipeline
+ → protocol.createRequest(operation, input)
+ → [RETRY LOOP]: resolveAuthScheme → resolveEndpoint → sign → transport.send()
+     → protocol.deserializeResponse() → if retryable: refreshToken → backoff → retry
+ → interceptor.readAfterExecution</code></pre>
+
+  <p>So <code>createRequest</code> runs once, up front. Then inside the retry loop the endpoint gets resolved, <code>setServiceEndpoint</code> re-points the request at it, the transport sends, and <code>deserializeResponse</code> turns the reply into your output — or throws so the loop can decide whether to retry. The other three members (<code>id</code>, <code>payloadCodec</code>, <code>messageExchange</code>) are read at wiring time, not on every call.</p>
+
+  <div class="note">
+    <b>A factory sits right beside it</b>
+    In the same folder lives <code>ClientProtocolFactory.java</code>. Its Javadoc: <em>“Creates a <code>ClientProtocol</code>.”</em> It has an <code>id()</code> and a <code>createProtocol(settings, trait)</code> method. That is the seam the client builder uses to <em>construct</em> your protocol from a Smithy trait — we return to it when we wire a protocol up for discovery.
+  </div>
+
+  <div class="quiz" data-answer="2">
+    <p class="eyebrow">Check yourself</p>
+    <p class="q">Which member turns the transport response back into a typed output shape (or throws)?</p>
+    <button class="quiz-opt">createRequest assembles the outbound transport request to send</button>
+    <button class="quiz-opt">setServiceEndpoint merges the request with the service endpoint</button>
+    <button class="quiz-opt">deserializeResponse turns the response bytes into typed output</button>
+    <button class="quiz-opt">payloadCodec identifies the codec serializing request payloads</button>
+    <div class="quiz-fb right">Right. <code>deserializeResponse</code> is the inbound half — its Javadoc says it “deserializes the output from the transport response or throws a modeled or unmodeled exception.”</div>
+    <div class="quiz-fb nope">Re-read “The three do-the-work members.” The one whose job is the <em>inbound</em> reply — response bytes to output object, or an exception — is <code>deserializeResponse</code>.</div>
+  </div>
+
+  <div class="source">
+    <p class="eyebrow">Primary source</p>
+    Interface read verbatim: <code>client/client-core/src/main/java/software/amazon/smithy/java/client/core/ClientProtocol.java</code>. Pipeline call sites: <code>ClientPipeline.java</code> lines 123, 188, 410. Call-pipeline sketch and “protocol agnosticism via <code>MessageExchange</code>”: internal <em>Smithy Java Knowledge Transfer</em> doc.
+  </div>
+
+  <div class="ask">
+    Stuck on any of this? <b>Ask your teacher.</b> Ask the agent to walk you line-by-line through <code>ClientPipeline.java</code>, or to show a real HTTP request/response type standing in for <code>RequestT</code> and <code>ResponseT</code>.
+  </div>
+
+  <div class="pager">
+    <a class="prv" href="0001-what-is-a-protocol.html"><span class="lbl">Prev</span>← What a protocol even is</a>
+    <a class="nxt" href="0003-the-smallest-real-protocol.html"><span class="lbl">Next</span>The smallest real protocol →</a>
+  </div>
+  <p class="md-note">Prefer plain text? <a href="0002-the-clientprotocol-contract.md">Read the Markdown version →</a></p>
+</main>
+</body>
+</html>

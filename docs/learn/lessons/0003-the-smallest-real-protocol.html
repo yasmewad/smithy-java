@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 3 · The smallest real protocol — smithy.io/learn</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">smithy<b>.io</b>/learn · adding a protocol</span>
+  <span class="progress">○ ○ ● ○ ○ ○ ○ ○</span>
+</div>
+
+<main class="wrap">
+  <p class="eyebrow">Lesson 3 of 8 · A concrete example</p>
+  <h1>The smallest real protocol</h1>
+  <p class="dek">Lesson 2 gave you the contract. Now watch a real, shipping protocol satisfy it in about 45 lines — because a base class already did the hard parts.</p>
+  <p class="meta"><span class="chip">≈ 7 min</span><span class="chip">real code</span><span class="chip">inheritance</span></p>
+
+  <p>In the last lesson you read <code>ClientProtocol</code> and saw the jobs a protocol must do: hand back an <code>id()</code>, hand back a <code>payloadCodec()</code>, build a request with <code>createRequest(...)</code>, and turn a response back into an object with <code>deserializeResponse(...)</code>. That is a lot of surface area. If you had to write all of it by hand for every protocol, “add a protocol” would still feel like a wall.</p>
+
+  <p>It isn’t — because most of that work is <em>shared</em> across a family of protocols and lives in a base class. The concrete protocol on top is tiny. Let’s read the smallest real one in the codebase, top to bottom.</p>
+
+  <h2>The whole file</h2>
+  <p class="filepath">client/client-rpcv2-cbor/src/main/java/software/amazon/smithy/java/client/rpcv2/RpcV2CborProtocol.java</p>
+  <pre><code>public final class RpcV2CborProtocol extends AbstractRpcV2ClientProtocol {
+    private static final String PAYLOAD_MEDIA_TYPE = "application/cbor";
+    private static final Codec CBOR_CODEC = Rpcv2CborCodec.builder().build();
+
+    public RpcV2CborProtocol(ShapeId service) {
+        super(Rpcv2CborTrait.ID, service, PAYLOAD_MEDIA_TYPE);
+    }
+
+    @Override
+    protected Codec codec() {
+        return CBOR_CODEC;
+    }
+
+    public static final class Factory implements ClientProtocolFactory&lt;Rpcv2CborTrait&gt; {
+        @Override
+        public ShapeId id() {
+            return Rpcv2CborTrait.ID;
+        }
+
+        @Override
+        public ClientProtocol&lt;?, ?&gt; createProtocol(ProtocolSettings settings, Rpcv2CborTrait trait) {
+            return new RpcV2CborProtocol(
+                    Objects.requireNonNull(settings.service(), "service is a required protocol setting"));
+        }
+    }
+}</code></pre>
+
+  <p>That is the real class, verbatim (minus the license header and imports). Count the lines that do actual work and there are only a handful. Notice what is <em>missing</em>: there is no <code>createRequest</code> here, no <code>deserializeResponse</code>, no error handling. So where did the contract go?</p>
+
+  <h2>The base class did the hard parts</h2>
+  <p>The first line is the whole trick: <code>extends AbstractRpcV2ClientProtocol</code>. The base class is where request building and response reading actually live. Its own doc comment says so:</p>
+
+  <p class="filepath">client/client-rpcv2/src/main/java/software/amazon/smithy/java/client/rpcv2/AbstractRpcV2ClientProtocol.java</p>
+  <pre><code>/**
+ * Shared base for RPC v2 client protocol implementations.
+ *
+ * &lt;p&gt;Subclasses provide the codec and media type that distinguish the concrete wire
+ * format (CBOR vs JSON). All request construction, response deserialization, error
+ * extraction, and event-streaming plumbing is handled here.
+ */
+@SmithyInternalApi
+public abstract class AbstractRpcV2ClientProtocol extends HttpClientProtocol {</code></pre>
+
+  <p>Read that comment slowly: “<em>All request construction, response deserialization, error extraction, and event-streaming plumbing is handled here.</em>” Those are exactly the heavy <code>ClientProtocol</code> methods from Lesson 2. The base class implements <code>createRequest(...)</code> and <code>deserializeResponse(...)</code> once, for every RPC v2 protocol. The subclass inherits them for free.</p>
+
+  <p>The base class doesn’t know <em>which</em> wire format it is serializing to — CBOR? JSON? — so it leaves exactly one hole for the subclass to fill:</p>
+
+  <pre><code>/** Returns the codec used for serialization and deserialization. */
+protected abstract Codec codec();</code></pre>
+
+  <div class="note">
+    <b>The one idea to hold onto</b>
+    A base class carries the <em>behavior</em> that is common to a family of protocols — how to build a request, how to read a response. A concrete protocol supplies only its <em>identity</em> (which protocol am I, for which service, with what media type) and its <em>codec</em> (which bytes format do I speak). That’s the entire division of labor in this file.
+  </div>
+
+  <h2>Identity: the <code>super(...)</code> call</h2>
+  <p>The constructor passes three things up to the base class:</p>
+  <pre><code>public RpcV2CborProtocol(ShapeId service) {
+    super(Rpcv2CborTrait.ID, service, PAYLOAD_MEDIA_TYPE);
+}</code></pre>
+  <ul>
+    <li><code>Rpcv2CborTrait.ID</code> — the protocol’s shape ID, the answer to <code>id()</code>. This is how the model says “this service speaks rpcv2Cbor.”</li>
+    <li><code>service</code> — which service this protocol instance is bound to.</li>
+    <li><code>PAYLOAD_MEDIA_TYPE</code> — the string <code>"application/cbor"</code>. That is the only thing that makes this the CBOR flavor rather than the JSON flavor.</li>
+  </ul>
+
+  <h2>Codec: the one override</h2>
+  <p>The single method the subclass is forced to implement just returns a cached codec:</p>
+  <pre><code>private static final Codec CBOR_CODEC = Rpcv2CborCodec.builder().build();
+
+@Override
+protected Codec codec() {
+    return CBOR_CODEC;
+}</code></pre>
+  <p>The codec (<code>Rpcv2CborCodec</code>) is the thing that actually turns objects into CBOR bytes and back. It is built once, stored in a <code>static final</code> field, and handed back on every call. You will meet the codec layer properly in Lesson 5 — for now, it is simply “the object that knows CBOR.”</p>
+
+  <div class="why">
+    <b>Why cache it in a field?</b>
+    The KT doc lists “<em>Performance by Design</em>” as a core value — “<em>library on the hot path</em>.” Building the codec once and reusing it avoids allocating a fresh one on every request. Small file, but the same discipline as the rest of the framework.
+  </div>
+
+  <h2>The nested <code>Factory</code>: how the protocol gets created</h2>
+  <p>The rest of the file is a small nested class:</p>
+  <pre><code>public static final class Factory implements ClientProtocolFactory&lt;Rpcv2CborTrait&gt; {</code></pre>
+  <p>A <code>ClientProtocol</code> handles requests; a <code>ClientProtocolFactory</code> <em>creates</em> a <code>ClientProtocol</code>. The factory interface asks for two things — an <code>id()</code> and a <code>createProtocol(...)</code> method — and this one satisfies both: it reports <code>Rpcv2CborTrait.ID</code>, and it builds a <code>RpcV2CborProtocol</code> from the service found in <code>ProtocolSettings</code>. The factory is the seam the framework calls through when it wires up a client. How the framework <em>finds</em> this factory (a file under <code>META-INF/services/</code>) is the subject of a later lesson — here, just notice that a protocol ships with its own little factory.</p>
+
+  <h2>What you just learned</h2>
+  <p>The smallest real protocol is small on purpose. It picks a base class that already implements the hard <code>ClientProtocol</code> methods, then supplies only its identity (via <code>super(...)</code>) and its codec (via one override), plus a factory so it can be constructed. That is the pattern you will copy when you add your own. The next lesson opens up the machinery that makes this possible: <em>schema-directed serde</em>, the reason one generated class can serialize to CBOR or JSON without change.</p>
+
+  <div class="quiz" data-answer="0">
+    <p class="eyebrow">Check yourself</p>
+    <p class="q">Beyond what it inherits, what does <code>RpcV2CborProtocol</code> itself supply?</p>
+    <button class="quiz-opt">Its protocol trait ID, service, and CBOR codec</button>
+    <button class="quiz-opt">The full request builder plus the response reader</button>
+    <button class="quiz-opt">The HTTP transport, socket pool, and worker threads</button>
+    <button class="quiz-opt">The generated shape classes, builders, and field names</button>
+    <div class="quiz-fb right">Right. It passes its identity (trait <code>ID</code>, service, and <code>"application/cbor"</code>) to <code>super(...)</code> and overrides <code>codec()</code> to return the CBOR codec. Everything else is inherited.</div>
+    <div class="quiz-fb nope">Re-read “The base class did the hard parts.” <code>AbstractRpcV2ClientProtocol</code> already carries request construction and response deserialization — the concrete class only adds identity plus a codec.</div>
+  </div>
+
+  <div class="source">
+    <p class="eyebrow">Primary source</p>
+    <code>client/client-rpcv2-cbor/.../RpcV2CborProtocol.java</code> and <code>client/client-rpcv2/.../AbstractRpcV2ClientProtocol.java</code> in the smithy-java repo. Protocol-family reference: <a href="https://smithy.io/2.0/">smithy.io/2.0</a>.
+  </div>
+
+  <div class="ask">
+    Stuck on any of this? <b>Ask your teacher.</b> Ask the agent to open <code>AbstractRpcV2ClientProtocol.java</code> and walk you through its <code>createRequest</code>, or to show a second protocol that reuses the same base class.
+  </div>
+
+  <div class="pager">
+    <a class="prv" href="0002-the-clientprotocol-contract.html"><span class="lbl">Prev</span>← The ClientProtocol contract</a>
+    <a class="nxt" href="0004-schema-directed-serde.html"><span class="lbl">Next</span>Schema-directed serde →</a>
+  </div>
+  <p class="md-note">Prefer plain text? <a href="0003-the-smallest-real-protocol.md">Read the Markdown version →</a></p>
+</main>
+</body>
+</html>

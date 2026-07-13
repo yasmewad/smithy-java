@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 8 · Proving it: compliance tests — smithy.io/learn</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">smithy<b>.io</b>/learn · adding a protocol</span>
+  <span class="progress">○ ○ ○ ○ ○ ○ ○ ●</span>
+</div>
+
+<main class="wrap">
+  <p class="eyebrow">Lesson 8 of 8 · Proving it</p>
+  <h1>Proving it — compliance tests</h1>
+  <p class="dek">You have all the pieces. Now: the one test that decides whether your protocol is <em>correct</em>, and the full checklist that ties this whole track together.</p>
+  <p class="meta"><span class="chip">≈ 7 min</span><span class="chip">the payoff</span><span class="chip">checklist inside</span></p>
+
+  <p>Seven lessons in, you can read a protocol, name what each method does, pick a base class, and wire it up for discovery. One question remains, and it is the only one that matters at the end: <em>how do you know your protocol is actually correct?</em> Not “compiles,” not “my unit test passes” — actually produces the exact bytes the protocol specification demands.</p>
+
+  <h2>The authoritative correctness bar</h2>
+  <p>smithy-java answers this with <b>protocol compliance tests</b>. The KT doc states the rule plainly:</p>
+
+  <div class="why">
+    <b>The rule</b>
+    “<em>Protocol compliance tests are the authoritative correctness check.</em> Run them before and after any change touching serde, codecs, HTTP binding, or protocol integrations. A passing unit test that fails a compliance test is a bug.”
+  </div>
+
+  <p>Here is the beautiful part: the tests are not Java you write. They live <em>inside the Smithy model</em> as traits — <code>@httpRequestTests</code> and <code>@httpResponseTests</code> — each one a concrete example that says “given this input, the wire bytes must look exactly like <em>this</em>.” A module named <code>protocol-test-harness/</code> reads those traits, generates a real client (and server), runs your protocol against every example, and compares the actual bytes to the expected bytes.</p>
+
+  <div class="note">
+    <b>The one idea to hold onto</b>
+    Compliance tests are the protocol specification, made executable. You do not grade your own homework — the Smithy-defined test suite does. Per the KT doc, <b>14+ test suites</b> cover rpcv2-cbor, restJson1, restXml, awsJson, and awsQuery, for both client and server.
+  </div>
+
+  <h2>What running it looks like</h2>
+  <p>Two commands carry you across the finish line. The first runs the harness on its own; the second runs everything, which is what a reviewer will expect to be green:</p>
+
+  <p class="filepath">from the repository root</p>
+<pre><code>./gradlew :protocol-test-harness:test   # just the compliance suites
+./gradlew build                          # compile + all tests, everywhere</code></pre>
+
+  <p>The <code>:protocol-test-harness:test</code> command is the one from the KT doc’s “Run Tests” section, annotated there as “<em>protocol compliance tests (restJson1, restXml, awsJson, awsQuery, rpcv2-cbor)</em>.” When it is green, your bytes match the spec.</p>
+
+  <h2>How a suite is declared</h2>
+  <p>A compliance suite is a tiny Java class. It names the service that carries the test traits and the side under test — then hands each test to a comparator. This is the <em>entire</em> client suite for rpcv2Cbor:</p>
+
+  <p class="filepath">client/client-rpcv2-cbor/src/it/java/software/amazon/smithy/java/client/rpcv2/RpcV2CborProtocolTests.java</p>
+<pre><code>@ProtocolTest(
+        service = "smithy.protocoltests.rpcv2Cbor#RpcV2Protocol",
+        testType = TestType.CLIENT)
+public class RpcV2CborProtocolTests {
+    @HttpClientRequestTests
+    public void requestTest(DataStream expected, DataStream actual) {
+        CborComparator.assertEquals(expected.asByteBuffer(), actual.asByteBuffer());
+    }
+
+    @HttpClientResponseTests
+    public void responseTest(Runnable test) {
+        test.run();
+    }
+}</code></pre>
+
+  <p>That is it. The <code>@ProtocolTest</code> annotation triggers generation of one test per trait found in the service closure. <code>requestTest</code> receives the <code>expected</code> and <code>actual</code> wire bytes and asserts they are equal; <code>responseTest</code> just runs the generated check. No per-test code — you write the comparison once and the harness fans it out over every example in the model.</p>
+
+  <div class="note">
+    <b>You will skip a few — on purpose</b>
+    The real file uses <code>@ProtocolTestFilter(skipTests = { … })</code> to exclude a handful of cases with recorded reasons (an upstream Smithy bug, a not-yet-supported <code>clientOptional</code> path). Skipping a known-broken case with a comment is normal and honest; silently passing a wrong one is the bug the rule warns about.</p>
+  </div>
+
+  <h2>The definitive checklist</h2>
+  <p>Everything this track taught, in the order you would actually do it. Each step points back to the lesson that explains the <em>why</em>.</p>
+
+  <table>
+    <thead><tr><th>Step</th><th>What you do</th><th>Taught in</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>Pick a base class.</b> REST-style (HTTP-bound traits) → extend <code>HttpBindingClientProtocol</code>; RPC-style (routing by header or path) → extend <code>HttpClientProtocol</code>, or a shared abstract like <code>AbstractRpcV2ClientProtocol</code>.</td><td>Lesson 7</td></tr>
+      <tr><td>2</td><td><b>Reuse or write a codec.</b> If your wire format already has a <code>Codec</code> (JSON, CBOR, XML), reuse it; only write a new one for a genuinely new format.</td><td>Lesson 5</td></tr>
+      <tr><td>3</td><td><b>Implement <code>ClientProtocol</code>.</b> Let the base class do the heavy lifting; you supply the small overrides (like <code>codec()</code>) plus a nested <code>Factory</code> so config can build your protocol.</td><td>Lessons 2 &amp; 3</td></tr>
+      <tr><td>4</td><td><b>Add a <code>SchemaExtensionProvider</code></b> — only if your wire needs trait data precomputed onto schemas. Skip it if you reuse a codec that already ships one.</td><td>Lesson 6</td></tr>
+      <tr><td>5</td><td><b>Register the <code>Factory</code></b> in <code>META-INF/services/</code> so <code>ServiceLoader</code> can discover it. Missing registration = the protocol silently does not exist.</td><td>Lesson 6</td></tr>
+      <tr><td>6</td><td><b>Add compliance tests and run the harness.</b> Point a <code>@ProtocolTest</code> class at your service and run <code>:protocol-test-harness:test</code>.</td><td>Lesson 8</td></tr>
+    </tbody>
+  </table>
+
+  <p>Step 5 is a single line of text in a file. This is the exact registration for the rpcv2Cbor client protocol you dissected earlier:</p>
+
+  <p class="filepath">client/client-rpcv2-cbor/src/main/resources/META-INF/services/software.amazon.smithy.java.client.core.ClientProtocolFactory</p>
+<pre><code>software.amazon.smithy.java.client.rpcv2.RpcV2CborProtocol$Factory</code></pre>
+
+  <p>The file <em>name</em> is the interface being implemented (<code>ClientProtocolFactory</code>); the file <em>content</em> is the fully-qualified name of your <code>Factory</code> — the <code>$Factory</code> suffix is Java’s notation for the nested class you saw in <code>RpcV2CborProtocol</code>. That one line is what turns your code into a protocol the runtime can find.</p>
+
+  <div class="warn">
+    <b>Two silent-failure traps</b>
+    The KT doc flags both: forget the <code>META-INF/services/</code> entry and the “feature is silently absent”; add trait behavior without updating its <code>SchemaExtensionProvider</code> and it “silently has no wire effect.” Both compile. Both pass unit tests. Only the compliance suite catches them.
+  </div>
+
+  <h2>You made it</h2>
+  <p>You started at “codegen is a locked door” and you finish able to describe, in order, every step to add a protocol to smithy-java — and, just as importantly, how to <em>prove</em> it works. A protocol is no longer a mystery; it is a base class, a codec, a factory, maybe an extension, one line of registration, and a compliance suite that keeps you honest. That is the whole task. Go read a real one end to end — you now can.</p>
+
+  <div class="quiz" data-answer="0">
+    <p class="eyebrow">Check yourself</p>
+    <p class="q">Why are protocol compliance tests called the authoritative correctness check?</p>
+    <button class="quiz-opt">They replay Smithy wire tests against your real code</button>
+    <button class="quiz-opt">They compile the module faster than the unit tests</button>
+    <button class="quiz-opt">They format the source and apply the license header</button>
+    <button class="quiz-opt">They publish the snapshot jar to your local Maven</button>
+    <div class="quiz-fb right">Right. The harness reads Smithy-defined <code>@httpRequestTests</code>/<code>@httpResponseTests</code> and checks your protocol’s actual bytes against the spec’s expected bytes — the spec, made executable.</div>
+    <div class="quiz-fb nope">Not quite — re-read “The authoritative correctness bar.” The harness runs the model’s own wire-format tests against real generated client/server code; it is not about build speed, formatting, or publishing.</div>
+  </div>
+
+  <div class="source">
+    <p class="eyebrow">Primary source</p>
+    KT doc <em>Smithy Java, Knowledge Transfer</em> — “Run Tests,” “Correctness First,” and “Common Workflows: Adding a protocol compliance test.” Verified in-repo: <code>protocol-test-harness/</code>, <code>client/client-rpcv2-cbor/src/it/…/RpcV2CborProtocolTests.java</code>, and the <code>META-INF/services/…ClientProtocolFactory</code> registration. Spec traits: <a href="https://smithy.io/2.0/additional-specs/http-protocol-compliance-tests.html">smithy.io HTTP protocol compliance tests</a>.
+  </div>
+
+  <div class="ask">
+    Ready to try one for real? <b>Ask your teacher.</b> Have the agent walk you through a live <code>./gradlew :protocol-test-harness:test</code> run, or open a real <code>@ProtocolTest</code> suite and trace one test from model trait to byte comparison.
+  </div>
+
+  <div class="pager">
+    <a class="prv" href="0007-choosing-your-base-class.html"><span class="lbl">Prev</span>← Choosing your base class</a>
+    <a class="nxt" href="index.html"><span class="lbl">Finish</span>Back to the track overview →</a>
+  </div>
+  <p class="md-note">Prefer plain text? <a href="0008-proving-it-compliance-tests.md">Read the Markdown version →</a></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 7 · Choosing your base class — smithy.io/learn</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">smithy<b>.io</b>/learn · adding a protocol</span>
+  <span class="progress">○ ○ ○ ○ ○ ○ ● ○</span>
+</div>
+
+<main class="wrap">
+  <p class="eyebrow">Lesson 7 of 8 · Picking your path</p>
+  <h1>Choosing your base class</h1>
+  <p class="dek">There are exactly two base classes a client protocol can extend. Which one you pick is decided by a single question about your wire format — and getting it right saves you hundreds of lines.</p>
+  <p class="meta"><span class="chip">≈ 7 min</span><span class="chip">the RPC/REST fork</span><span class="chip">real code</span></p>
+
+  <p>You now know what a protocol must do: build a request from an operation, and turn a response back into an object. Before you write a line, smithy-java asks you to make one decision that shapes everything after it — <em>which base class do I extend?</em> There are only two candidates, and the answer is not a matter of taste. It falls out of how your wire format decides <b>where each field goes</b>.</p>
+
+  <h2>The two base classes</h2>
+  <p>Every client protocol in the repo extends one of these. Both live under <code>client/</code>, and you verified in earlier lessons that a protocol is just a class satisfying the <code>ClientProtocol</code> contract. These two abstract classes each satisfy most of that contract for you — differently.</p>
+
+  <p class="filepath">client/client-http/src/main/java/software/amazon/smithy/java/client/http/HttpClientProtocol.java</p>
+  <pre><code>public abstract class HttpClientProtocol implements ClientProtocol&lt;HttpRequest, HttpResponse&gt; {
+
+    public HttpClientProtocol(ShapeId id) {
+        this.id = id;
+    }
+
+    @Override
+    public HttpRequest setServiceEndpoint(HttpRequest request, Endpoint endpoint) { ... }
+}</code></pre>
+
+  <p><code>HttpClientProtocol</code> is the <b>bare</b> base. It handles the HTTP identity — an id, the <code>HttpMessageExchange</code>, and gluing the endpoint onto the request. It does <em>not</em> know anything about how to place your fields. That is left entirely to you: you override <code>createRequest</code> and <code>deserializeResponse</code> and serialize the whole body yourself.</p>
+
+  <p class="filepath">client/client-http-binding/src/main/java/software/amazon/smithy/java/client/http/binding/HttpBindingClientProtocol.java</p>
+  <pre><code>public abstract class HttpBindingClientProtocol&lt;F extends Frame&lt;?&gt;&gt; extends HttpClientProtocol {
+
+    private final HttpBinding httpBinding = new HttpBinding();
+
+    @Override
+    public &lt;I extends SerializableStruct, O extends SerializableStruct&gt; HttpRequest createRequest(...) {
+        RequestSerializer serializer = httpBinding.requestSerializer()
+                .operation(operation)
+                .payloadCodec(payloadCodec())
+                .payloadMediaType(payloadMediaType())
+                .shapeValue(input)
+                .endpoint(endpoint)
+                .omitEmptyPayload(omitEmptyPayload());
+        ...
+        return serializer.serializeRequest();
+    }
+}</code></pre>
+
+  <p><code>HttpBindingClientProtocol</code> <b>extends</b> the bare base and does the field placement for you. Notice it already implements <code>createRequest</code> — it hands your input to an <code>HttpBinding</code> that reads the operation's <code>@http*</code> traits and routes each field to the right place on the wire. You only tell it the codec and media type.</p>
+
+  <div class="note">
+    <b>The one idea to hold onto</b>
+    <code>HttpBindingClientProtocol</code> <em>is a</em> <code>HttpClientProtocol</code> (it extends it) that has already written the tedious field-placement logic. Extending the binding base means opting in to automatic <code>@http*</code> trait mapping. Extending the bare base means you serialize the whole body yourself.
+  </div>
+
+  <h2>What "automatic trait mapping" actually means</h2>
+  <p>Lesson 4 introduced the HTTP binding traits. A REST-style protocol lets the model author annotate fields, and the binding layer places them for you:</p>
+
+  <table>
+    <thead><tr><th>Trait</th><th>Where the field lands on the wire</th></tr></thead>
+    <tbody>
+      <tr><td><code>@httpHeader</code></td><td>an HTTP header</td></tr>
+      <tr><td><code>@httpQuery</code></td><td>the query string</td></tr>
+      <tr><td><code>@httpLabel</code></td><td>a slot in the URI path</td></tr>
+      <tr><td><code>@httpPayload</code></td><td>the entire request body</td></tr>
+    </tbody>
+  </table>
+
+  <p>If your protocol honors these traits, you want the binding base — because it already knows how to read them. If your protocol ignores them and just serializes the whole input into one body, that machinery is dead weight, so you extend the bare base.</p>
+
+  <h2>The fork, drawn from the KT doc</h2>
+  <p>Section 11 of the Knowledge Transfer doc lays out every shipping AWS protocol against its base class. This is the table to memorize:</p>
+
+  <table>
+    <thead><tr><th>Protocol</th><th>Base class</th><th>Routing</th></tr></thead>
+    <tbody>
+      <tr><td>restJson1</td><td><code>HttpBindingClientProtocol</code></td><td>URI + method</td></tr>
+      <tr><td>restXml</td><td><code>HttpBindingClientProtocol</code></td><td>URI + method</td></tr>
+      <tr><td>AWS JSON 1.0/1.1</td><td><code>HttpClientProtocol</code> (direct)</td><td><code>X-Amz-Target</code> header</td></tr>
+      <tr><td>AWS Query</td><td><code>HttpClientProtocol</code> (direct)</td><td><code>Action</code> form param</td></tr>
+    </tbody>
+  </table>
+
+  <p>The KT doc states the split plainly: <em>"REST protocols delegate to <code>HttpBinding</code> for automatic trait-to-HTTP mapping; RPC protocols handle serialization directly (no HTTP binding traits)."</em> The two columns on the right are the tell. REST protocols route by <b>URI + method</b> — each operation gets its own path, exactly what path/label/query bindings are for. RPC protocols route by a <b>header or a form parameter</b> — the whole call goes to one endpoint and a discriminator names the operation.</p>
+
+  <h2>See the RPC side in the code</h2>
+  <p>The RPC protocols back up the table. <code>AwsJson1Protocol</code> and <code>AwsJson11Protocol</code> both extend a shared sealed base, which extends the <em>bare</em> class directly:</p>
+
+  <p class="filepath">aws/client/aws-client-awsjson/.../awsjson/AwsJsonProtocol.java</p>
+  <pre><code>abstract sealed class AwsJsonProtocol extends HttpClientProtocol
+        permits AwsJson1Protocol, AwsJson11Protocol {
+
+    @Override
+    public &lt;I extends SerializableStruct, O extends SerializableStruct&gt; HttpRequest createRequest(...) {
+        var target = service.getName() + "." + operation.schema().id().getName();
+        var builder = HttpRequest.create();
+        builder.setMethod("POST");
+        builder.setUri(endpoint);
+        ...
+        builder.addHeader(HeaderName.X_AMZ_TARGET, target)
+    }
+}</code></pre>
+
+  <p>Because it extends the bare base, <code>AwsJsonProtocol</code> has to write its own <code>createRequest</code> — and you can see it doing exactly what the table promised: fixed <code>POST</code>, and the operation named in the <code>X_AMZ_TARGET</code> header rather than in the path. <code>AwsQueryClientProtocol</code> does the same, extending <code>HttpClientProtocol</code> directly and building a URL-encoded form body by hand.</p>
+
+  <h2>See the REST side in the code</h2>
+  <p><code>RestXmlClientProtocol</code> extends the binding base, so it never writes <code>createRequest</code> at all — it inherits the version you saw above. It only supplies the format-specific pieces, like the codec and media type:</p>
+
+  <p class="filepath">aws/client/aws-client-restxml/.../restxml/RestXmlClientProtocol.java</p>
+  <pre><code>public final class RestXmlClientProtocol extends HttpBindingClientProtocol&lt;AwsEventFrame&gt; {
+
+    @Override
+    public Codec payloadCodec() { ... }
+
+    @Override
+    protected String payloadMediaType() { ... }
+}</code></pre>
+
+  <p>That short class is the payoff of picking the right base: the field-placement work is inherited, and only the format-specific pieces remain. <code>RestJsonClientProtocol</code> sits on the same binding base with JSON.</p>
+
+  <div class="why">
+    <b>The decision rule</b>
+    Ask one question: <em>does my wire format use HTTP binding traits to decide where each field goes?</em> If yes — fields scatter across path, query, headers, and payload — extend <code>HttpBindingClientProtocol</code> and let it map them. If no — you route by a header or action name and serialize one full body — extend <code>HttpClientProtocol</code> and do the serialization yourself.
+  </div>
+
+  <div class="warn">
+    <b>Don't pick by format</b>
+    It is tempting to think "JSON means the binding base." Not so: restJson1 <em>and</em> AWS JSON both use JSON, yet restJson1 extends the binding base and AWS JSON extends the bare one. The format is not the deciding factor — <em>field placement</em> is. Routing by <code>X-Amz-Target</code> is the giveaway that AWS JSON is RPC, not REST.
+  </div>
+
+  <h2>Where you're headed</h2>
+  <p>You have made the structural choice. In the final lesson you will prove your protocol is correct the way the framework does — with the compliance test harness the KT doc calls the authoritative correctness check, so a passing build actually means a working protocol.</p>
+
+  <div class="quiz" data-answer="2">
+    <p class="eyebrow">Check yourself</p>
+    <p class="q">Your new protocol routes every operation to one endpoint and names the operation in a header, serializing the whole input as one JSON body. Which base class fits, and why?</p>
+    <button class="quiz-opt">Binding base, since the wire format is textual JSON data</button>
+    <button class="quiz-opt">Binding base, since it routes each request over plain HTTP</button>
+    <button class="quiz-opt">Bare base, since it ignores bindings and writes one body</button>
+    <button class="quiz-opt">Bare base, since JSON payloads cannot carry any HTTP headers</button>
+    <div class="quiz-fb right">Right. Routing by a header and serializing one full body is the RPC signature — no <code>@http*</code> placement — so you extend <code>HttpClientProtocol</code>, exactly like <code>AwsJsonProtocol</code> does.</div>
+    <div class="quiz-fb nope">Re-read "The decision rule." The format (JSON) is a distractor — restJson1 and AWS JSON are both JSON. What decides it is field placement: routing by a header and one full body means the bare <code>HttpClientProtocol</code>.</div>
+  </div>
+
+  <div class="source">
+    <p class="eyebrow">Primary source</p>
+    KT doc §11 "AWS Protocol Integrations" (base-class table) and §6 "HTTP Layer" (binding traits). Verified in repo: <code>client/client-http/.../HttpClientProtocol.java</code>, <code>client/client-http-binding/.../HttpBindingClientProtocol.java</code>, and the family members <code>AwsJsonProtocol.java</code>, <code>AwsQueryClientProtocol.java</code>, <code>RestJsonClientProtocol.java</code>, <code>RestXmlClientProtocol.java</code> under <code>aws/client/</code>. See also <a href="https://smithy.io/2.0/spec/http-bindings.html">smithy.io HTTP binding traits</a>.
+  </div>
+
+  <div class="ask">
+    Stuck on any of this? <b>Ask your teacher.</b> Ask it to open <code>RestXmlClientProtocol.java</code> and show you every method it does <em>not</em> override — that emptiness is the whole argument for the binding base.
+  </div>
+
+  <div class="pager">
+    <a class="prv" href="0006-extensions-and-discovery.html"><span class="lbl">Prev</span>← Extensions &amp; discovery</a>
+    <a class="nxt" href="0008-proving-it-compliance-tests.html"><span class="lbl">Next</span>Proving it: compliance tests →</a>
+  </div>
+  <p class="md-note">Prefer plain text? <a href="0007-choosing-your-base-class.md">Read the Markdown version →</a></p>
+</main>
+</body>
+</html>

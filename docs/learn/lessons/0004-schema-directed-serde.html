@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 4 · Schema-directed serde — smithy.io/learn</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">smithy<b>.io</b>/learn · adding a protocol</span>
+  <span class="progress">○ ○ ○ ● ○ ○ ○ ○</span>
+</div>
+
+<main class="wrap">
+  <p class="eyebrow">Lesson 4 of 8 · Why it decouples</p>
+  <h1>One class, every wire format</h1>
+  <p class="dek">The single trick that lets a generated class serialize to JSON, CBOR, or XML unchanged: the schema is the first argument to every serde method — and the protocol, not the class, decides the bytes.</p>
+  <p class="meta"><span class="chip">≈ 7 min</span><span class="chip">real code</span><span class="chip">the core idea</span></p>
+
+  <p>Lesson 1 promised that the <em>same</em> generated shape class can hit the wire as JSON, CBOR, or XML without being touched. This lesson shows you the mechanism that makes that true. It is one idea, and once you see it, the rest of the framework clicks into place. The KT doc calls it <b>schema-directed serde</b>.</p>
+
+  <h2>The problem it solves</h2>
+  <p>A generated class like <code>GetFoosInput</code> holds a field called <code>id</code>. Somebody has to turn that field into bytes. If the <em>class itself</em> knew how to write JSON, it would be welded to JSON forever — adding CBOR would mean regenerating every class. So the class must <em>not</em> know the wire format. But then how does it hand its data off to something that does?</p>
+
+  <div class="note">
+    <b>The one idea to hold onto</b>
+    The generated class <em>pushes</em> its members — it says “here is a string field, here is its schema” — and hands them to a visitor. The visitor is the protocol’s codec. The class supplies <em>what</em>; the codec decides <em>how</em>. Neither imports the other.
+  </div>
+
+  <h2>The visitor: <code>ShapeSerializer</code></h2>
+  <p>The visitor is an interface named <code>ShapeSerializer</code>, and every one of its write methods takes a <code>Schema</code> as its first argument. That is the whole design in one line.</p>
+
+  <p class="filepath">core/src/main/java/software/amazon/smithy/java/core/serde/ShapeSerializer.java</p>
+  <pre><code>public interface ShapeSerializer extends Flushable, AutoCloseable {
+
+    void writeStruct(Schema schema, SerializableStruct struct);
+
+    &lt;T&gt; void writeList(Schema schema, T listState, int size, BiConsumer&lt;T, ShapeSerializer&gt; consumer);
+
+    void writeString(Schema schema, String value);
+
+    void writeTimestamp(Schema schema, Instant value);
+}</code></pre>
+
+  <p>Read <code>writeString(Schema schema, String value)</code> slowly. The caller passes the value <em>and</em> the schema for the member that value came from. The value is the payload; the schema is the instructions. A JSON codec reads the schema to find the field-name bytes; a CBOR codec reads the <em>same</em> schema for its own encoded field name. Same call, different bytes.</p>
+
+  <h2>The push side: generated code</h2>
+  <p>Here is a real generated class from the test suite. Note it never mentions JSON, CBOR, or XML — it only pushes.</p>
+
+  <p class="filepath">client/client-waiters/src/test/java/software/amazon/smithy/java/client/waiters/models/GetFoosInput.java</p>
+  <pre><code>public record GetFoosInput(String id) implements SerializableStruct {
+    public static final Schema SCHEMA = Schema.structureBuilder(ID)
+            .putMember("id", PreludeSchemas.STRING)
+            .build();
+    public static final Schema SCHEMA_ID = SCHEMA.member("id");
+
+    @Override
+    public void serializeMembers(ShapeSerializer serializer) {
+        serializer.writeString(SCHEMA_ID, id);
+    }
+}</code></pre>
+
+  <p>The method <code>serializeMembers(ShapeSerializer)</code> is the push. For each member it calls one write method, passing that member’s schema and the value. The KT doc names this the <em>push-based serialization</em> principle: “Generated types implement <code>serializeMembers(ShapeSerializer)</code> and push their own fields into the serializer.” No reflection, no format knowledge — just a list of pushes.</p>
+
+  <div class="why">
+    <b>Why the schema, not the class, carries the wire rules</b>
+    Because the schema is passed to every method, one <code>serializeMembers()</code> works with any codec. The KT doc: “The same generated <code>serializeMembers()</code> works unchanged with JSON, CBOR, XML, or any future protocol. Switching protocols at runtime requires only a config/dependency change — no regeneration.”
+  </div>
+
+  <h2>Traits are never read at write time</h2>
+  <p>You might expect the codec, at the moment of writing, to inspect the schema’s traits — “does this field have a <code>@jsonName</code>? what timestamp format?” It does <b>not</b>. That would be slow, and it would happen on every single call. Instead, every protocol decision is <em>precomputed once</em> when the schema is built, and stashed in a per-protocol <b>extension</b>.</p>
+
+  <p>The KT doc is emphatic here:</p>
+  <blockquote>Schema traits are <b>never inspected at write-time</b>. All protocol decisions are precomputed into extensions (byte arrays, formatters, lookup tables) at Schema construction. At serialization: <code>currentFieldNameTable[memberIndex]</code> (O(1)) then <code>System.arraycopy</code>. No hashing, no trait lookups on the hot path.</blockquote>
+
+  <p>So at write time the codec does two cheap things: it looks up the member’s precomputed field-name bytes by <em>index</em> (<code>fieldNameTable[memberIndex]</code>), then copies those bytes with <code>System.arraycopy</code>. Each protocol has its own table — <code>SmithyJsonSchemaExtensions</code> precomputes JSON field-name bytes, <code>CborSchemaExtensions</code> precomputes CBOR-encoded names — but the generated class is blind to which table is in play. Both extension providers are real classes in the repo (<code>codecs/json-codec/.../SmithyJsonSchemaExtensions.java</code>, <code>codecs/cbor-codec/.../CborSchemaExtensions.java</code>); Lesson 6 is devoted to them.</p>
+
+  <div class="warn">
+    <b>The trap this design creates</b>
+    If you add a trait that should change the wire but forget to teach its <code>SchemaExtensionProvider</code> about it, nothing breaks loudly — the codec simply never sees it. The KT doc lists this as a rule: “Adding a trait without updating its <code>SchemaExtensionProvider</code> silently has no wire effect.” Remember that when you reach Lesson 6.
+  </div>
+
+  <h2>Reading back: the callback pattern</h2>
+  <p>Deserialization runs the same idea in reverse. Instead of the class pushing values out, the codec pushes values <em>in</em> through a callback. The deserializer method is <code>readStruct</code>, and it hands each member to a small consumer.</p>
+
+  <p class="filepath">core/src/main/java/software/amazon/smithy/java/core/serde/ShapeDeserializer.java</p>
+  <pre><code>&lt;T&gt; void readStruct(Schema schema, T state, StructMemberConsumer&lt;T&gt; consumer);
+
+interface StructMemberConsumer&lt;T&gt; {
+    void accept(T state, Schema memberSchema, ShapeDeserializer memberDeserializer);
+}</code></pre>
+
+  <p>The generated builder implements that consumer and dispatches on the member’s integer index — a <code>switch</code> on <code>member.memberIndex()</code>, no string comparisons:</p>
+
+  <p class="filepath">aws/aws-event-streams/src/test/java/software/amazon/smithy/java/aws/events/model/TestOperationOutput.java</p>
+  <pre><code>public void accept(Builder builder, Schema member, ShapeDeserializer de) {
+    switch (member.memberIndex()) {
+        case 0 -&gt; builder.intMemberHeader(de.readInteger(member));
+        case 1 -&gt; builder.stringMember(de.readString(member));
+        case 2 -&gt; builder.outputStream((EventStream&lt;TestEventStream&gt;) de.readEventStream(member));
+        default -&gt; throw new IllegalArgumentException("Unexpected member: " + member.memberName());
+    }
+}</code></pre>
+
+  <p>The codec walks the incoming bytes, and for each field it recognizes it calls <code>accept</code> with that member’s schema. The builder switches on the index and pulls the value out with the matching <code>read*</code> method — again passing the schema. The KT doc notes this <code>switch</code> compiles to a JVM <em>tableswitch</em>: integer dispatch, not string matching.</p>
+
+  <h2>Putting it together</h2>
+  <p>Serialize: the class pushes members into a <code>ShapeSerializer</code>; the codec, holding precomputed tables, turns each push into bytes. Deserialize: the codec reads bytes and calls back into a <code>StructMemberConsumer</code>; the builder switches on the index and reads each value. In both directions the schema is the first argument, and in both directions the class knows nothing about the wire. That is why “add a protocol” is a bounded job: you write a new codec that interprets schemas, and every existing generated class works with it for free.</p>
+
+  <div class="quiz" data-answer="2">
+    <p class="eyebrow">Check yourself</p>
+    <p class="q">At serialization time, how does the codec find a member’s field name?</p>
+    <button class="quiz-opt">It reads the member schema traits on each single call</button>
+    <button class="quiz-opt">It hashes the member name string on each write call</button>
+    <button class="quiz-opt">It reads a precomputed table by the member index once</button>
+    <button class="quiz-opt">It asks the generated class which wire format to emit</button>
+    <div class="quiz-fb right">Right. Decisions are precomputed at schema construction; at write time the codec does <code>fieldNameTable[memberIndex]</code> then <code>System.arraycopy</code>. Traits are never read on the hot path.</div>
+    <div class="quiz-fb nope">Re-read “Traits are never read at write time.” The codec does not inspect traits or hash names per call — it looks up a precomputed table by the member’s integer index.</div>
+  </div>
+
+  <div class="source">
+    <p class="eyebrow">Primary source</p>
+    KT doc §2 “Schemas &amp; Schema-Directed Serde”. Verified in <code>core/.../serde/ShapeSerializer.java</code>, <code>core/.../serde/ShapeDeserializer.java</code>, and generated code <code>GetFoosInput.java</code> / <code>TestOperationOutput.java</code>. Background: <a href="https://smithy.io/2.0/">smithy.io/2.0</a>.
+  </div>
+
+  <div class="ask">
+    Not sure how a “push” becomes bytes? <b>Ask your teacher.</b> Ask it to trace one <code>writeString</code> call through the JSON codec, or to show you a codec’s field-name table being built.
+  </div>
+
+  <div class="pager">
+    <a class="prv" href="0003-the-smallest-real-protocol.html"><span class="lbl">Prev</span>← The smallest real protocol</a>
+    <a class="nxt" href="0005-the-codec-layer.html"><span class="lbl">Next</span>The codec layer →</a>
+  </div>
+  <p class="md-note">Prefer plain text? <a href="0004-schema-directed-serde.md">Read the Markdown version →</a></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 1 · What a protocol even is — smithy.io/learn</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">smithy<b>.io</b>/learn · adding a protocol</span>
+  <span class="progress">● ○ ○ ○ ○ ○ ○ ○</span>
+</div>
+
+<main class="wrap">
+  <p class="eyebrow">Lesson 1 of 8 · On-ramp</p>
+  <h1>What a “protocol” even is</h1>
+  <p class="dek">Before any code: what problem Smithy solves, what code generation means, and why “add a protocol” is a real, bounded task.</p>
+  <p class="meta"><span class="chip">≈ 6 min</span><span class="chip">no code yet</span><span class="chip">zero prerequisites</span></p>
+
+  <p>You are here to work with <b>smithy-java</b>, and somewhere you hit the word <em>codegen</em> and it felt like a locked door. This track opens it — one concrete task, <em>“add a new protocol,”</em> used as a guided tour of the whole framework. This first lesson assumes you know <em>nothing</em> about code generation. That is the right starting point.</p>
+
+  <h2>Start with the pain</h2>
+  <p>Imagine two programs talking over a network — your app and a service. They must agree on <em>exactly</em> how a message looks on the wire: is it JSON or binary? Where does the operation name go — in the URL, or a header? How is a date encoded? Every service that gets this slightly different means every client has to be hand-written again. That is thousands of near-identical, bug-prone lines.</p>
+
+  <h2>Smithy’s move: describe once, generate the rest</h2>
+  <p><a href="https://smithy.io/2.0/">Smithy</a> is a language for <em>describing</em> a service — its operations, its inputs and outputs — in the abstract, without saying anything about wire format. That description is a <b>model</b>. The pieces inside it — a structure, a field, an operation — are called <b>shapes</b>.</p>
+
+  <p><b>Code generation</b> (“codegen”) is the step that reads that model and <em>writes Java code for you</em>: builder classes, field accessors, the plumbing to send and receive each operation. You describe <code>GetItem</code> once; codegen emits the <code>GetItemInput</code> class, its builder, and the wiring. That is all “codegen” means here — a program that writes the boilerplate you would otherwise type by hand.</p>
+
+  <div class="note">
+    <b>The one idea to hold onto</b>
+    A <em>shape</em> says <b>what</b> the data is (“a structure with a required string <code>name</code>”). A <em>protocol</em> says <b>how</b> that data looks on the wire (“JSON, with the name in a <code>&quot;name&quot;</code> field”). Smithy keeps these two apart on purpose — that separation is the whole reason adding a protocol is a bounded task and not a rewrite.
+  </div>
+
+  <h2>So what is a “protocol,” concretely?</h2>
+  <p>A protocol is the set of rules for turning an operation call into bytes on the wire and turning the response bytes back into an object. smithy-java already ships several, named in the KT doc:</p>
+
+  <table>
+    <thead><tr><th>Protocol</th><th>Wire shape</th><th>How the operation is routed</th></tr></thead>
+    <tbody>
+      <tr><td>restJson1</td><td>JSON + HTTP bindings</td><td>URI + HTTP method</td></tr>
+      <tr><td>restXml</td><td>XML + HTTP bindings</td><td>URI + HTTP method</td></tr>
+      <tr><td>AWS JSON 1.0/1.1</td><td>full JSON body</td><td><code>X-Amz-Target</code> header</td></tr>
+      <tr><td>AWS Query</td><td>URL-encoded form</td><td><code>Action</code> form parameter</td></tr>
+      <tr><td>rpcv2Cbor</td><td>CBOR (compact binary)</td><td>fixed URI path</td></tr>
+    </tbody>
+  </table>
+
+  <p>Notice they all carry the <em>same</em> shapes — the difference is purely <em>how</em> those shapes hit the wire. Adding a protocol means teaching smithy-java one new set of “how” rules. Because shapes and protocols are decoupled, you do this <em>without</em> touching the generated shape code at all.</p>
+
+  <div class="why">
+    <b>Why this decoupling matters</b>
+    The KT doc calls it <em>protocol agnosticism</em>: “Switching protocols at runtime requires only a config change.” The same generated class serializes to JSON, CBOR, or XML unchanged. You are adding a plug-in, not editing the engine.
+  </div>
+
+  <h2>Where you’re headed</h2>
+  <p>Over the next seven lessons you will meet the one interface a protocol must satisfy (<code>ClientProtocol</code>), see the smallest real protocol in the codebase satisfy it in ~45 lines, understand the schema-directed serde trick that makes the decoupling work, learn when to reuse a codec versus write one, wire it up for discovery, pick the right base class, and finally prove it with compliance tests. By the end, “add a protocol” will be a checklist, not a mystery.</p>
+
+  <div class="quiz" data-answer="1">
+    <p class="eyebrow">Check yourself</p>
+    <p class="q">In Smithy, what is the division of labor between a shape and a protocol?</p>
+    <button class="quiz-opt">Shape picks the wire bytes; protocol names the field</button>
+    <button class="quiz-opt">Shape says what the data is; protocol says how it looks</button>
+    <button class="quiz-opt">Shape signs the request; protocol retries the failed call</button>
+    <button class="quiz-opt">Shape stores the model; protocol compiles the Java code</button>
+    <div class="quiz-fb right">Exactly. Shape = <em>what</em> (structure, fields, required-ness). Protocol = <em>how</em> (JSON vs CBOR, field placement). That split is why a protocol is a bounded add-on.</div>
+    <div class="quiz-fb nope">Not quite — re-read “The one idea to hold onto.” The shape describes <em>what</em> the data is; the protocol decides <em>how</em> it appears on the wire.</div>
+  </div>
+
+  <div class="source">
+    <p class="eyebrow">Primary source</p>
+    Read the model-and-shapes overview: <a href="https://smithy.io/2.0/">smithy.io/2.0</a>. Everything in this track is grounded in the internal <em>Smithy Java Knowledge Transfer</em> doc and the real smithy-java source.
+  </div>
+
+  <div class="ask">
+    Stuck on any of this? <b>Ask your teacher.</b> The agent that generated this track is your tutor — ask it to re-explain codegen with a different analogy, or to show you a real model file.
+  </div>
+
+  <div class="pager">
+    <a class="prv" href="index.html"><span class="lbl">Back</span>← Track overview</a>
+    <a class="nxt" href="0002-the-clientprotocol-contract.html"><span class="lbl">Next</span>The ClientProtocol contract →</a>
+  </div>
+  <p class="md-note">Prefer plain text? <a href="0001-what-is-a-protocol.md">Read the Markdown version →</a></p>
+</main>
+</body>
+</html>

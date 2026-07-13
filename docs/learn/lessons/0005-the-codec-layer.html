@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 5 · The codec layer — smithy.io/learn</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<script src="../assets/quiz.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">smithy<b>.io</b>/learn · adding a protocol</span>
+  <span class="progress">○ ○ ○ ○ ● ○ ○ ○</span>
+</div>
+
+<main class="wrap">
+  <p class="eyebrow">Lesson 5 of 8 · Reuse vs write</p>
+  <h1>The codec layer</h1>
+  <p class="dek">A codec turns schema-carrying structures into bytes and back. Most new protocols reuse one — here is how to tell when you must write one instead.</p>
+  <p class="meta"><span class="chip">≈ 7 min</span><span class="chip">one interface</span><span class="chip">a real decision</span></p>
+
+  <p>Last lesson you saw the trick that makes protocols pluggable: generated code <em>pushes</em> its fields into a <code>ShapeSerializer</code>, and a protocol-specific implementation <em>interprets</em> them into wire bytes. This lesson names the thing that produces those serializers and deserializers — the <b>Codec</b> — and answers the first real decision you face when adding a protocol: <em>do I reuse an existing codec, or write a new one?</em></p>
+
+  <h2>What a codec is</h2>
+  <p>The KT doc puts it in one sentence: <em>“Codecs are the bridge between structures (which carry schemas) and bytes.”</em> A structure knows <em>what</em> it holds (its schema); the codec knows how to spell that out in a particular wire format. It does not do this itself — it hands you the two visitors you met last lesson:</p>
+
+  <p class="filepath">core/src/main/java/software/amazon/smithy/java/core/serde/Codec.java</p>
+  <pre><code>public interface Codec extends AutoCloseable {
+
+    ShapeSerializer createSerializer(OutputStream sink);
+
+    ShapeDeserializer createDeserializer(ByteBuffer source);
+
+    default ByteBuffer serialize(SerializableShape shape) { ... }
+
+    default &lt;T extends SerializableShape&gt; T deserializeShape(
+            ByteBuffer source, ShapeBuilder&lt;T&gt; builder) { ... }
+}</code></pre>
+
+  <p>Read it top to bottom. The two abstract methods are the whole contract: give me an <code>OutputStream</code> and I hand back a <code>ShapeSerializer</code> that writes your format into it; give me a <code>ByteBuffer</code> and I hand back a <code>ShapeDeserializer</code> that reads your format out of it. The <code>default</code> methods (<code>serialize</code>, <code>deserializeShape</code>) are convenience wrappers built on those two — you get them for free.</p>
+
+  <div class="note">
+    <b>The one idea to hold onto</b>
+    A codec is the piece that knows a <em>wire format</em> — JSON, CBOR, XML — and nothing else. It does not know about HTTP, auth, or which operation you called. That narrowness is exactly why it is reusable across protocols.
+  </div>
+
+  <h2>The codecs that already ship</h2>
+  <p>smithy-java already implements three. Each is a <code>final class ... implements Codec</code>, and each owns one format:</p>
+
+  <table>
+    <thead><tr><th>Codec</th><th>Wire format</th><th>Module</th></tr></thead>
+    <tbody>
+      <tr><td><code>JsonCodec</code></td><td>JSON (text)</td><td><code>codecs/json-codec</code></td></tr>
+      <tr><td><code>Rpcv2CborCodec</code></td><td>CBOR (compact binary)</td><td><code>codecs/cbor-codec</code></td></tr>
+      <tr><td><code>XmlCodec</code></td><td>XML (text)</td><td><code>codecs/xml-codec</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Two different axes</h2>
+  <p>Here is the mental model that keeps this from getting confusing. There is a <b>protocol axis</b> and a <b>codec axis</b>, and they move independently.</p>
+
+  <ul>
+    <li>The <b>protocol</b> decides <em>routing and envelope</em>: which URL, which HTTP method, which header names the operation goes in.</li>
+    <li>The <b>codec</b> decides <em>the shape bytes</em>: how a structure and its fields are spelled out in the body.</li>
+  </ul>
+
+  <p>Because these are separate, a new protocol very often keeps the body format of an old one and only changes the routing. When that happens, you <em>reuse</em> the existing codec — you write no serialization code at all.</p>
+
+  <div class="why">
+    <b>Reuse in the real code</b>
+    <code>RpcV2CborProtocol</code> is a whole protocol, yet it writes no CBOR itself. It reaches for the shipped codec: <code>private static final Codec CBOR_CODEC = Rpcv2CborCodec.builder().build();</code> and its <code>codec()</code> method just returns it. <code>RestJsonClientProtocol</code> does the same with <code>JsonCodec</code>. Two different protocols, zero new codecs.
+  </div>
+
+  <p class="filepath">client/client-rpcv2-cbor/src/main/java/software/amazon/smithy/java/client/rpcv2/RpcV2CborProtocol.java</p>
+  <pre><code>public final class RpcV2CborProtocol extends AbstractRpcV2ClientProtocol {
+    private static final Codec CBOR_CODEC = Rpcv2CborCodec.builder().build();
+
+    @Override
+    protected Codec codec() {
+        return CBOR_CODEC;
+    }
+}</code></pre>
+
+  <h2>When <em>do</em> you write a new codec?</h2>
+  <p>Only for a genuinely new wire format — a body encoding none of the three shipped codecs produces. If your protocol speaks JSON, CBOR, or XML, you are reusing. If it speaks some other encoding no existing codec can emit, then and only then do you implement <code>Codec</code>, <code>ShapeSerializer</code>, and <code>ShapeDeserializer</code> in a new module. The KT doc lists this as its own multi-step workflow — a bigger job than adding a protocol that reuses a codec.</p>
+
+  <div class="warn">
+    <b>Don't reach for a new codec too early</b>
+    Writing a codec means re-implementing the entire serialize/deserialize visitor for a format. It is the framework's tenet of <em>simplicity</em> — “fewer moving parts” — that says: reuse first. A new protocol over an existing format should touch a <code>codec()</code> method, not a new module.
+  </div>
+
+  <h2>Where you're headed</h2>
+  <p>You now know the reuse-vs-write decision and can spot it in the code: a protocol either returns a shipped codec or, rarely, brings its own. Next lesson covers the other half of the wiring — <em>schema extensions</em> (the precomputed per-format data a codec reads) and how the framework <em>discovers</em> your protocol at runtime through SPI.</p>
+
+  <div class="quiz" data-answer="0">
+    <p class="eyebrow">Check yourself</p>
+    <p class="q">You are adding a protocol whose body is CBOR. What should you do about the codec?</p>
+    <button class="quiz-opt">Reuse the CBOR codec the framework ships</button>
+    <button class="quiz-opt">Write a new codec for CBOR yourself</button>
+    <button class="quiz-opt">Change the JSON codec to emit CBOR</button>
+    <button class="quiz-opt">Remove every codec and hand-roll bytes</button>
+    <div class="quiz-fb right">Right. CBOR is already a shipped format, so you reuse <code>Rpcv2CborCodec</code> exactly as <code>RpcV2CborProtocol</code> does — return it from <code>codec()</code>. You write a new codec only for a format none of the three can emit.</div>
+    <div class="quiz-fb nope">Re-read “When do you write a new codec?” CBOR already has a shipped codec, so there is nothing new to write — a protocol over an existing format reuses that codec.</div>
+  </div>
+
+  <div class="source">
+    <p class="eyebrow">Primary source</p>
+    Verified in <code>core/src/main/java/software/amazon/smithy/java/core/serde/Codec.java</code> and <code>client/client-rpcv2-cbor/src/main/java/software/amazon/smithy/java/client/rpcv2/RpcV2CborProtocol.java</code>. Codec overview: KT doc §5 (Codecs). Framework guidance: <a href="https://smithy.io/2.0/">smithy.io/2.0</a>.
+  </div>
+
+  <div class="ask">
+    Stuck on any of this? <b>Ask your teacher.</b> Ask the agent to open <code>JsonCodec.java</code> or <code>XmlCodec.java</code> so you can see a real <code>createSerializer</code> in full, or to trace how <code>codec()</code> is called during a request.
+  </div>
+
+  <div class="pager">
+    <a class="prv" href="0004-schema-directed-serde.html"><span class="lbl">Prev</span>← Schema-directed serde</a>
+    <a class="nxt" href="0006-extensions-and-discovery.html"><span class="lbl">Next</span>Extensions &amp; discovery →</a>
+  </div>
+  <p class="md-note">Prefer plain text? <a href="0005-the-codec-layer.md">Read the Markdown version →</a></p>
+</main>
+</body>
+</html>
