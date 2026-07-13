@@ -176,6 +176,12 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 2.6rem 0; }
   text-align: center; margin-top: 1rem;
 }
 
+/* Narrow screens: the 8-dot progress indicator + breadcrumb don't fit side by side. */
+@media (max-width: 480px) {
+  .progress { display: none; }
+  .topbar { font-size: 0.74rem; }
+}
+
 @media print {
   body { font-size: 12pt; color: #000; background: #fff; padding: 0; }
   .quiz-opt, .pager, .ask, .topbar { display: none; }
